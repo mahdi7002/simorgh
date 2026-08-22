@@ -1,0 +1,5 @@
+name: nazer
+role: چه اتفاقی افتاد؟
+rules:
+  - condition: device_control
+    response: "تلویزیون در وضعیت خاموش قرار دارد."

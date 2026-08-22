@@ -1,0 +1,1187 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>نقشه اجرایی سیمرغ</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;600;700;800&display=swap');
+
+:root {
+  --bg: #060810;
+  --surface: #0d1018;
+  --panel: #111520;
+  --border: #1c2030;
+  --border-light: #252a3a;
+  --gold: #c8a84b;
+  --gold-glow: rgba(200,168,75,0.12);
+  --gold-dim: #6b5a25;
+  --ember: #d95f3b;
+  --jade: #27a96b;
+  --sky: #3d82cc;
+  --violet: #7c52e8;
+  --rose: #c94f7a;
+  --text: #c8cce0;
+  --muted: #5a6080;
+  --bright: #e8ecff;
+  --done: #1a2e1e;
+  --done-border: #27a96b;
+}
+
+* { margin:0; padding:0; box-sizing:border-box; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Vazirmatn', sans-serif;
+  font-size: 14px;
+  line-height: 1.7;
+}
+
+/* ─── TOP BAR ─── */
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: rgba(6,8,16,0.92);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 28px;
+}
+
+.topbar-title {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--gold);
+  letter-spacing: 0.08em;
+}
+
+.progress-wrap {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.progress-bar-outer {
+  width: 200px;
+  height: 3px;
+  background: var(--border);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.progress-bar-inner {
+  height: 100%;
+  background: linear-gradient(90deg, var(--gold), var(--ember));
+  width: 0%;
+  transition: width 1.5s ease;
+  border-radius: 2px;
+}
+
+.progress-label {
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+/* ─── HERO ─── */
+.hero {
+  padding: 64px 28px 48px;
+  max-width: 1200px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 40px;
+  align-items: start;
+}
+
+.hero-left h1 {
+  font-size: clamp(2rem, 5vw, 3.5rem);
+  font-weight: 800;
+  color: var(--bright);
+  line-height: 1.15;
+  margin-bottom: 16px;
+}
+
+.hero-left h1 span {
+  background: linear-gradient(120deg, var(--gold), var(--ember));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.hero-left p {
+  font-size: 1rem;
+  color: var(--muted);
+  max-width: 520px;
+  font-weight: 300;
+}
+
+.hero-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 200px;
+}
+
+.stat-box {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  padding: 14px 18px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.stat-box .s-label { font-size: 0.75rem; color: var(--muted); }
+.stat-box .s-val { font-size: 1.1rem; font-weight: 700; color: var(--bright); }
+.stat-box .s-val.gold { color: var(--gold); }
+.stat-box .s-val.jade { color: var(--jade); }
+.stat-box .s-val.ember { color: var(--ember); }
+
+/* ─── PHASE TABS ─── */
+.tabs-wrap {
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+  position: sticky;
+  top: 53px;
+  z-index: 90;
+}
+
+.tabs {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  padding: 0 28px;
+  gap: 0;
+}
+
+.tab {
+  padding: 16px 28px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--muted);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: all 0.2s;
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+}
+
+.tab:hover { color: var(--text); }
+.tab.active { color: var(--gold); border-bottom-color: var(--gold); }
+
+/* ─── MAIN LAYOUT ─── */
+.main {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 28px 80px;
+}
+
+.phase-block {
+  display: none;
+  padding-top: 40px;
+}
+
+.phase-block.active { display: block; }
+
+.phase-header {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 20px;
+  align-items: center;
+  margin-bottom: 32px;
+  padding-bottom: 24px;
+  border-bottom: 1px solid var(--border);
+}
+
+.phase-badge {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  padding: 5px 14px;
+  border-radius: 1px;
+}
+
+.badge-1 { background: rgba(200,168,75,0.1); color: var(--gold); border: 1px solid var(--gold-dim); }
+.badge-2 { background: rgba(61,130,204,0.1); color: var(--sky); border: 1px solid rgba(61,130,204,0.3); }
+.badge-3 { background: rgba(39,169,107,0.1); color: var(--jade); border: 1px solid rgba(39,169,107,0.3); }
+
+.phase-header h2 {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--bright);
+}
+
+.phase-duration {
+  font-size: 0.8rem;
+  color: var(--muted);
+  text-align: left;
+  border: 1px solid var(--border);
+  padding: 6px 14px;
+  white-space: nowrap;
+}
+
+/* ─── SPRINT GRID ─── */
+.sprint-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  gap: 3px;
+  background: var(--border);
+  margin-bottom: 3px;
+}
+
+.sprint-card {
+  background: var(--panel);
+  padding: 0;
+  position: relative;
+  transition: background 0.15s;
+}
+
+.sprint-card:hover { background: #141820; }
+
+.sprint-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 18px 20px 14px;
+  border-bottom: 1px solid var(--border);
+}
+
+.sprint-week {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  color: var(--muted);
+  text-transform: uppercase;
+}
+
+.sprint-title {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--bright);
+  flex: 1;
+}
+
+.sprint-status {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.status-todo { background: var(--border-light); }
+.status-active { background: var(--gold); box-shadow: 0 0 6px var(--gold); animation: pulse 2s infinite; }
+.status-done { background: var(--jade); }
+
+@keyframes pulse {
+  0%,100% { opacity:1; }
+  50% { opacity:0.4; }
+}
+
+.sprint-tasks {
+  padding: 14px 20px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.task {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 0.84rem;
+  color: var(--muted);
+}
+
+.task-check {
+  width: 16px;
+  height: 16px;
+  border: 1px solid var(--border-light);
+  border-radius: 2px;
+  flex-shrink: 0;
+  margin-top: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.65rem;
+  color: var(--jade);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.task-check:hover { border-color: var(--gold); }
+.task.done .task-check { background: rgba(39,169,107,0.1); border-color: var(--jade); }
+.task.done .task-text { text-decoration: line-through; opacity: 0.5; }
+
+.task-text { line-height: 1.5; }
+
+.sprint-tags {
+  padding: 0 20px 16px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.stag {
+  font-size: 0.72rem;
+  padding: 2px 9px;
+  border-radius: 1px;
+  border: 1px solid var(--border-light);
+  color: var(--muted);
+  background: var(--surface);
+}
+
+.stag-py { border-color: rgba(61,130,204,0.3); color: var(--sky); }
+.stag-js { border-color: rgba(200,168,75,0.3); color: var(--gold); }
+.stag-db { border-color: rgba(124,82,232,0.3); color: var(--violet); }
+.stag-ai { border-color: rgba(39,169,107,0.3); color: var(--jade); }
+.stag-hard { border-color: rgba(217,95,59,0.3); color: var(--ember); }
+
+/* ─── MILESTONE ─── */
+.milestone {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-right: 3px solid var(--gold);
+  padding: 20px 24px;
+  margin: 3px 0;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.milestone-icon { font-size: 1.5rem; flex-shrink: 0; }
+
+.milestone-body h4 {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--gold);
+  margin-bottom: 4px;
+}
+
+.milestone-body p {
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+
+/* ─── TECH STACK ─── */
+.stack-section {
+  margin-top: 40px;
+  padding-top: 32px;
+  border-top: 1px solid var(--border);
+}
+
+.stack-title {
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  color: var(--muted);
+  text-transform: uppercase;
+  margin-bottom: 16px;
+}
+
+.stack-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 3px;
+  background: var(--border);
+}
+
+.stack-item {
+  background: var(--panel);
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.stack-item .s-role {
+  font-size: 0.7rem;
+  color: var(--muted);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.stack-item .s-name {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--bright);
+}
+
+.stack-item .s-why {
+  font-size: 0.75rem;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+/* ─── RISK SECTION ─── */
+.risk-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 3px;
+  background: var(--border);
+  margin-top: 40px;
+}
+
+.risk-card {
+  background: var(--panel);
+  padding: 20px;
+}
+
+.risk-level {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  margin-bottom: 10px;
+}
+
+.risk-high { color: var(--ember); }
+.risk-med { color: var(--gold); }
+.risk-low { color: var(--jade); }
+
+.risk-card h4 {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--bright);
+  margin-bottom: 8px;
+}
+
+.risk-card p {
+  font-size: 0.8rem;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.risk-card .mitigation {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+  font-size: 0.78rem;
+  color: var(--jade);
+}
+
+/* ─── DECISION LOG ─── */
+.decision-log {
+  margin-top: 40px;
+}
+
+.log-entry {
+  display: grid;
+  grid-template-columns: 100px 1fr;
+  gap: 20px;
+  padding: 16px 0;
+  border-bottom: 1px solid var(--border);
+  align-items: start;
+}
+
+.log-date {
+  font-size: 0.75rem;
+  color: var(--gold);
+  font-weight: 600;
+  padding-top: 2px;
+}
+
+.log-body h5 {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--bright);
+  margin-bottom: 4px;
+}
+
+.log-body p {
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+/* ─── SECTION LABEL ─── */
+.sec-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  color: var(--muted);
+  text-transform: uppercase;
+  margin: 36px 0 16px;
+}
+
+@media (max-width: 700px) {
+  .hero { grid-template-columns: 1fr; }
+  .hero-stats { flex-direction: row; flex-wrap: wrap; min-width: unset; }
+  .stat-box { flex: 1; min-width: 140px; }
+  .phase-header { grid-template-columns: 1fr; gap: 10px; }
+  .tabs { gap: 0; overflow-x: auto; }
+  .tab { padding: 14px 16px; font-size: 0.8rem; }
+}
+</style>
+</head>
+<body>
+
+<!-- TOP BAR -->
+<div class="topbar">
+  <div class="topbar-title">🦅 سیمرغ — نقشه اجرایی</div>
+  <div class="progress-wrap">
+    <div class="progress-bar-outer">
+      <div class="progress-bar-inner" id="mainProgress"></div>
+    </div>
+    <div class="progress-label" id="progressLabel">محاسبه...</div>
+  </div>
+</div>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-left">
+    <h1>از ایده تا <span>اجرا</span></h1>
+    <p>نقشه دقیق هفته‌به‌هفته برای ساخت سیمرغ — از اولین خط کد تا اولین کاربر واقعی. هر تسک، هر ابزار، هر تصمیم.</p>
+  </div>
+  <div class="hero-stats">
+    <div class="stat-box">
+      <span class="s-label">فاز اول</span>
+      <span class="s-val gold">۸ هفته</span>
+    </div>
+    <div class="stat-box">
+      <span class="s-label">تعداد ماژول</span>
+      <span class="s-val">۷ ماژول</span>
+    </div>
+    <div class="stat-box">
+      <span class="s-label">پلتفرم اصلی</span>
+      <span class="s-val jade">Termux + Linux</span>
+    </div>
+    <div class="stat-box">
+      <span class="s-label">مدل پایه</span>
+      <span class="s-val ember">Qwen2.5 / Gemma3</span>
+    </div>
+  </div>
+</div>
+
+<!-- TABS -->
+<div class="tabs-wrap">
+  <div class="tabs">
+    <div class="tab active" onclick="showPhase(1, this)">فاز ۱ — هسته</div>
+    <div class="tab" onclick="showPhase(2, this)">فاز ۲ — شخصیت</div>
+    <div class="tab" onclick="showPhase(3, this)">فاز ۳ — شبکه</div>
+    <div class="tab" onclick="showPhase(4, this)">ریسک‌ها</div>
+    <div class="tab" onclick="showPhase(5, this)">تصمیمات</div>
+  </div>
+</div>
+
+<div class="main">
+
+<!-- ══════════════════════════════════════════
+     PHASE 1 — CORE ENGINE
+══════════════════════════════════════════ -->
+<div class="phase-block active" id="phase1">
+
+  <div class="phase-header">
+    <span class="phase-badge badge-1">فاز اول</span>
+    <h2>ساخت هسته — سیمرغ زنده می‌شود</h2>
+    <div class="phase-duration">هفته ۱ تا ۸ · فقط برای مهدی</div>
+  </div>
+
+  <!-- MILESTONE 0 -->
+  <div class="milestone">
+    <div class="milestone-icon">🎯</div>
+    <div class="milestone-body">
+      <h4>هدف فاز اول</h4>
+      <p>یک سیستم کارکردی که روی Termux و Linux Mint اجرا می‌شود، پرسش می‌فهمد (نه فقط پاسخ می‌دهد)، حافظه دارد، و محدودیت‌هایش را می‌شناسد.</p>
+    </div>
+  </div>
+
+  <div class="sec-label">اسپرینت‌های هفتگی</div>
+
+  <div class="sprint-grid">
+
+    <!-- WEEK 1 -->
+    <div class="sprint-card">
+      <div class="sprint-head">
+        <span class="sprint-week">هفته ۱</span>
+        <span class="sprint-title">زیرساخت و اتصال مدل</span>
+        <span class="sprint-status status-active" id="status-week1"></span>
+      </div>
+      <div class="sprint-tasks" id="tasks-week1"></div>
+      <div class="sprint-tags">
+        <span class="stag stag-py">Python</span>
+        <span class="stag stag-ai">Ollama</span>
+        <span class="stag stag-hard">LAN</span>
+      </div>
+    </div>
+
+    <!-- WEEK 2 -->
+    <div class="sprint-card">
+      <div class="sprint-head">
+        <span class="sprint-week">هفته ۲</span>
+        <span class="sprint-title">موتور منشور — روح سیمرغ</span>
+        <span class="sprint-status status-todo" id="status-week2"></span>
+      </div>
+      <div class="sprint-tasks" id="tasks-week2"></div>
+      <div class="sprint-tags">
+        <span class="stag stag-py">Python</span>
+        <span class="stag stag-ai">Prompt Engineering</span>
+      </div>
+    </div>
+
+    <!-- WEEK 3 -->
+    <div class="sprint-card">
+      <div class="sprint-head">
+        <span class="sprint-week">هفته ۳</span>
+        <span class="sprint-title">حافظه لایه‌ای — SQLite</span>
+        <span class="sprint-status status-todo" id="status-week3"></span>
+      </div>
+      <div class="sprint-tasks" id="tasks-week3"></div>
+      <div class="sprint-tags">
+        <span class="stag stag-db">SQLite</span>
+        <span class="stag stag-py">Python</span>
+        <span class="stag stag-db">Schema Design</span>
+      </div>
+    </div>
+
+    <!-- WEEK 4 -->
+    <div class="sprint-card">
+      <div class="sprint-head">
+        <span class="sprint-week">هفته ۴</span>
+        <span class="sprint-title">موتور شناخت حالت هیجانی</span>
+        <span class="sprint-status status-todo" id="status-week4"></span>
+      </div>
+      <div class="sprint-tasks" id="tasks-week4"></div>
+      <div class="sprint-tags">
+        <span class="stag stag-py">Python</span>
+        <span class="stag stag-ai">NLP فارسی</span>
+      </div>
+    </div>
+
+    <!-- WEEK 5 -->
+    <div class="sprint-card">
+      <div class="sprint-head">
+        <span class="sprint-week">هفته ۵</span>
+        <span class="sprint-title">پایگاه فرهنگی — دانش فارسی</span>
+        <span class="sprint-status status-todo" id="status-week5"></span>
+      </div>
+      <div class="sprint-tasks" id="tasks-week5"></div>
+      <div class="sprint-tags">
+        <span class="stag stag-db">SQLite + FTS5</span>
+        <span class="stag stag-py">Python</span>
+        <span class="stag stag-ai">Semantic Search</span>
+      </div>
+    </div>
+
+    <!-- WEEK 6 -->
+    <div class="sprint-card">
+      <div class="sprint-head">
+        <span class="sprint-week">هفته ۶</span>
+        <span class="sprint-title">Knowledge Graph — نقشه مفاهیم</span>
+        <span class="sprint-status status-todo" id="status-week6"></span>
+      </div>
+      <div class="sprint-tasks" id="tasks-week6"></div>
+      <div class="sprint-tags">
+        <span class="stag stag-py">NetworkX</span>
+        <span class="stag stag-db">Graph DB</span>
+        <span class="stag stag-ai">Reasoning</span>
+      </div>
+    </div>
+
+    <!-- WEEK 7 -->
+    <div class="sprint-card">
+      <div class="sprint-head">
+        <span class="sprint-week">هفته ۷</span>
+        <span class="sprint-title">رابط کاربری ترمینال + وب</span>
+        <span class="sprint-status status-todo" id="status-week7"></span>
+      </div>
+      <div class="sprint-tasks" id="tasks-week7"></div>
+      <div class="sprint-tags">
+        <span class="stag stag-py">FastAPI</span>
+        <span class="stag stag-js">React/Vite</span>
+        <span class="stag stag-py">Rich CLI</span>
+      </div>
+    </div>
+
+    <!-- WEEK 8 -->
+    <div class="sprint-card">
+      <div class="sprint-head">
+        <span class="sprint-week">هفته ۸</span>
+        <span class="sprint-title">تست جامع و اولین نسخه</span>
+        <span class="sprint-status status-todo" id="status-week8"></span>
+      </div>
+      <div class="sprint-tasks" id="tasks-week8"></div>
+      <div class="sprint-tags">
+        <span class="stag">Testing</span>
+        <span class="stag stag-ai">Benchmarking</span>
+        <span class="stag stag-hard">Performance</span>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- MILESTONE END OF PHASE 1 -->
+  <div class="milestone" style="margin-top:3px; border-right-color: var(--jade);">
+    <div class="milestone-icon">🏁</div>
+    <div class="milestone-body">
+      <h4>پایان فاز ۱ — سیمرغ v1 آماده است</h4>
+      <p>یک هوش مصنوعی کاملاً آفلاین که می‌فهمد، حافظه دارد، فرهنگ می‌شناسد، و محدودیت‌هایش را صادقانه اعلام می‌کند.</p>
+    </div>
+  </div>
+
+  <!-- TECH STACK PHASE 1 -->
+  <div class="stack-section">
+    <div class="stack-title">پشته فناوری فاز اول</div>
+    <div class="stack-grid">
+      <div class="stack-item">
+        <span class="s-role">مدل زبانی</span>
+        <span class="s-name">Qwen2.5-0.5B</span>
+        <span class="s-why">سریع، سبک، فارسی خوب — برای Termux</span>
+      </div>
+      <div class="stack-item">
+        <span class="s-role">مدل قوی‌تر</span>
+        <span class="s-name">Gemma3:2b</span>
+        <span class="s-why">برای Linux Mint — استدلال عمیق‌تر</span>
+      </div>
+      <div class="stack-item">
+        <span class="s-role">اجرای مدل</span>
+        <span class="s-name">Ollama + llama.cpp</span>
+        <span class="s-why">کامپایل ARM64 — بهینه روی A14</span>
+      </div>
+      <div class="stack-item">
+        <span class="s-role">حافظه</span>
+        <span class="s-name">SQLite + FTS5</span>
+        <span class="s-why">آفلاین، سریع، قابل حمل</span>
+      </div>
+      <div class="stack-item">
+        <span class="s-role">Knowledge Graph</span>
+        <span class="s-name">NetworkX + SQLite</span>
+        <span class="s-why">گراف مفاهیم سبک</span>
+      </div>
+      <div class="stack-item">
+        <span class="s-role">Backend API</span>
+        <span class="s-name">FastAPI + Python</span>
+        <span class="s-why">اتصال CLI به وب</span>
+      </div>
+      <div class="stack-item">
+        <span class="s-role">رابط وب</span>
+        <span class="s-name">React + Vite</span>
+        <span class="s-why">مثل NEXUS — سریع، آفلاین</span>
+      </div>
+      <div class="stack-item">
+        <span class="s-role">CLI</span>
+        <span class="s-name">Python + Rich</span>
+        <span class="s-why">نمایش فارسی زیبا در ترمینال</span>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ══════════════════════════════════════════
+     PHASE 2 — PERSONALITY & CULTURE
+══════════════════════════════════════════ -->
+<div class="phase-block" id="phase2">
+
+  <div class="phase-header">
+    <span class="phase-badge badge-2">فاز دوم</span>
+    <h2>ساخت شخصیت — سیمرغ روح پیدا می‌کند</h2>
+    <div class="phase-duration">هفته ۹ تا ۱۶ · جامعه فارسی‌زبان</div>
+  </div>
+
+  <div class="milestone">
+    <div class="milestone-icon">🎯</div>
+    <div class="milestone-body">
+      <h4>هدف فاز دوم</h4>
+      <p>سیمرغ به جمع کوچکی از کاربران فارسی‌زبان می‌رسد. اکوسیستم چندعاملی فعال می‌شود. MeshPower اتصال می‌یابد.</p>
+    </div>
+  </div>
+
+  <div class="sec-label">برنامه هفتگی</div>
+
+  <div class="sprint-grid">
+
+    <div class="sprint-card">
+      <div class="sprint-head">
+        <span class="sprint-week">هفته ۹–۱۰</span>
+        <span class="sprint-title">آینه فرهنگی — ۶ آرکتایپ</span>
+        <span class="sprint-status status-todo"></span>
+      </div>
+      <div class="sprint-tasks" id="tasks-week9"></div>
+      <div class="sprint-tags">
+        <span class="stag stag-py">Python</span>
+        <span class="stag stag-ai">Personality AI</span>
+        <span class="stag stag-db">SQLite</span>
+      </div>
+    </div>
+
+    <div class="sprint-card">
+      <div class="sprint-head">
+        <span class="sprint-week">هفته ۱۱–۱۲</span>
+        <span class="sprint-title">اکوسیستم چندعاملی</span>
+        <span class="sprint-status status-todo"></span>
+      </div>
+      <div class="sprint-tasks" id="tasks-week11"></div>
+      <div class="sprint-tags">
+        <span class="stag stag-ai">Multi-Agent</span>
+        <span class="stag stag-py">Python</span>
+      </div>
+    </div>
+
+    <div class="sprint-card">
+      <div class="sprint-head">
+        <span class="sprint-week">هفته ۱۳–۱۴</span>
+        <span class="sprint-title">MeshPower — محاسبات توزیع‌شده</span>
+        <span class="sprint-status status-todo"></span>
+      </div>
+      <div class="sprint-tasks" id="tasks-week13"></div>
+      <div class="sprint-tags">
+        <span class="stag stag-hard">LAN Mesh</span>
+        <span class="stag stag-py">Python</span>
+        <span class="stag stag-hard">Distributed</span>
+      </div>
+    </div>
+
+    <div class="sprint-card">
+      <div class="sprint-head">
+        <span class="sprint-week">هفته ۱۵–۱۶</span>
+        <span class="sprint-title">بتا — اولین کاربران واقعی</span>
+        <span class="sprint-status status-todo"></span>
+      </div>
+      <div class="sprint-tasks" id="tasks-week15"></div>
+      <div class="sprint-tags">
+        <span class="stag">Beta Testing</span>
+        <span class="stag stag-ai">User Research</span>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="milestone" style="margin-top:3px; border-right-color: var(--sky);">
+    <div class="milestone-icon">🌙</div>
+    <div class="milestone-body">
+      <h4>پایان فاز ۲ — سیمرغ نفس می‌کشد</h4>
+      <p>۵ نفر دارند با سیمرغ زندگی می‌کنند. شبکه MeshPower روی ۳ دستگاه فعال است. اکوسیستم چندعاملی کار می‌کند.</p>
+    </div>
+  </div>
+
+</div>
+
+<!-- ══════════════════════════════════════════
+     PHASE 3 — NETWORK & WORLD
+══════════════════════════════════════════ -->
+<div class="phase-block" id="phase3">
+
+  <div class="phase-header">
+    <span class="phase-badge badge-3">فاز سوم</span>
+    <h2>شبکه جهانی — سیمرغ پرواز می‌کند</h2>
+    <div class="phase-duration">ماه ۵ به بعد · هر انسانی</div>
+  </div>
+
+  <div class="milestone">
+    <div class="milestone-icon">🌍</div>
+    <div class="milestone-body">
+      <h4>هدف فاز سوم</h4>
+      <p>سیمرغ به یک پروتکل باز تبدیل می‌شود که هر فرهنگی می‌تواند نسخه خودش را بسازد — با روح خودش، روی زیرساخت MeshPower.</p>
+    </div>
+  </div>
+
+  <div class="sec-label">مراحل کلان</div>
+
+  <div class="sprint-grid">
+
+    <div class="sprint-card">
+      <div class="sprint-head">
+        <span class="sprint-week">ماه ۵–۶</span>
+        <span class="sprint-title">MeshPower عمومی</span>
+        <span class="sprint-status status-todo"></span>
+      </div>
+      <div class="sprint-tasks" id="tasks-month5"></div>
+      <div class="sprint-tags">
+        <span class="stag stag-hard">P2P</span>
+        <span class="stag stag-py">Protocol</span>
+      </div>
+    </div>
+
+    <div class="sprint-card">
+      <div class="sprint-head">
+        <span class="sprint-week">ماه ۷–۸</span>
+        <span class="sprint-title">SDK فرهنگی — برای هر زبانی</span>
+        <span class="sprint-status status-todo"></span>
+      </div>
+      <div class="sprint-tasks" id="tasks-month7"></div>
+      <div class="sprint-tags">
+        <span class="stag stag-js">SDK</span>
+        <span class="stag">Open Source</span>
+      </div>
+    </div>
+
+    <div class="sprint-card">
+      <div class="sprint-head">
+        <span class="sprint-week">ماه ۹+</span>
+        <span class="sprint-title">آکادمی سیمرغ</span>
+        <span class="sprint-status status-todo"></span>
+      </div>
+      <div class="sprint-tasks" id="tasks-month9"></div>
+      <div class="sprint-tags">
+        <span class="stag">Community</span>
+        <span class="stag stag-ai">Education</span>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+
+<!-- ══════════════════════════════════════════
+     RISKS
+══════════════════════════════════════════ -->
+<div class="phase-block" id="phase4">
+
+  <div class="phase-header">
+    <span class="phase-badge badge-1">ریسک‌ها</span>
+    <h2>موانع واقعی و راه‌حل‌ها</h2>
+    <div class="phase-duration">صادقانه</div>
+  </div>
+
+  <div class="risk-grid">
+
+    <div class="risk-card">
+      <div class="risk-level risk-high">⚠ ریسک بالا</div>
+      <h4>کیفیت فارسی مدل‌های کوچک</h4>
+      <p>Qwen2.5-0.5B و Gemma3:2b فارسی را بهتر از قبل می‌فهمند، اما هنوز در مکالمه‌های پیچیده فلسفی ضعف دارند.</p>
+      <div class="mitigation">✓ راه‌حل: استفاده از دو مدل به صورت موازی. برای استدلال عمیق → Gemma3. برای سرعت → Qwen2.5. fine-tuning روی داده فارسی در فاز ۲.</div>
+    </div>
+
+    <div class="risk-card">
+      <div class="risk-level risk-high">⚠ ریسک بالا</div>
+      <h4>محدودیت RAM در Termux</h4>
+      <p>Samsung A14 حداکثر ۴–۵ گیگابایت RAM برای مدل می‌گذارد. مدل‌های بزرگ‌تر اجرا نمی‌شوند.</p>
+      <div class="mitigation">✓ راه‌حل: معماری MeshPower — استدلال سنگین را به Linux Mint بفرست. A14 فقط حافظه و رابط کاربری را مدیریت کند.</div>
+    </div>
+
+    <div class="risk-card">
+      <div class="risk-level risk-med">◐ ریسک متوسط</div>
+      <h4>پیچیدگی یکپارچه‌سازی ۷ ماژول</h4>
+      <p>حافظه + استدلال + هیجان + فرهنگ + Knowledge Graph + MeshPower + UI — هماهنگ کردن همه اینها سخت است.</p>
+      <div class="mitigation">✓ راه‌حل: هر ماژول مستقل تست شود. یکپارچه‌سازی تنها پس از اثبات هر ماژول به تنهایی.</div>
+    </div>
+
+    <div class="risk-card">
+      <div class="risk-level risk-med">◐ ریسک متوسط</div>
+      <h4>«سیمرغ» واقعاً بهتر از ChatGPT هست؟</h4>
+      <p>خطر این است که محصول نهایی فقط یک wrapper فارسی روی یک مدل ضعیف‌تر باشد — نه یک ارتقاء واقعی.</p>
+      <div class="mitigation">✓ راه‌حل: benchmarks صادقانه در هفته ۸. اگر کیفیت کافی نبود، فاز ۲ را با fine-tuning شروع کن نه با کاربران.</div>
+    </div>
+
+    <div class="risk-card">
+      <div class="risk-level risk-low">✓ ریسک پایین</div>
+      <h4>مصرف باتری A14</h4>
+      <p>اجرای مداوم Ollama روی Android باتری را سریع تمام می‌کند.</p>
+      <div class="mitigation">✓ راه‌حل: حالت sleep/wake برای مدل. فقط وقتی پرسش هست مدل فعال شود. charging schedule.</div>
+    </div>
+
+    <div class="risk-card">
+      <div class="risk-level risk-low">✓ ریسک پایین</div>
+      <h4>زمان — تنها کار می‌کنی</h4>
+      <p>۸ هفته برای ۷ ماژول — در صورتی که تنها هستی — ممکن است تنگ باشد.</p>
+      <div class="mitigation">✓ راه‌حل: اولویت با ماژول‌های ۱، ۲، ۳ (هسته). بقیه به فاز ۲ منتقل شوند اگر لازم شد.</div>
+    </div>
+
+  </div>
+
+</div>
+
+<!-- ══════════════════════════════════════════
+     DECISIONS
+══════════════════════════════════════════ -->
+<div class="phase-block" id="phase5">
+
+  <div class="phase-header">
+    <span class="phase-badge badge-1">تصمیمات</span>
+    <h2>لاگ تصمیمات معماری</h2>
+    <div class="phase-duration">چرا هر انتخاب؟</div>
+  </div>
+
+  <div class="decision-log">
+
+    <div class="log-entry">
+      <div class="log-date">تصمیم ۱</div>
+      <div class="log-body">
+        <h5>SQLite به جای PostgreSQL یا MongoDB</h5>
+        <p>سیمرغ باید کاملاً آفلاین باشد. SQLite روی همه دستگاه‌ها اجرا می‌شود، نیاز به سرور ندارد، و با FTS5 جستجوی معنایی فارسی را پشتیبانی می‌کند. سرعت کافی برای استفاده شخصی دارد.</p>
+      </div>
+    </div>
+
+    <div class="log-entry">
+      <div class="log-date">تصمیم ۲</div>
+      <div class="log-body">
+        <h5>دو مدل به جای یک — Qwen2.5 + Gemma3</h5>
+        <p>سرعت و عمق هر دو مهم‌اند. Qwen2.5 برای پاسخ‌های سریع و روزمره. Gemma3 برای استدلال فلسفی و چندلایه. سیمرغ بر اساس پیچیدگی پرسش انتخاب می‌کند کدام را فراخوانی کند.</p>
+      </div>
+    </div>
+
+    <div class="log-entry">
+      <div class="log-date">تصمیم ۳</div>
+      <div class="log-body">
+        <h5>Python به جای Rust یا Go برای backend</h5>
+        <p>سرعت توسعه مهم‌تر از سرعت اجرا است در این مرحله. Python اکوسیستم ML کامل دارد. بعداً اگر bottleneck پیدا شد، ماژول‌های حیاتی به Rust ترجمه می‌شوند.</p>
+      </div>
+    </div>
+
+    <div class="log-entry">
+      <div class="log-date">تصمیم ۴</div>
+      <div class="log-body">
+        <h5>NetworkX برای Knowledge Graph — نه Neo4j</h5>
+        <p>Neo4j نیاز به سرور جداگانه دارد. NetworkX در حافظه کار می‌کند و روی SQLite persist می‌شود. برای حجم اولیه (هزاران node) کافی است. در فاز ۳ اگر graph بزرگ شد، مهاجرت امکان‌پذیر است.</p>
+      </div>
+    </div>
+
+    <div class="log-entry">
+      <div class="log-date">تصمیم ۵</div>
+      <div class="log-body">
+        <h5>منشور را در Python hardcode کن، نه در prompt</h5>
+        <p>اگر منشور فقط در system prompt باشد، مدل می‌تواند آن را نادیده بگیرد. بهتر است منشور در کد Python به صورت structural constraint پیاده‌سازی شود — مثل middleware که هر پاسخ از آن عبور می‌کند.</p>
+      </div>
+    </div>
+
+    <div class="log-entry">
+      <div class="log-date">تصمیم ۶</div>
+      <div class="log-body">
+        <h5>فاز ۱ فقط برای مهدی — بدون عجله برای انتشار</h5>
+        <p>بزرگ‌ترین اشتباه در پروژه‌های AI این است که زود منتشر کنی و بازخورد منفی شکل درست فکر کردن را تخریب کند. سیمرغ اول باید برای خودت واقعاً مفید باشد. سپس دیگران.</p>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+
+</div><!-- /main -->
+
+<script>
+// ─── تسک‌های استاتیک (برای هر هفته)
+const staticTasks = {
+  week1: [
+    "نصب و تنظیم Ollama روی Linux Mint",
+    "اجرای Qwen2.5-0.5B و Gemma3:2b و تست سرعت هر دو",
+    "ساخت wrapper پایتون برای API محلی Ollama",
+    "تست اتصال Termux → Linux Mint از طریق LAN",
+    "ساخت simorgh_core.py — ماژول اصلی"
+  ],
+  week2: [
+    "پیاده‌سازی simorgh_manifesto.py — بارگذاری منشور بازنویسی‌شده",
+    "ساخت لایه‌ی pre-processing: تشخیص «علت پرسش» قبل از پاسخ",
+    "پیاده‌سازی ۶ لایه استدلال به صورت pipeline",
+    "ساخت self-critique module: «کجا ممکن است اشتباه کنم؟»",
+    "تست با ۲۰ پرسش واقعی — بررسی کیفیت استدلال"
+  ],
+  week3: [
+    "طراحی schema پایگاه داده حافظه ۴ لایه",
+    "ساخت simorgh_memory.py — حافظه کوتاه‌مدت (مکالمه)",
+    "ساخت حافظه بلندمدت — الگوهای ارزشی کاربر",
+    "پیاده‌سازی حافظه معنایی — نحوه تصمیم‌گیری کاربر",
+    "سیستم context injection — بارگذاری حافظه مرتبط در هر پرسش"
+  ],
+  week4: [
+    "ساخت emotion_detector.py — تشخیص ۳ حالت اصلی",
+    "حالت ۱: «می‌خواهم بفهمم» → فعال‌سازی پایپلاین استدلال",
+    "حالت ۲: «می‌خواهم تصمیم بگیرم» → فعال‌سازی حکمت عملی",
+    "حالت ۳: «می‌خواهم دیده شوم» → حضور بدون تحلیل",
+    "پیاده‌سازی «سکوت آگاهانه» — وقتی جواب ندادن بهتر است"
+  ],
+  week5: [
+    "بارگذاری و ایندکس ۵۰۰۰ بیت از حافظ، مولانا، سعدی، عطار",
+    "ساخت cultural_retriever.py — جستجوی معنایی در شعر فارسی",
+    "ماژول تطبیق مفهوم: «حافظ این را چطور می‌دیده؟»",
+    "بارگذاری ضرب‌المثل‌های فارسی و داستان‌های کلیله",
+    "تست: استفاده از منابع فرهنگی در پاسخ به پرسش‌های مدرن"
+  ],
+  week6: [
+    "پیاده‌سازی Knowledge Graph با NetworkX",
+    "ساخت nodes برای مفاهیم اصلی: علم، هنر، اخلاق، تاریخ، طبیعت",
+    "ماژول یافتن ارتباطات پنهان بین حوزه‌های مختلف",
+    "اتصال Knowledge Graph به لایه ۴ استدلال (ارتباطات بین‌حوزه‌ای)",
+    "ذخیره‌سازی مفاهیم جدیدی که سیمرغ در مکالمه یاد می‌گیرد"
+  ],
+  week7: [
+    "ساخت CLI با Rich — رابط فارسی زیبا در ترمینال",
+    "نمایش لایه‌های استدلال به صورت مرحله‌به‌مرحله در CLI",
+    "ساخت FastAPI server — اتصال Termux به رابط وب",
+    "رابط وب ساده با React/Vite — شبیه NEXUS",
+    "نمایش وضعیت حافظه و لایه‌های استدلال در UI"
+  ],
+  week8: [
+    "تست ۱۰۰ پرسش واقعی — کیفیت استدلال، خودانتقادی، حضور",
+    "بررسی مصرف RAM و CPU روی هر دو دستگاه",
+    "تست حافظه: آیا الگوهای ارزشی درست ذخیره می‌شوند؟",
+    "مقایسه با ChatGPT روی ۱۰ پرسش فلسفی فارسی",
+    "push اولین نسخه به GitHub — simorgh-v1"
+  ]
+};
+
+// رندر کردن تسک‌ها با توجه به وضعیت done از API
+async function renderTasks() {
+  const resp = await fetch('/tasks');
+  const data = await resp.json();
+  const taskMap = {};
+  data.tasks.forEach(t => { taskMap[t.title] = t; });
+
+  let doneCount = 0, totalCount = 0;
+
+  for (let [week, tasks] of Object.entries(staticTasks)) {
+    const container = document.getElementById('tasks-' + week);
+    if (!container) continue;
+    container.innerHTML = '';
+    tasks.forEach(text => {
+      const tdata = taskMap[text];
+      const done = tdata ? tdata.done : false;
+      const id = tdata ? tdata.id : null;
+      totalCount++;
+      if (done) doneCount++;
+
+      const taskDiv = document.createElement('div');
+      taskDiv.className = 'task' + (done ? ' done' : '');
+      taskDiv.dataset.id = id;
+      taskDiv.innerHTML = `
+        <div class="task-check" onclick="toggleTask(this, '${text.replace(/'/g, "\\'")}')">${done ? '✓' : ''}</div>
+        <span class="task-text">${text}</span>
+      `;
+      container.appendChild(taskDiv);
+    });
+
+    // به‌روزرسانی وضعیت هفته
+    const statusEl = document.getElementById('status-' + week);
+    if (statusEl) {
+      const allDone = tasks.every(t => taskMap[t] && taskMap[t].done);
+      statusEl.className = 'sprint-status ' + (allDone ? 'status-done' : tasks.some(t => taskMap[t] && taskMap[t].done) ? 'status-active' : 'status-todo');
+    }
+  }
+
+  // نوار پیشرفت
+  const pct = totalCount ? Math.round((doneCount / totalCount) * 100) : 0;
+  document.getElementById('mainProgress').style.width = pct + '%';
+  document.getElementById('progressLabel').textContent = pct + '% کامل';
+}
+
+async function toggleTask(el, title) {
+  const taskDiv = el.closest('.task');
+  const id = taskDiv.dataset.id;
+  if (!id) return;
+
+  const resp = await fetch('/tasks/' + id, { method: 'PATCH' });
+  if (resp.ok) {
+    const data = await resp.json();
+    taskDiv.classList.toggle('done', data.done);
+    el.textContent = data.done ? '✓' : '';
+    renderTasks(); // بازخوانی کامل برای به‌روزرسانی نوار و وضعیت
+  }
+}
+
+function showPhase(n, el) {
+  document.querySelectorAll('.phase-block').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('phase' + n).classList.add('active');
+  el.classList.add('active');
+}
+
+// بارگذاری اولیه
+window.addEventListener('load', renderTasks);
+</script>
+
+</body>
+</html>
+HTMLEOF

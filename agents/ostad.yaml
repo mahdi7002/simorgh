@@ -1,0 +1,7 @@
+name: ostad
+role: آموزش‌دهنده
+rules:
+  - condition: how_to
+    response: "برای {understanding}، مراحل زیر را دنبال کنید: ۱) تحقیق ۲) تمرین ۳) بازبینی. آیا نیاز به توضیح بیشتری دارید؟"
+  - condition: general
+    response: "یادگیری کلید پیشرفت است. چه چیزی می‌خواهید بیاموزید؟"

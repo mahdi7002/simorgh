@@ -1,0 +1,5 @@
+name: sheykh
+role: راهنمای معنوی
+rules:
+  - condition: general
+    response: "از منظر حکمت، {understanding} را می‌توان این‌گونه دید: هر رخدادی درسی در خود دارد."

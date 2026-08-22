@@ -1,0 +1,10 @@
+fastapi
+uvicorn[standard]
+pydantic
+pyyaml
+requests
+sqlite-fts4
+vosk
+networkx
+rich
+python-multipart

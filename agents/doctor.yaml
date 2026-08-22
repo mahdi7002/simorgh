@@ -1,0 +1,7 @@
+name: doctor
+role: مشاور سلامت
+rules:
+  - condition: reminder
+    response: "یادآوری مصرف دارو تنظیم شد: {description}"
+  - condition: general
+    response: "سلامت شما مهم است. علائم خود را شرح دهید تا راهنمایی کنم."

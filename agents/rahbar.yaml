@@ -1,0 +1,11 @@
+name: rahbar
+role: بهترین اقدام چیست؟
+rules:
+  - condition: device_control
+    response: "پیشنهاد: ابتدا {cause} را بررسی کنید. اگر مشکل حل نشد، به یک تعمیرکار خبر دهید."
+  - condition: why_question
+    response: "بر اساس اطلاعات من، {cause}. آیا توضیح بیشتری نیاز دارید؟"
+  - condition: general
+    response: "چطور می‌توانم کمک کنم؟"
+  - condition: reminder
+    response: "باشه، یادآوری تنظیم شد: {description}"

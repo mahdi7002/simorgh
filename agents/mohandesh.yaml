@@ -1,0 +1,7 @@
+name: mohandesh
+role: حل‌کنندهٔ فنی
+rules:
+  - condition: device_control
+    response: "از نظر فنی، {cause}. لطفاً ابتدا اتصالات را بررسی کنید."
+  - condition: how_to
+    response: "برای پیاده‌سازی {understanding}، بهترین روش استفاده از ابزار مناسب است. آیا زبان برنامه‌نویسی خاصی مد نظر دارید؟"
