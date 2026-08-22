@@ -1,0 +1,7 @@
+name: hakim
+role: چرا؟
+rules:
+  - condition: why_question
+    response: "بر اساس گراف علت، {cause}"
+  - condition: device_control
+    response: "دستگاه خاموش است زیرا {cause}"

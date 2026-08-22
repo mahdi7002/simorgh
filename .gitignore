@@ -1,0 +1,7 @@
+__pycache__/
+*.pyc
+data/simorgh.db
+models/vosk-model-fa/
+*.wav
+/tmp/
+.ssh/

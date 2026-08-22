@@ -1,0 +1,5 @@
+*.gguf filter=lfs diff=lfs merge=lfs -text
+*.bin filter=lfs diff=lfs merge=lfs -text
+models/** filter=lfs diff=lfs merge=lfs -text
+*.zip filter=lfs diff=lfs merge=lfs -text
+data/simorgh_full.db filter=lfs diff=lfs merge=lfs -text
