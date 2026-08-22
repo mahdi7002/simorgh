@@ -1,7 +1,43 @@
+# ===== Python =====
 __pycache__/
 *.pyc
-data/simorgh.db
-models/vosk-model-fa/
-*.wav
-/tmp/
-.ssh/
+*.pyo
+*.egg-info/
+.venv/
+venv/
+*.log
+
+# ===== Databases & large data (never commit — keep local or use LFS) =====
+*.db
+*.db.zst
+*.sqlite
+*.sqlite3
+
+# ===== Speech / ML models (large binaries — never commit) =====
+*.mdl
+*.fst
+*.ie
+*.dubm
+vosk-model*/
+*.zip
+*.zip.*
+
+# ===== Editor / OS junk =====
+*.save
+*.save.*
+*.swp
+*~
+.DS_Store
+Thumbs.db
+
+# ===== Secrets — never commit =====
+.env
+*.env
+keys.env
+*_key*.json
+device_report.json
+
+# ===== Build artifacts =====
+build/
+dist/
+*.o

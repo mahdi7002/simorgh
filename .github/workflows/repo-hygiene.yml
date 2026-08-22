@@ -1,0 +1,56 @@
+name: Repo Hygiene Guard
+
+# Runs on every push and pull request. Fails the check (visible as a red X
+# on GitHub) if junk patterns sneak back into the repository — large binary
+# files, editor backups, __pycache__, duplicate zips, or leaked secrets.
+# This is what keeps the repo clean automatically over time, instead of
+# relying on remembering to check by hand.
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  hygiene:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Block files larger than 5MB
+        run: |
+          echo "Scanning tracked files for size..."
+          big=$(git ls-files -z | xargs -0 -I{} du -b "{}" 2>/dev/null | awk '$1 > 5242880 {print}')
+          if [ -n "$big" ]; then
+            echo "❌ Files larger than 5MB found (should be .gitignore'd or use Git LFS):"
+            echo "$big"
+            exit 1
+          fi
+          echo "✅ No oversized files."
+
+      - name: Block known junk patterns
+        run: |
+          echo "Scanning for junk file patterns..."
+          junk=$(git ls-files | grep -E '__pycache__|\.pyc$|\.save($|\.[0-9]+$)|\.zip\.[0-9]+$|\.swp$|~$' || true)
+          if [ -n "$junk" ]; then
+            echo "❌ Junk files tracked in git:"
+            echo "$junk"
+            exit 1
+          fi
+          echo "✅ No junk file patterns."
+
+      - name: Block obvious secret patterns
+        run: |
+          echo "Scanning for leaked-looking API keys..."
+          hits=$(git grep -nE "(gsk_|sk-[A-Za-z0-9]{20,}|api[_-]?key['\"]?\s*[:=]\s*['\"][A-Za-z0-9]{16,})" -- . ':!*.md' ':!.github/workflows/*' || true)
+          if [ -n "$hits" ]; then
+            echo "❌ Possible secret found:"
+            echo "$hits"
+            exit 1
+          fi
+          echo "✅ No obvious secrets."
+
+      - name: Verify minimal demo actually runs
+        run: |
+          python3 demo/simorgh_minimal.py --test
