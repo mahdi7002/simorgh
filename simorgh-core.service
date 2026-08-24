@@ -1,13 +1,11 @@
 [Unit]
 Description=Simorgh Core API (MeshPower 2.0)
 After=network.target
-
 [Service]
 User=mahdi
 WorkingDirectory=/home/mahdi/simorgh
 ExecStart=/usr/bin/python3 /home/mahdi/simorgh/main.py
 Restart=always
 Environment="PATH=/usr/bin:/usr/local/bin"
-
 [Install]
 WantedBy=multi-user.target

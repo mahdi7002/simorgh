@@ -1,0 +1,37 @@
+server:
+  host: "0.0.0.0"
+  port: 8000
+  debug: true
+  workers: 4
+
+database:
+  path: "knowledge/knowledge_graph.db"
+  wal_mode: true
+
+memory:
+  short_term_db: "memory/short_term.db"
+  long_term_db: "memory/long_term.db"
+  max_history: 1000
+
+llm:
+  model_path: "models/qwen2.5-1.5b.gguf"
+  max_ram: "4GB"
+  temperature: 0.7
+  max_tokens: 2048
+
+agents:
+  enabled:
+    - hakim
+    - nazer
+    - rahbar
+  disabled:
+    - ostad
+    - mohandesh
+    - doctor
+    - sheykh
+
+logging:
+  level: "INFO"
+  file: "logs/simorgh.log"
+  max_size: "10MB"
+  backup_count: 5
