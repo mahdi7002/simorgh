@@ -1,13 +1,10 @@
-*.gguf filter=lfs diff=lfs merge=lfs -text
-*.bin filter=lfs diff=lfs merge=lfs -text
-models/** filter=lfs diff=lfs merge=lfs -text
-*.zip filter=lfs diff=lfs merge=lfs -text
-# Prevent the bundled dashboard HTML from dominating GitHub's
-# language-detection stats (this is a Python backend project).
-dashboard/index.html linguist-vendored
-
-# Keep the offline speech-model archive out of language stats and
-# diff views (it's a binary blob, not source).
-models/*.zip linguist-vendored
-models/*.zip -diff
+*.py text eol=lf
+*.sh text eol=lf
+*.md text eol=lf
+*.json text eol=lf
+*.yaml text eol=lf
+*.yml text eol=lf
+*.db binary
+*.gguf binary
+*.onnx binary
 data/simorgh_full.db filter=lfs diff=lfs merge=lfs -text
