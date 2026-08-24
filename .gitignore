@@ -1,43 +1,20 @@
-# ===== Python =====
+venv/
 __pycache__/
 *.pyc
-*.pyo
-*.egg-info/
-.venv/
-venv/
-*.log
-
-# ===== Databases & large data (never commit — keep local or use LFS) =====
+*.bak
+*.bak2
+*.bak3
 *.db
-*.db.zst
-*.sqlite
-*.sqlite3
-
-# ===== Speech / ML models (large binaries — never commit) =====
-*.mdl
-*.fst
-*.ie
-*.dubm
-vosk-model*/
 *.zip
-*.zip.*
-
-# ===== Editor / OS junk =====
-*.save
-*.save.*
-*.swp
-*~
-.DS_Store
-Thumbs.db
-
-# ===== Secrets — never commit =====
+logs/
+audio_in/
+audio_out/
+models/vosk-model-fa/
+models/piper/
+SimorghCore
 .env
-*.env
-keys.env
-*_key*.json
-device_report.json
-
-# ===== Build artifacts =====
-build/
-dist/
-*.o
+catalog.json
+data/reports/
+data/snapshots/
+data/*.log
+core/voice_endpoint_OLD_backup.py

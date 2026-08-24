@@ -1,5 +1,5 @@
+import os
 import sqlite3, json, os
-
 DB_PATH = os.path.join(os.path.dirname(__file__), "../../data/simorgh.db")
 
 def load_cultural_data():
@@ -19,7 +19,6 @@ def load_cultural_data():
 
 def search_cultural(query, limit=3):
     conn = sqlite3.connect(DB_PATH)
-    # جستجوی FTS5 برای یافتن ابیات مرتبط
     rows = conn.execute(
         "SELECT content FROM memory_fts WHERE content MATCH ? LIMIT ?",
         (query, limit)

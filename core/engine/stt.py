@@ -1,21 +1,18 @@
 import os, json, wave
 import vosk
 
-MODEL_PATH = os.path.join(os.path.dirname(__file__), "../../models/vosk-model-fa")
-_model = None
+# مسیر مطلق به مدل Vosk (دقیقاً همان جایی که استخراج شده)
+MODEL_PATH = os.path.expanduser("~/simorgh/models/vosk-model-fa")
 
-def get_model():
-    global _model
-    if _model is None:
-        _model = vosk.Model(MODEL_PATH)
-    return _model
+if not os.path.exists(MODEL_PATH):
+    raise FileNotFoundError(f"مدل Vosk در {MODEL_PATH} یافت نشد")
+_model = vosk.Model(MODEL_PATH)
 
 def transcribe_wav(wav_path: str) -> str:
     wf = wave.open(wav_path, "rb")
     if wf.getnchannels() != 1 or wf.getsampwidth() != 2 or wf.getframerate() != 16000:
         raise ValueError("فایل صوتی باید mono, 16bit, 16000Hz باشد")
-    model = get_model()
-    rec = vosk.KaldiRecognizer(model, 16000)
+    rec = vosk.KaldiRecognizer(_model, 16000)
     results = []
     while True:
         data = wf.readframes(4000)
