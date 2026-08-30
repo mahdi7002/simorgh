@@ -77,11 +77,15 @@ async def ask(query: str = Form(...)):
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/chat")
-async def chat(query: str = Form(...), agent: str = Form("hakim")):
+async def chat(query: str = Form(...), agent: str = Form(None), persona: str = Form(None)):
+    # هم «agent» هم «persona» پذیرفته می‌شود — چون /personas از واژه‌ی
+    # persona استفاده می‌کند ولی این endpoint قبلاً فقط agent می‌خواست؛
+    # این‌طور هیچ‌کدام از دو نام‌گذاری کاربر را غافلگیر نمی‌کند.
+    chosen_agent = agent or persona or "hakim"
     try:
-        logger.info(f"Chat query: {query} (agent={agent})")
-        response = chat_ask(query, agent=agent)
-        return {"response": response, "agent": agent}
+        logger.info(f"Chat query: {query} (agent={chosen_agent})")
+        response = chat_ask(query, agent=chosen_agent)
+        return {"response": response, "agent": chosen_agent}
     except Exception as e:
         logger.error(f"Error in /chat: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
@@ -105,18 +109,28 @@ async def personas_route():
 
 @app.get("/dashboard/")
 async def dashboard():
-    return FileResponse("/home/mahdi/Desktop/simorgh_dashboard.html")
+    from core.paths import DASHBOARD_HTML
+    return FileResponse(str(DASHBOARD_HTML))
 
 
 @app.get("/status")
 async def status():
+    import socket
+
+    def port_is_open(port: str | int, timeout: float = 0.5) -> bool:
+        try:
+            with socket.create_connection(("127.0.0.1", int(port)), timeout=timeout):
+                return True
+        except OSError:
+            return False
+
     services = []
     for name, port in [("simorgh-core", 8000), ("simorgh-persona", 8001), ("llama-server", 8080)]:
-        try:
-            r = subprocess.run(["systemctl", "is-active", name], capture_output=True, text=True, timeout=2)
-            up = r.stdout.strip() == "active"
-        except Exception:
-            up = False
+        # این سرویس (simorgh-core) خودش دارد به این درخواست جواب می‌دهد —
+        # پس همیشه up است، صرف‌نظر از اینکه از طریق systemd اجرا شده باشد
+        # یا مستقیم با «python3 main.py». برای بقیه، اتصال واقعی به پورت
+        # را چک می‌کنیم، نه وضعیت systemd (که روی کلون تازه اصلاً ثبت نشده).
+        up = True if name == "simorgh-core" else port_is_open(port)
         services.append({"name": name, "port": port, "up": up})
     return {
         "cpu": psutil.cpu_percent(interval=0.3),

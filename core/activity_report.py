@@ -6,8 +6,9 @@ core/activity_report.py
 
 import sqlite3
 from datetime import datetime
+from pathlib import Path
 
-DB_PATH = "/home/mahdi/SimorghCore/data/activity.db"
+from core.paths import ACTIVITY_DB as DB_PATH
 POLL_SECONDS = 15  # باید با activity_tracker.py هماهنگ باشه
 
 
@@ -16,11 +17,18 @@ def get_daily_report(date_str: str = None) -> str:
     if date_str is None:
         date_str = datetime.now().strftime("%Y-%m-%d")
 
+    if not Path(DB_PATH).exists():
+        return f"برای {date_str} هیچ فعالیتی ثبت نشده."
+
     conn = sqlite3.connect(DB_PATH)
-    rows = conn.execute(
-        "SELECT app, window_title, timestamp FROM activity_log WHERE timestamp LIKE ? ORDER BY timestamp",
-        (f"{date_str}%",),
-    ).fetchall()
+    try:
+        rows = conn.execute(
+            "SELECT app, window_title, timestamp FROM activity_log WHERE timestamp LIKE ? ORDER BY timestamp",
+            (f"{date_str}%",),
+        ).fetchall()
+    except sqlite3.OperationalError:
+        conn.close()
+        return f"برای {date_str} هیچ فعالیتی ثبت نشده."
     conn.close()
 
     if not rows:
