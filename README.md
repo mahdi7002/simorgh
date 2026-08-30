@@ -60,6 +60,6 @@ see the portfolio linked from this profile.
 
 ## License
 
-No license file is included yet — this repository is not currently
-licensed for reuse. A license will be added before any external
+This repository is licensed under the MIT License — see the LICENSE
+file for details.
 contribution is invited.

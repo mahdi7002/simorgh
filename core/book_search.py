@@ -12,7 +12,7 @@ from typing import List, Dict
 
 logger = logging.getLogger(__name__)
 
-DB_PATH = "/home/mahdi/SimorghCore/data/simorgh.db"
+from core.paths import POETRY_DB as DB_PATH
 STOPWORDS = {"من", "تو", "او", "ما", "شما", "این", "که", "را", "به", "از", "با", "در", "و"}
 
 

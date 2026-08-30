@@ -13,7 +13,7 @@ import subprocess
 import time
 from datetime import datetime
 
-DB_PATH = "/home/mahdi/SimorghCore/data/activity.db"
+from core.paths import ACTIVITY_DB as DB_PATH
 POLL_SECONDS = 15
 
 
