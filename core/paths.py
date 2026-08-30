@@ -18,6 +18,7 @@ DATA_DIR.mkdir(parents=True, exist_ok=True)
 QURAN_DB = Path(os.environ.get("SIMORGH_QURAN_DB", str(DATA_DIR / "quran.db")))
 POETRY_DB = Path(os.environ.get("SIMORGH_POETRY_DB", str(DATA_DIR / "simorgh.db")))
 ACTIVITY_DB = Path(os.environ.get("SIMORGH_ACTIVITY_DB", str(DATA_DIR / "activity.db")))
+BOOKS_DB = Path(os.environ.get("SIMORGH_BOOKS_DB", str(DATA_DIR / "books.db")))
 
 DASHBOARD_HTML = Path(os.environ.get("SIMORGH_DASHBOARD_HTML", str(ROOT / "dashboard" / "index.html")))
 
