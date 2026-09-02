@@ -1,6 +1,9 @@
 import json, sqlite3, time, requests
 from pathlib import Path
-import pdfplumber
+try:
+    import pdfplumber
+except ImportError:
+    pdfplumber = None
 
 CATALOG_PATH = Path.home() / "simorgh" / "catalog.json"
 DB_PATH = str(Path.home() / "simorgh" / "library_catalog.db")

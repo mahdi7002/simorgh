@@ -54,3 +54,8 @@ jobs:
       - name: Verify minimal demo actually runs
         run: |
           python3 demo/simorgh_minimal.py --test
+
+      - name: Verify main.py imports with only the light dependency set
+        run: |
+          pip install fastapi uvicorn python-multipart pydantic requests python-dotenv psutil pyyaml
+          python3 -c "import main; print('main.py imports cleanly with light deps only')"
