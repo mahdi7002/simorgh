@@ -10,7 +10,7 @@ import sqlite3
 from typing import List, Dict
 
 logger = logging.getLogger(__name__)
-DB_PATH = "/home/mahdi/SimorghOS_Core-1/data/grid/quran.db"
+DB_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "grid", "quran.db")
 
 # کلمات عمومی/فعل‌های رایج که در اکثر آیات ظاهر می‌شوند و باعث نویز می‌شوند
 STOPWORDS = {
