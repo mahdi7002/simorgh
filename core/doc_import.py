@@ -1,23 +1,10 @@
 import sqlite3
 from pathlib import Path
+import pdfplumber
+import pytesseract
+from pdf2image import convert_from_path
 
-try:
-    import pdfplumber
-    import pytesseract
-    from pdf2image import convert_from_path
-    _PDF_LIBS_OK = True
-except ImportError:
-    pdfplumber = pytesseract = convert_from_path = None
-    _PDF_LIBS_OK = False
-
-from core.paths import BOOKS_DB as DB_PATH
-
-def _require_pdf_libs():
-    if not _PDF_LIBS_OK:
-        raise RuntimeError(
-            "کتابخانه‌های PDF نصب نیستند — برای فعال‌سازی: "
-            "pip install pdfplumber pytesseract pdf2image"
-        )
+DB_PATH = str(Path.home() / "simorgh" / "books.db")
 
 def _init_db():
     conn = sqlite3.connect(DB_PATH)
@@ -29,7 +16,6 @@ def _init_db():
     return conn
 
 def _extract_text_pdf(path: str) -> str:
-    _require_pdf_libs()
     text_parts = []
     with pdfplumber.open(path) as pdf:
         for page in pdf.pages:

@@ -10,39 +10,27 @@ from fastapi import APIRouter
 
 router = APIRouter()
 
-from core.paths import POETRY_DB, DATA_DIR
-LIBRARY_DB = str(DATA_DIR / "library_catalog.db")
+POETRY_DB = "/home/mahdi/SimorghCore/data/simorgh.db"
+LIBRARY_DB = str(Path.home() / "simorgh" / "library_catalog.db")
 
 
 @router.get("/poets")
 def list_poets():
-    if not Path(POETRY_DB).exists():
-        return []
     conn = sqlite3.connect(POETRY_DB)
-    try:
-        rows = conn.execute(
-            "SELECT poet, COUNT(*) as cnt FROM poems_fts GROUP BY poet ORDER BY cnt DESC"
-        ).fetchall()
-    except sqlite3.OperationalError:
-        conn.close()
-        return []
+    rows = conn.execute(
+        "SELECT poet, COUNT(*) as cnt FROM poems_fts GROUP BY poet ORDER BY cnt DESC"
+    ).fetchall()
     conn.close()
     return [{"poet": r[0], "count": r[1]} for r in rows]
 
 
 @router.get("/poet-poems")
 def poet_poems(poet: str, limit: int = 50):
-    if not Path(POETRY_DB).exists():
-        return []
     conn = sqlite3.connect(POETRY_DB)
-    try:
-        rows = conn.execute(
-            "SELECT title, text FROM poems_fts WHERE poet = ? LIMIT ?",
-            (poet, limit)
-        ).fetchall()
-    except sqlite3.OperationalError:
-        conn.close()
-        return []
+    rows = conn.execute(
+        "SELECT title, text FROM poems_fts WHERE poet = ? LIMIT ?",
+        (poet, limit)
+    ).fetchall()
     conn.close()
     result = []
     for title, text in rows:

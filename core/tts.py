@@ -8,7 +8,7 @@ OUT_DIR.mkdir(parents=True, exist_ok=True)
 def synthesize(text: str) -> str:
     out_path = OUT_DIR / f"{uuid.uuid4().hex}.wav"
     proc = subprocess.run(
-        [__import__("core.paths", fromlist=["PIPER_BIN"]).PIPER_BIN, "--model", MODEL, "--output_file", str(out_path)],
+        ["/home/mahdi/.local/bin/piper", "--model", MODEL, "--output_file", str(out_path)],
         input=text.encode("utf-8"),
         capture_output=True,
     )
