@@ -1,0 +1,37 @@
+[
+  {
+    "component": "agent/ostad",
+    "issue": "No recent usage",
+    "suggestion": "Consider removing or reviewing"
+  },
+  {
+    "component": "agent/sheykh",
+    "issue": "No recent usage",
+    "suggestion": "Consider removing or reviewing"
+  },
+  {
+    "component": "agent/rahbar",
+    "issue": "No recent usage",
+    "suggestion": "Consider removing or reviewing"
+  },
+  {
+    "component": "agent/mohandesh",
+    "issue": "No recent usage",
+    "suggestion": "Consider removing or reviewing"
+  },
+  {
+    "component": "agent/hakim",
+    "issue": "No recent usage",
+    "suggestion": "Consider removing or reviewing"
+  },
+  {
+    "component": "agent/nazer",
+    "issue": "No recent usage",
+    "suggestion": "Consider removing or reviewing"
+  },
+  {
+    "component": "agent/doctor",
+    "issue": "No recent usage",
+    "suggestion": "Consider removing or reviewing"
+  }
+]

@@ -1,20 +1,59 @@
+# Virtual environments
 venv/
+.venv/
+env/
+
+# Python cache & build
 __pycache__/
-*.pyc
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+dist/
+build/
+
+# Speech models & large binaries (NEVER commit)
+vosk-model-fa/
+models/vosk-model-fa/
+models/vosk-model-small-fa-0.5.zip
+models/piper/
+*.zip
+*.bin
+*.pt
+*.onnx
+*.gguf
+*.fst
+*.mdl
+
+# Backups & temporary
 *.bak
 *.bak2
 *.bak3
-*.db
-*.zip
+*.tmp
+*.pre_upgrade_backup
+*.OLD_backup
+*~
+
+# Runtime logs & temporary data
+.env
 logs/
 audio_in/
 audio_out/
-models/vosk-model-fa/
-models/piper/
-SimorghCore
-.env
-catalog.json
 data/reports/
 data/snapshots/
 data/*.log
+data/import*.log
+data/reflection.log
+data/reports.log
+
+# IDE / OS
+.idea/
+.vscode/
+*.swp
+.DS_Store
+Thumbs.db
+
+# Old specific files
 core/voice_endpoint_OLD_backup.py
+SimorghCore

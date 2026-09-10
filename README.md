@@ -1,71 +1,96 @@
-# Simorgh — سیمرغ
+# سیمرغ · Simorgh
 
-An offline-first Persian AI assistant platform. Built through AI-directed
-development: every line of code in this repository was written by an AI
-model (primarily Claude) under direction from the project's author —
-[Mahdi Jafari Najafabadi](https://github.com/mahdi7002), who defines
-requirements, reviews architecture, and verifies results, but does not
-write code by hand.
+**دستیار هوش مصنوعی آفلاین‌محور، با هویت فرهنگی فارسی و عرفانی**
 
-## Quick start — zero setup required
+ساخته‌شده با هدایت انسانی و تولید کد توسط مدل‌های هوش مصنوعی — نه ادعای رقابت با غول‌های صنعتی، بلکه چیزی که آن‌ها معمولاً نمی‌سازند: **کاملاً محلی، بدون کلید API اجباری، با پرسونا و متون فرهنگی واقعی.**
 
-The fastest way to see how the persona system works, with no
-dependencies and no local model required:
+---
+
+## استقبال
+
+اگر تازه این مخزن را باز کرده‌اید: خوش آمدید.
+
+سیمرغ یک محصول یک‌نفرهٔ هدایت‌شده است. نویسندۀ پروژه ([Mahdi Jafari Najafabadi](https://github.com/mahdi7002)، یزد) نیازها، معماری و پذیرش نتیجه را تعیین می‌کند؛ کد توسط مدل‌های AI نوشته و بازبینی می‌شود. هدف این نبوده که «بزرگ‌ترین مدل جهان» باشد — هدف این بوده که **روی ماشین خودتان، با احترام به محدودیت‌ها، زنده بماند و مفید باشد.**
+
+آنچه امروز در این ریپو می‌بینید نتیجۀ مسیر شفاف است: پیدا کردن فایل خالی، حذف مسیرهای سخت‌کد، تست cold-start مثل کاربر غریبه، و اصلاح وابستگی‌ها تا `import main` بدون پشتهٔ صوت/PDF هم ممکن باشد.
+
+> **Verification over claims.** چیزی را «کار می‌کند» نمی‌گوییم مگر اینکه واقعاً اجرا و چک شده باشد.
+
+---
+
+## شروع سریع (کاربر اول)
+
+```bash
+git clone https://github.com/mahdi7002/simorgh.git
+cd simorgh
+
+python3 -m venv .venv
+source .venv/bin/activate   # Windows: .venv\Scripts\activate
+pip install -U pip
+pip install -r requirements.txt
+
+python -c "import main; print('OK', len(main.app.routes))"
+python main.py
+```
+
+سپس:
+
+```bash
+curl -s http://127.0.0.1:8000/health
+curl -s http://127.0.0.1:8000/personas
+curl -s -X POST http://127.0.0.1:8000/chat -d "query=سلام&agent=hakim"
+```
+
+- **بدون** سرور مدل محلی: پاسخ fallback صادقانه («مدل در دسترس نیست»).
+- **با** `llama-server` (مثلاً پورت ۸۰۸۰/۸۰۸۱): چت کامل با پرسوناها.
+
+نسخهٔ مینیمال بدون FastAPI:
 
 ```bash
 python3 demo/simorgh_minimal.py --test
 python3 demo/simorgh_minimal.py "عدالت چیست؟"
 ```
 
-This minimal demo always produces a working response — if a local LLM
-server is reachable it uses that, otherwise it falls back to an offline
-public-domain wisdom set. It exists specifically so anyone cloning this
-repo has something that runs immediately.
+جزئیات بیشتر: [`docs/FIRST_RUN.md`](docs/FIRST_RUN.md) (اگر در شاخه باشد) و [`QUICKSTART.md`](QUICKSTART.md).
 
-## What's in this repository
+---
 
-- `cli.py`, `main.py` — command-line and service entry points
-- `core/engine/` — routing, memory, and understanding modules
-- `agents/` — persona definitions (YAML system prompts)
-- `dashboard/` — web dashboard front-end
-- `demo/simorgh_minimal.py` — the always-working minimal example above
-- `.github/workflows/repo-hygiene.yml` — automated guard that blocks
-  oversized files, editor junk, and leaked secrets on every push
+## چه چیزی اینجاست
 
-## Current status — being actively synced
+| بخش | توضیح |
+|-----|--------|
+| `main.py` / `cli.py` | ورود سرویس و خط فرمان |
+| `core/` | چت، هویت، حافظه، جستجوی قرآن/شعر، مسیرهای portable |
+| `agents/` | تعاریف عامل / YAML |
+| ۱۲ پرسونا | از جمله حکیم، حافظ، ناظر، رهبر، … (`GET /personas`) |
+| `dashboard/` | رابط وب |
+| `demo/simorgh_minimal.py` | همیشه چیزی برای اجرا دارد |
+| `.github/workflows/` | نگهبانی hygiene ریپو |
 
-This public repository is in the process of being brought in line with
-the author's full local development version, which includes a larger
-set of personas, a full-text search index across classical Persian
-poetry and a verified Quranic text database, and local speech
-recognition. That fuller version currently runs locally and is being
-migrated here incrementally rather than dumped in all at once, so that
-every commit stays reviewable and the repository stays clean (see the
-hygiene guard above).
+**اختیاری (نصب جدا):** گفتار (`faster-whisper`)، PDF، متریک غنی‌تر (`psutil`). هستهٔ `requirements.txt` برای بالا آمدن API کافی است.
 
-## Design principles
+---
 
-- **Offline-first.** The core system requires no API key and no
-  internet connection to function.
-- **Provider-agnostic.** Cloud AI providers are optional, disabled by
-  default, and never hardcoded — the user chooses.
-- **Verification over claims.** Nothing here is presented as tested or
-  finished without being actually run and checked.
+## اصول طراحی
 
-## Author
+1. **Offline-first** — بدون کلید API اجباری و بدون اینترنت برای هسته  
+2. **Provider-agnostic** — ابر اختیاری است، پیش‌فرض خاموش  
+3. **Constraint as design** — محدودیت رم/برد/Termux بخشی از معماری است، نه بهانه  
+4. **Honesty** — محدودیت‌ها نوشته می‌شوند؛ ادعا بدون اجرا پذیرفته نیست  
 
-Built by [Mahdi Jafari Najafabadi](https://github.com/mahdi7002),
-Yazd, Iran — an AI-directed product builder. More projects and context:
-see the portfolio linked from this profile.
+---
 
-## License
+## وضعیت
 
-This repository is licensed under the MIT License — see the LICENSE
-file for details.
-contribution is invited.
+مخزن عمومی به‌تدریج با نسخهٔ کامل محلی هم‌تراز می‌شود (دانشنامه، شعر، قرآن، صوت). هر کامیت باید قابل‌بازبینی بماند.
 
-## اصلِ حاکم — منعِ خودبهبودیِ خودکار
+برای گزارش باگ یا پیشنهاد: Issues همین ریپو.
 
-> سیمرغ هیچ‌وقت نباید بدونِ دخالتِ مستقیمِ انسان، کدِ خودش یا توانایی‌های خودش رو تغییر بده یا گسترش بده.
+---
 
-این محدودیتِ فنی نیست — انتخابِ ارزشیه. جزئیاتِ کامل در [docs/CHARTER.md](docs/CHARTER.md) و [docs/GOVERNANCE.md](docs/GOVERNANCE.md).
+## مجوز و نویسنده
+
+- **License:** MIT — فایل [`LICENSE`](LICENSE)  
+- **Author:** [Mahdi Jafari Najafabadi](https://github.com/mahdi7002) · Yazd, Iran  
+
+همکاری با همان روحیهٔ شفافیت خوش‌آمد است — اول Issue، بعد PR کوچک و قابل‌تست.

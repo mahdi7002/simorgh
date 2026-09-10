@@ -11,8 +11,8 @@ import re
 import sqlite3
 import subprocess
 
-from core.paths import POETRY_DB as DB_PATH
-from core.paths import SCAN_ROOTS
+DB_PATH = "/home/mahdi/SimorghCore/data/simorgh.db"
+SCAN_ROOTS = ["/home/mahdi"]
 EXCLUDE_DIRS = {"venv", "node_modules", ".git", "__pycache__", ".cache"}
 CHUNK_SIZE = 1000
 
