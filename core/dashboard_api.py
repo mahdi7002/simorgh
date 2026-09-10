@@ -10,7 +10,7 @@ from fastapi import APIRouter
 
 router = APIRouter()
 
-POETRY_DB = "/home/mahdi/SimorghCore/data/simorgh.db"
+POETRY_DB = str(Path(__file__).resolve().parent.parent / "data" / "simorgh_full.db")
 LIBRARY_DB = str(Path.home() / "simorgh" / "library_catalog.db")
 
 
