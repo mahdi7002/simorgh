@@ -63,3 +63,9 @@ see the portfolio linked from this profile.
 This repository is licensed under the MIT License — see the LICENSE
 file for details.
 contribution is invited.
+
+## اصلِ حاکم — منعِ خودبهبودیِ خودکار
+
+> سیمرغ هیچ‌وقت نباید بدونِ دخالتِ مستقیمِ انسان، کدِ خودش یا توانایی‌های خودش رو تغییر بده یا گسترش بده.
+
+این محدودیتِ فنی نیست — انتخابِ ارزشیه. جزئیاتِ کامل در [docs/CHARTER.md](docs/CHARTER.md) و [docs/GOVERNANCE.md](docs/GOVERNANCE.md).
