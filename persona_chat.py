@@ -132,13 +132,24 @@ def main():
             print(f"  - {p['id']:10} {p['name_fa']:8} {p['role_fa']}")
 
         print()
-        result = chat_with_persona("hakim", "زندگی چیست؟")
-        print(f"[نمونه پاسخ حکیم — mode={result['mode']}]")
-        print(result["answer"])
+        print("--- تست واقعیِ هر ۱۲ پرسونا (نه فقط یکی) ---")
+        all_ok = True
+        for p in all_personas:
+            pid = p["id"]
+            result = chat_with_persona(pid, "یک سوال ساده برای تست")
+            has_answer = bool(result.get("answer"))
+            if not has_answer:
+                all_ok = False
+            print(f"  {pid:10} mode={result.get('mode'):8} {'✅' if has_answer else '❌ بدون پاسخ'}")
 
         print()
-        print("TEST PASS" if ok and "answer" in result else "TEST FAIL")
-        sys.exit(0 if ok else 1)
+        sample = chat_with_persona("hakim", "زندگی چیست؟")
+        print(f"[نمونه پاسخ حکیم — mode={sample['mode']}]")
+        print(sample["answer"])
+
+        print()
+        print("TEST PASS" if ok and all_ok else "TEST FAIL")
+        sys.exit(0 if (ok and all_ok) else 1)
 
     if len(args) >= 2:
         persona_id, message = args[0], " ".join(args[1:])
