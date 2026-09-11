@@ -1,10 +1,9 @@
-from faster_whisper import WhisperModel
-
 _model = None
 
 def get_model():
     global _model
     if _model is None:
+        from faster_whisper import WhisperModel
         _model = WhisperModel("tiny", device="cpu", compute_type="int8")
     return _model
 
