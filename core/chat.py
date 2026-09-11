@@ -11,7 +11,7 @@ core/chat.py
 """
 
 from core.identity import SIMORGH_IDENTITY
-from core.llm_local import generate
+from core.llm_local import generate, get_model_tier
 from core.poetry_search import get_poetic_wisdom, format_for_prompt as format_poetry
 from core.quran_search import get_quran_wisdom, format_for_prompt as format_quran
 from core.book_search import get_book_wisdom, format_for_prompt as format_books
@@ -221,6 +221,10 @@ def ask(question: str, agent: str = "hakim") -> str:
     handoff = suggest_handoff(question, agent)
     if handoff and handoff in PERSONAS:
         hint = f"\n\n💡 اگه خواستی، می‌تونی این سؤال رو از «{PERSONAS[handoff]['symbol']} {PERSONAS[handoff]['name']}» هم بپرسی."
-        return response + hint
+        response += hint
+
+    tier = get_model_tier(needs_quality=needs_quality)
+    if tier == "large" and len(response) > 600:
+        response += "\n\n📄 اگه بخوای، می‌تونم این رو به‌صورت یک فایل هم برات ذخیره کنم — فقط بگو."
 
     return response
