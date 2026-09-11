@@ -16,8 +16,10 @@ build/
 # Speech models & large binaries (NEVER commit)
 vosk-model-fa/
 models/vosk-model-fa/
-models/vosk-model-small-fa-0.5.zip
 models/piper/
+models/vosk-model-small-fa-0.5.zip
+vosk-model-small-fa-0.5/
+vosk-model-small-fa-0.5.zip
 *.zip
 *.bin
 *.pt
@@ -46,6 +48,9 @@ data/*.log
 data/import*.log
 data/reflection.log
 data/reports.log
+imports/
+transcripts/
+memory/*.db
 
 # IDE / OS
 .idea/
