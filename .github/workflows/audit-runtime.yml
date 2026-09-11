@@ -1,0 +1,122 @@
+name: SIMORGH Runtime Audit
+
+on:
+  push:
+    branches:
+      - 'audit/**'
+
+jobs:
+  runtime-audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Environment
+        run: |
+          python --version
+          git rev-parse HEAD
+          find . -type f | wc -l
+          du -sh .
+
+      - name: Install declared dependencies
+        run: python -m pip install -r requirements.txt
+
+      - name: Compile all Python
+        run: python -m compileall -q .
+
+      - name: Declared-dependencies import probe
+        id: declared_import
+        continue-on-error: true
+        run: python -c "import main; print('DECLARED_IMPORT_PASS')"
+
+      - name: Install runtime-only modules referenced by source
+        run: python -m pip install psutil pyyaml httpx pytest
+
+      - name: Full main import probe
+        id: main_import
+        continue-on-error: true
+        run: python -c "import main; print('MAIN_IMPORT_PASS', len(main.app.routes))"
+
+      - name: Minimal demo
+        id: minimal_demo
+        continue-on-error: true
+        run: python demo/simorgh_minimal.py --test
+
+      - name: Pytest discovery
+        id: pytest
+        continue-on-error: true
+        run: |
+          files=$(find . -type f \( -name 'test_*.py' -o -name '*_test.py' \) -not -path './.git/*')
+          if [ -z "$files" ]; then
+            echo 'NO_PYTHON_TEST_FILES'
+            exit 0
+          fi
+          pytest -q
+
+      - name: Database integrity
+        id: db
+        continue-on-error: true
+        run: |
+          python - <<'PY'
+          import sqlite3
+          from pathlib import Path
+          dbs=list(Path('.').rglob('*.db'))
+          print('DB_COUNT', len(dbs))
+          bad=0
+          for p in dbs:
+              try:
+                  c=sqlite3.connect(f'file:{p}?mode=ro', uri=True, timeout=5)
+                  result=c.execute('PRAGMA integrity_check').fetchone()[0]
+                  tables=c.execute("SELECT count(*) FROM sqlite_master WHERE type='table'").fetchone()[0]
+                  print(f'DB {p} integrity={result} tables={tables} size={p.stat().st_size}')
+                  bad += result != 'ok'
+                  c.close()
+              except Exception as e:
+                  print(f'DB {p} ERROR {type(e).__name__}: {e}')
+                  bad += 1
+          raise SystemExit(1 if bad else 0)
+          PY
+
+      - name: API smoke test
+        id: api
+        continue-on-error: true
+        run: |
+          python - <<'PY'
+          import main
+          from fastapi.testclient import TestClient
+          c=TestClient(main.app)
+          r=c.get('/health')
+          print('HEALTH', r.status_code, r.text)
+          r=c.get('/personas')
+          print('PERSONAS', r.status_code, len(r.json().get('personas', [])))
+          print('ROUTES', sorted(getattr(x,'path','') for x in main.app.routes))
+          PY
+
+      - name: Dashboard path probe
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('/home/mahdi/Desktop/simorgh_dashboard.html')
+          print('HARDCODED_DASHBOARD_EXISTS', p.exists())
+          PY
+
+      - name: Audit verdict
+        run: |
+          echo "Declared import outcome: ${{ steps.declared_import.outcome }}"
+          echo "Main import outcome: ${{ steps.main_import.outcome }}"
+          echo "Minimal demo outcome: ${{ steps.minimal_demo.outcome }}"
+          echo "Pytest outcome: ${{ steps.pytest.outcome }}"
+          echo "Database outcome: ${{ steps.db.outcome }}"
+          echo "API outcome: ${{ steps.api.outcome }}"
+          if [ "${{ steps.main_import.outcome }}" != "success" ] || [ "${{ steps.minimal_demo.outcome }}" != "success" ] || [ "${{ steps.db.outcome }}" != "success" ] || [ "${{ steps.api.outcome }}" != "success" ]; then
+            echo 'RUNTIME_AUDIT_FAIL'
+            exit 1
+          fi
+          echo 'RUNTIME_AUDIT_PASS'
