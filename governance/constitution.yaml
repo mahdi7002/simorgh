@@ -1,0 +1,13 @@
+version: 1
+principles:
+  - human_decides
+  - known_is_not_inferred
+  - preserve_provenance
+  - no_privilege_escalation
+  - no_autonomous_constitution_change
+self_improvement:
+  max_autonomous_risk: 2
+  executable_changes: sandbox_only
+  privilege_or_network_changes: human_gate
+  evaluator_changes: human_gate
+  constitution_changes: human_gate
