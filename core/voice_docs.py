@@ -1,12 +1,14 @@
-from fastapi import APIRouter, UploadFile, File
+from pathlib import Path
+import shutil
+import tempfile
+from fastapi import APIRouter, UploadFile, File, HTTPException
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
-import shutil, tempfile
-from pathlib import Path
-
+from core.paths import IMPORTS_DIR
 from core.tts import synthesize
 from core.stt import transcribe
-from core.doc_import import import_file, search_books
+from core.memory_journal import add_entry, get_entries, search_entries
+from core.yazd_lore import tell_story_about
 
 router = APIRouter()
 
@@ -15,33 +17,38 @@ class SpeakRequest(BaseModel):
 
 @router.post("/speak")
 def speak(req: SpeakRequest):
-    path = synthesize(req.text)
-    return FileResponse(path, media_type="audio/wav")
+    return FileResponse(synthesize(req.text), media_type="audio/wav")
 
 @router.post("/listen")
 async def listen(file: UploadFile = File(...)):
     with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as tmp:
         shutil.copyfileobj(file.file, tmp)
         tmp_path = tmp.name
-    text = transcribe(tmp_path)
-    Path(tmp_path).unlink(missing_ok=True)
-    return {"text": text}
+    try:
+        return {"text": transcribe(tmp_path)}
+    finally:
+        Path(tmp_path).unlink(missing_ok=True)
 
 @router.post("/import")
 async def import_doc(file: UploadFile = File(...)):
-    dest = Path.home() / "simorgh" / "imports" / file.filename
-    dest.parent.mkdir(parents=True, exist_ok=True)
-    with open(dest, "wb") as f:
+    filename = Path(file.filename or "").name
+    if not filename or filename in {".", ".."}:
+        raise HTTPException(400, "Invalid filename")
+    IMPORTS_DIR.mkdir(parents=True, exist_ok=True)
+    dest = IMPORTS_DIR / filename
+    with dest.open("wb") as f:
         shutil.copyfileobj(file.file, f)
-    count = import_file(str(dest))
-    return {"file": file.filename, "chunks_indexed": count}
+    try:
+        from core.doc_import import import_file
+        count = import_file(str(dest))
+        return {"file": filename, "chunks_indexed": count}
+    except RuntimeError as exc:
+        raise HTTPException(503, str(exc)) from exc
 
 @router.get("/books-search")
 def books_search(q: str):
+    from core.doc_import import search_books
     return search_books(q)
-
-from core.yazd_lore import tell_story_about, format_for_prompt as format_yazd_lore
-from core.memory_journal import add_entry, get_entries, search_entries
 
 class JournalEntry(BaseModel):
     place: str
@@ -49,8 +56,7 @@ class JournalEntry(BaseModel):
 
 @router.post("/journal")
 def journal_add(entry: JournalEntry):
-    entry_id = add_entry(entry.place, entry.note)
-    return {"id": entry_id, "status": "ثبت شد"}
+    return {"id": add_entry(entry.place, entry.note), "status": "ثبت شد"}
 
 @router.get("/journal")
 def journal_list(limit: int = 20):
@@ -62,5 +68,4 @@ def journal_search(q: str):
 
 @router.get("/yazd-story")
 def yazd_story(place: str):
-    story = tell_story_about(place)
-    return {"place": place, "story": story or "روایتی برای این مکان هنوز ثبت نشده."}
+    return {"place": place, "story": tell_story_about(place) or "روایتی برای این مکان هنوز ثبت نشده."}
