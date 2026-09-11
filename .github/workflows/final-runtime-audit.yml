@@ -1,0 +1,68 @@
+name: SIMORGH Final Runtime Audit
+
+on:
+  push:
+    branches:
+      - 'fix/final-*'
+
+jobs:
+  runtime:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install core dependencies
+        run: python -m pip install -r requirements.txt pytest httpx
+      - name: Compile source
+        run: python -m compileall -q .
+      - name: Import main with core dependencies only
+        run: python -c "import main; print('MAIN_IMPORT_PASS', len(main.app.routes))"
+      - name: Import all core modules
+        run: |
+          python - <<'PY'
+          import importlib, pathlib
+          mods=[]
+          for p in pathlib.Path('core').rglob('*.py'):
+              if p.name.startswith('test_') or p.name.endswith('_test.py'):
+                  continue
+              mods.append('.'.join(p.with_suffix('').parts))
+          failures=[]
+          for mod in sorted(set(mods)):
+              try: importlib.import_module(mod)
+              except Exception as exc: failures.append((mod,type(exc).__name__,str(exc)))
+          print('CORE_MODULES',len(set(mods)))
+          for x in failures: print('FAIL',*x)
+          raise SystemExit(1 if failures else 0)
+          PY
+      - name: Minimal demo
+        run: python demo/simorgh_minimal.py --test
+      - name: Regression tests
+        run: pytest -q
+      - name: Database integrity
+        run: |
+          python - <<'PY'
+          import sqlite3
+          from pathlib import Path
+          dbs=list(Path('.').rglob('*.db'))
+          bad=0
+          for p in dbs:
+              with sqlite3.connect(f'file:{p}?mode=ro', uri=True) as c:
+                  result=c.execute('PRAGMA integrity_check').fetchone()[0]
+                  print(f'DB {p} integrity={result} size={p.stat().st_size}')
+                  bad += result != 'ok'
+          raise SystemExit(1 if bad else 0)
+          PY
+      - name: API smoke
+        run: |
+          python - <<'PY'
+          from fastapi.testclient import TestClient
+          import main
+          c=TestClient(main.app)
+          assert c.get('/health').status_code == 200
+          assert c.get('/dashboard/').status_code == 200
+          assert c.get('/personas').status_code == 200
+          print('API_SMOKE_PASS')
+          PY

@@ -3,34 +3,51 @@
 ## پیش‌نیازها
 - Python 3.10+
 - pip
-- ffmpeg
-- 8GB RAM
+- ffmpeg فقط برای workflowهای صوتی/تبدیل فایل
+- 8GB RAM برای اجرای هسته کافی است؛ مدل محلی بسته به اندازهٔ مدل حافظهٔ بیشتری می‌خواهد.
 
-## نصب
+## نصب هسته
 ```bash
 git clone https://github.com/mahdi7002/simorgh.git
 cd simorgh
-pip install -r requirements.txt
-python -c "from core.engine.memory_graph import init_db; init_db()"
+python3 -m venv .venv
+. .venv/bin/activate
+python -m pip install -U pip
+python -m pip install -r requirements.txt
 ```
 
-## دانلود مدل Vosk (تشخیص گفتار فارسی)
+## قابلیت‌های اختیاری PDF / OCR / گفتار
 ```bash
-mkdir -p models && cd models
-wget https://alphacephei.com/vosk/models/vosk-model-small-fa-0.5.zip
-unzip vosk-model-small-fa-0.5.zip
-mv vosk-model-small-fa-0.5 vosk-model-fa
-cd ..
+python -m pip install -r requirements-optional.txt
 ```
+برای STT محلی، مدل/پیاده‌سازی انتخابی را متناسب با سخت‌افزار نصب کنید. نبود این وابستگی‌ها نباید مانع بالا آمدن هسته شود.
 
-## اجرا
+## اجرای هسته
 ```bash
 python main.py
 ```
-سپس مرورگر: http://localhost:8000/dashboard
+داشبورد:
+`http://127.0.0.1:8000/dashboard/`
 
-## سرویس دائمی
+health check:
 ```bash
-sudo cp simorgh-core.service /etc/systemd/system/
-sudo systemctl enable --now simorgh-core
+curl http://127.0.0.1:8000/health
 ```
+
+## مدل زبانی محلی
+سیمرغ به‌صورت پیش‌فرض به endpoint سازگار با OpenAI روی `127.0.0.1:8080` و در حالت کیفیت روی `127.0.0.1:8081` متصل می‌شود. آدرس را می‌توان با متغیر `SIMORGH_LLM_URL` برای اجزای سازگار با آن تغییر داد.
+
+## مسیرهای قابل تنظیم
+مسیرهای داده، حافظه، dashboard، Piper و سایر فایل‌های runtime از طریق متغیرهای `SIMORGH_*` قابل override هستند. دیگر هیچ مسیر `/home/<user>` یا dashboard مخصوص ماشین توسعه‌دهنده نباید برای اجرای هسته لازم باشد.
+
+## تست
+```bash
+python -m pytest -q
+python demo/simorgh_minimal.py --test
+```
+
+## کنترل خودبهبود
+قوانین خودبهبود در `governance/constitution.yaml` و `core/self_improvement_policy.py` تعریف شده‌اند:
+- تغییرهای صرفاً اطلاعاتی/برگشت‌پذیر می‌توانند خودکار باشند.
+- تغییر اجرایی فقط در sandbox و پس از ارزیابی مجاز است.
+- افزایش دسترسی، شبکه، تغییر evaluator و تغییر قانون اساسی همیشه به تأیید انسان نیاز دارند.
