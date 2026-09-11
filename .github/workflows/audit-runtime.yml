@@ -8,7 +8,7 @@ on:
 jobs:
   runtime-audit:
     runs-on: ubuntu-latest
-    timeout-minutes: 12
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
         with:
@@ -36,13 +36,40 @@ jobs:
         continue-on-error: true
         run: python -c "import main; print('DECLARED_IMPORT_PASS')"
 
-      - name: Install runtime-only modules referenced by source
-        run: python -m pip install psutil pyyaml httpx pytest
+      - name: Install missing runtime dependencies discovered by source
+        run: python -m pip install psutil pyyaml httpx pytest pdfplumber pytesseract pdf2image
 
       - name: Full main import probe
         id: main_import
         continue-on-error: true
         run: python -c "import main; print('MAIN_IMPORT_PASS', len(main.app.routes))"
+
+      - name: Import all project Python modules
+        id: module_imports
+        continue-on-error: true
+        run: |
+          python - <<'PY'
+          import importlib.util
+          import sys
+          from pathlib import Path
+          failures=[]
+          for p in sorted(Path('.').rglob('*.py')):
+              if '.git' in p.parts or p.name.startswith('test_') or p.name.endswith('_test.py'):
+                  continue
+              name='audit_'+('_'.join(p.with_suffix('').parts))
+              spec=importlib.util.spec_from_file_location(name, p)
+              if not spec or not spec.loader:
+                  continue
+              mod=importlib.util.module_from_spec(spec)
+              try:
+                  spec.loader.exec_module(mod)
+              except Exception as e:
+                  failures.append((str(p), type(e).__name__, str(e)))
+          print('MODULE_IMPORT_FAILURES', len(failures))
+          for item in failures:
+              print('IMPORT_FAIL', item)
+          raise SystemExit(1 if failures else 0)
+          PY
 
       - name: Minimal demo
         id: minimal_demo
@@ -100,6 +127,7 @@ jobs:
           PY
 
       - name: Dashboard path probe
+        id: dashboard
         run: |
           python - <<'PY'
           from pathlib import Path
@@ -111,6 +139,7 @@ jobs:
         run: |
           echo "Declared import outcome: ${{ steps.declared_import.outcome }}"
           echo "Main import outcome: ${{ steps.main_import.outcome }}"
+          echo "Module import outcome: ${{ steps.module_imports.outcome }}"
           echo "Minimal demo outcome: ${{ steps.minimal_demo.outcome }}"
           echo "Pytest outcome: ${{ steps.pytest.outcome }}"
           echo "Database outcome: ${{ steps.db.outcome }}"
