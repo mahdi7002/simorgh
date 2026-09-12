@@ -3,7 +3,10 @@ name: SIMORGH Final Runtime Audit
 on:
   push:
     branches:
-      - 'fix/final-*'
+      - main
+  pull_request:
+    branches:
+      - main
 
 jobs:
   runtime:
