@@ -109,25 +109,26 @@ def run_reflection(human_approval=True):
         with open(prop_path, 'w') as f:
             json.dump(final_proposals, f, ensure_ascii=False, indent=2)
         print(f"Proposals saved to {prop_path}")
-        if not human_approval:
-            apply_proposals(final_proposals)
-            print("Proposals auto-applied.")
-        else:
-            print("Awaiting human approval.")
+        print("Awaiting human approval — به‌طور خودکار اعمال نمی‌شود.")
     else:
         print("No new proposals.")
     return final_proposals
 
 def apply_proposals(proposals):
-    conn = sqlite3.connect(DB_PATH)
-    for p in proposals:
-        if p["type"] == "blocks":
-            truth.add_fact(p["source"], "blocks", p["target"],
-                           explanation=p.get("explanation", ""),
-                           confidence=p["confidence"],
-                           knowledge_type=p.get("knowledge_type", "hypothesis"))
-    conn.commit()
-    conn.close()
+    """
+    اصل ۱۶ منشور: سیمرغ هرگز دانشِ خودش را بدونِ دخالتِ مستقیمِ انسان
+    تغییر نمی‌دهد. این تابع عمداً از سیستمِ ریسک‌بندیِ عمومی
+    (core/self_improvement_policy.py) استفاده نمی‌کند، چون آن سیستم
+    تغییراتِ برگشت‌پذیر را به‌طورِ پیش‌فرض خودکار مجاز می‌داند —
+    اما این مسیر دقیقاً همان حلقه‌ی خودبهبودیِ خودکاری‌ست که منشور
+    صراحتاً منعش کرده. پس اینجا همیشه، بدونِ استثنا، رد می‌شود؛ تنها
+    راهِ اعمال، فراخوانیِ صریحِ همین تابع توسط یک انسان (مثلاً از CLI)
+    بعدِ مرورِ فایلِ proposals_*.json است، نه از داخلِ چرخه‌ی reflection.
+    """
+    print(f"[گاورننس] {len(proposals)} پیشنهاد ذخیره شد، اما اعمال نشد — "
+          "طبق اصل ۱۶ منشور، اعمالِ دانشِ جدید نیازمندِ مرور و تأییدِ "
+          "دستیِ انسان است. فایلِ proposals را ببین.")
+    return False
 
 if __name__ == "__main__":
     run_reflection(human_approval=True)
@@ -138,7 +139,6 @@ def run_full_reflection():
     snapshot = create_snapshot()
     print(f"Snapshot saved: {snapshot}")
 
-    # بارگیری تمام قسمت‌های history (محدودیت را بردارید)
     episodes = load_episodes(limit=10000)
     clusters = cluster_queries(episodes)
     proposals = []
@@ -166,15 +166,11 @@ def run_full_reflection():
         with open(prop_path, 'w') as f:
             json.dump(final_proposals, f, ensure_ascii=False, indent=2)
         print(f"Full proposals saved to {prop_path}")
-        # در بازتاب کامل، اگر human_approval=False باشد، مستقیماً اعمال می‌کنیم
-        if not human_approval:
-            apply_proposals(final_proposals)
-            print("Full proposals auto-applied.")
+        print("Awaiting human approval — به‌طور خودکار اعمال نمی‌شود.")
     else:
         print("No new proposals from full reflection.")
 
-    # به‌روزرسانی Meta-Reflection
     if final_proposals:
-        meta_reflection.log_reflection_outcome(len(final_proposals), 0, 0, 1.0)  # accuracy بعد از تأیید آپدیت می‌شود
+        meta_reflection.log_reflection_outcome(len(final_proposals), 0, 0, 1.0)
 
     print("Full reflection completed.")

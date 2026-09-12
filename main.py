@@ -17,7 +17,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-app = FastAPI(title="SIMORGH", version=os.getenv("SIMORGH_VERSION", "3.1.0"))
+app = FastAPI(title="SIMORGH", version=os.getenv("SIMORGH_VERSION", "0.1.0"))
 from core.voice_docs import router as voice_docs_router
 from core.dashboard_api import router as dashboard_api_router
 from core.voice_endpoint import router as voice_endpoint_router
