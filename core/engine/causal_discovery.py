@@ -26,7 +26,12 @@ def discover_from_events(window_minutes=5, min_occurrences=3):
     return proposals
 
 def apply_discoveries(proposals):
-    from . import memory_graph
-    for p in proposals:
-        memory_graph.add_edge(p["source"], p["target"], p["relation"], p["explanation"], p["confidence"])
-    return len(proposals)
+    """
+    اصل ۱۶ منشور: دقیقاً مثلِ apply_proposals در reflection.py — سیمرغ
+    هرگز رابطه‌ی علّیِ کشف‌شده را بدونِ تأییدِ انسان به حافظه‌ی گراف
+    اضافه نمی‌کند. این تابع فقط پیشنهادها را چاپ/برمی‌گرداند؛ اعمالِ
+    واقعی باید توسط یک انسان و به‌صورتِ صریح انجام شود.
+    """
+    print(f"[گاورننس] {len(proposals)} رابطه‌ی علّیِ کشف‌شده — طبق اصل ۱۶ "
+          "منشور، اعمال نمی‌شود. برای بررسی و اعمالِ دستی، proposals را ببین.")
+    return 0
