@@ -42,7 +42,7 @@ curl http://127.0.0.1:8000/health
 
 ## تست
 ```bash
-python -m pip install pytest
+python -m pip install pytest httpx2
 python -m pytest -q
 python demo/simorgh_minimal.py --test
 python persona_chat.py --test
