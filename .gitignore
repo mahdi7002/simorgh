@@ -62,3 +62,4 @@ Thumbs.db
 # Old specific files
 core/voice_endpoint_OLD_backup.py
 SimorghCore
+data/quarantined_poems_backup.json
