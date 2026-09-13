@@ -12,42 +12,75 @@ class ReviewResult:
 
 class Reviewer:
     """
-    Deterministic response-quality gate.
+    Conservative quality boundary.
 
-    It does not pretend to prove factual truth. It checks whether
-    evidence-sensitive output contains enough provenance signals to
-    deserve a normal answer path.
+    This component never claims that generated text is true.
+    For evidence-sensitive questions, missing evidence is a warning,
+    even when the model itself uses words such as 'source', 'according to',
+    'Quran', etc.
     """
 
-    def review(self, query: str, outputs: dict[str, str], tool_results: dict) -> ReviewResult:
+    EVIDENCE_REQUESTS = (
+        "منبع",
+        "منابع",
+        "دقیق",
+        "آیه",
+        "بیت",
+        "غزل",
+        "نقل",
+        "source",
+        "exact",
+        "citation",
+    )
+
+    def review(
+        self,
+        query: str,
+        outputs: dict[str, str],
+        tool_results: dict,
+    ) -> ReviewResult:
+
         warnings: list[str] = []
-        checks = ["non_empty_output", "no_tool_claim_without_tool_result"]
+        checks = [
+            "non_empty_output",
+            "evidence_gate",
+            "no_false_evidence_claim",
+        ]
 
-        combined = "\n".join(v for v in outputs.values() if v)
+        combined = "\n".join(v for v in outputs.values() if v).strip()
 
-        if not combined.strip():
+        if not combined:
             warnings.append("empty_response")
 
-        evidence_words = (
-            "بر اساس",
-            "طبق",
-            "آیه",
-            "غزل",
-            "بیت",
-            "منبع",
-            "source",
-            "according to",
+        q = (query or "").lower()
+
+        evidence_sensitive = (
+            any(word in q for word in self.EVIDENCE_REQUESTS)
+            or "قرآن" in q
+            or "آیه" in q
+            or "شعر" in q
+            or "غزل" in q
+            or "مولوی" in q
+            or "حافظ" in q and "حافظه" not in q
         )
 
-        asks_for_source = any(
-            x in (query or "").lower()
-            for x in ("منبع", "دقیق", "آیه", "بیت", "source", "exact")
-        )
+        has_real_evidence = bool(tool_results)
 
-        if asks_for_source and not tool_results and not any(
-            x in combined for x in evidence_words
-        ):
-            warnings.append("evidence_sensitive_request_without_evidence")
+        if evidence_sensitive and not has_real_evidence:
+            warnings.append("evidence_sensitive_request_without_tool_evidence")
+
+        # Generated prose saying "طبق منبع" is not evidence.
+        if not has_real_evidence:
+            generated_claim_markers = (
+                "طبق منابع",
+                "بر اساس منبع",
+                "بر اساس قرآن",
+                "طبق قرآن",
+                "مطابق منبع",
+                "according to sources",
+            )
+            if any(marker in combined.lower() for marker in generated_claim_markers):
+                warnings.append("generated_evidence_claim_without_evidence")
 
         return ReviewResult(
             approved=not warnings,

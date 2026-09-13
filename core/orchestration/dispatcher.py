@@ -11,19 +11,37 @@ class DispatchResult:
 
 class Dispatcher:
     """
-    Lightweight deterministic dispatcher.
+    Cheap deterministic routing for low-resource environments.
 
-    No autonomous model-selection is required for routing.
-    This keeps routing cheap and predictable on low-RAM machines.
+    Important:
+    substring collisions such as حافظ داخل حافظه must not select hafez.
     """
 
     RULES = (
-        (("شعر", "غزل", "مولوی", "حافظ", "شاعر", "poem", "poetry"), ("hafez",)),
-        (("قرآن", "آیه", "اسلام", "دین", "quran"), ("hakim", "hafez")),
-        (("چرا", "علت", "دلیل", "why"), ("hakim", "nazer")),
-        (("چگونه", "چیکار", "انجام", "قدم", "how", "build", "code"), ("amel", "rahbar")),
-        (("آموزش", "یاد", "توضیح", "teach"), ("moalem", "hakim")),
-        (("داستان", "شعر", "خلق", "ایده", "story", "creative"), ("khaliq",)),
+        (
+            ("غزل", "مولوی", "شاعر", "اشعار", "poem", "poetry"),
+            ("hafez",),
+        ),
+        (
+            ("قرآن", "آیه", "اسلام", "quran"),
+            ("hakim", "hafez"),
+        ),
+        (
+            ("چرا", "علت", "دلیل", "why"),
+            ("hakim", "nazer"),
+        ),
+        (
+            ("چگونه", "چیکار کنم", "انجام بده", "قدم بعدی", "how", "build", "code"),
+            ("amel", "rahbar"),
+        ),
+        (
+            ("آموزش", "یاد بده", "توضیح بده", "teach"),
+            ("moalem", "hakim"),
+        ),
+        (
+            ("داستان", "قصه", "ایده", "خلاق", "story", "creative"),
+            ("khaliq",),
+        ),
     )
 
     DEFAULT = ("hakim", "moalem")
@@ -31,8 +49,16 @@ class Dispatcher:
     def dispatch(self, query: str, max_agents: int = 2) -> DispatchResult:
         q = (query or "").strip().lower()
 
+        if not q:
+            return DispatchResult(list(self.DEFAULT[:max_agents]), "default-route")
+
+        # حافظه is not حافظ.
+        # Prevent Persian substring collision.
+        if "حافظه" in q:
+            return DispatchResult(["hakim", "nazer"][:max_agents], "memory-topic")
+
         for keywords, agents in self.RULES:
-            if any(k.lower() in q for k in keywords):
+            if any(keyword in q for keyword in keywords):
                 return DispatchResult(list(agents[:max_agents]), "keyword-rule")
 
         return DispatchResult(list(self.DEFAULT[:max_agents]), "default-route")
