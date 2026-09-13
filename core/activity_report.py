@@ -7,7 +7,12 @@ core/activity_report.py
 import sqlite3
 from datetime import datetime
 
-DB_PATH = "/home/mahdi/SimorghCore/data/activity.db"
+try:
+    from core.paths import ACTIVITY_DB
+    DB_PATH = str(ACTIVITY_DB)
+except Exception:
+    from pathlib import Path
+    DB_PATH = str(Path(__file__).resolve().parents[1] / "data" / "activity.db")
 POLL_SECONDS = 15  # باید با activity_tracker.py هماهنگ باشه
 
 

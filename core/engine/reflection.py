@@ -1,9 +1,16 @@
 import os
 import sqlite3, json, os, datetime, re
 from collections import defaultdict
-import numpy as np
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.cluster import DBSCAN
+try:
+    import numpy as np
+    from sklearn.feature_extraction.text import TfidfVectorizer
+    from sklearn.cluster import DBSCAN
+    _HAS_SKLEARN = True
+except ImportError:
+    np = None
+    TfidfVectorizer = None
+    DBSCAN = None
+    _HAS_SKLEARN = False
 from . import truth
 from . import meta_reflection
 
@@ -22,6 +29,8 @@ def load_episodes(limit=200):
 def cluster_queries(episodes):
     texts = [ep["query"] for ep in episodes]
     if len(texts) < 3:
+        return []
+    if not _HAS_SKLEARN:
         return []
     try:
         vec = TfidfVectorizer(max_features=100)

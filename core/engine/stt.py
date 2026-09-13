@@ -1,5 +1,9 @@
 import os, json, wave
-import vosk
+
+try:
+    import vosk
+except ImportError:
+    vosk = None
 
 # مسیر مطلق به مدل Vosk (دقیقاً همان جایی که استخراج شده)
 MODEL_PATH = os.path.expanduser("~/simorgh/models/vosk-model-fa")
@@ -8,6 +12,8 @@ _model = None
 
 def get_model():
     global _model
+    if vosk is None:
+        raise RuntimeError("vosk is not installed (optional dependency)")
     if _model is None:
         if not os.path.exists(MODEL_PATH):
             raise FileNotFoundError(f"مدل Vosk در {MODEL_PATH} یافت نشد")

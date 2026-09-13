@@ -11,8 +11,15 @@ import re
 import sqlite3
 import subprocess
 
-DB_PATH = "/home/mahdi/SimorghCore/data/simorgh.db"
-SCAN_ROOTS = ["/home/mahdi"]
+try:
+    from core.paths import APP_DB, SCAN_ROOT, ROOT
+    DB_PATH = str(APP_DB)
+    SCAN_ROOTS = [str(SCAN_ROOT), str(ROOT)]
+except Exception:
+    from pathlib import Path
+    _root = Path(__file__).resolve().parents[1]
+    DB_PATH = str(_root / "data" / "simorgh.db")
+    SCAN_ROOTS = [str(_root / "library" / "incoming"), str(_root)]
 EXCLUDE_DIRS = {"venv", "node_modules", ".git", "__pycache__", ".cache"}
 CHUNK_SIZE = 1000
 
