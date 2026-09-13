@@ -1,6 +1,11 @@
 import os
 import sqlite3, os, json
-import networkx as nx
+try:
+    import networkx as nx
+    _HAS_NX = True
+except ImportError:
+    nx = None
+    _HAS_NX = False
 
 DB_PATH = os.path.join(os.path.dirname(__file__), "../../data/simorgh.db")
 
@@ -27,6 +32,8 @@ def add_relation(concept1, concept2, relation, explanation="", confidence=1.0):
     conn.close()
 
 def load_graph():
+    if not _HAS_NX:
+        raise RuntimeError("networkx is not installed (optional dependency)")
     G = nx.Graph()
     conn = sqlite3.connect(DB_PATH)
     nodes = conn.execute("SELECT id, name FROM nodes WHERE type='concept'").fetchall()

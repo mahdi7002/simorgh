@@ -21,3 +21,30 @@ class MemoryEngine:
         with sqlite3.connect(self.db_path) as conn:
             rows = conn.execute("SELECT user_input,system_response,timestamp FROM conversations WHERE session_id=? ORDER BY id DESC LIMIT ?", (session_id,limit)).fetchall()
         return [{"user":r[0],"system":r[1],"time":r[2]} for r in rows]
+
+    def _ensure_provenance_table(self):
+        with sqlite3.connect(self.db_path) as conn:
+            conn.execute("""CREATE TABLE IF NOT EXISTS provenance_memory (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                content TEXT NOT NULL, source TEXT NOT NULL,
+                confidence REAL DEFAULT 0.5, tags TEXT,
+                status TEXT DEFAULT 'KNOWN',
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP)""")
+
+    def store_with_provenance(self, content, source, confidence=0.5, tags=None, status="KNOWN"):
+        self._ensure_provenance_table()
+        with sqlite3.connect(self.db_path) as conn:
+            conn.execute(
+                "INSERT INTO provenance_memory(content,source,confidence,tags,status) VALUES(?,?,?,?,?)",
+                (content, source, float(confidence), __import__('json').dumps(tags or [], ensure_ascii=False), status))
+
+    def search_with_provenance(self, query, limit=10):
+        self._ensure_provenance_table()
+        with sqlite3.connect(self.db_path) as conn:
+            rows = conn.execute(
+                "SELECT content,source,confidence,status,created_at FROM provenance_memory WHERE content LIKE ? ORDER BY id DESC LIMIT ?",
+                (f"%{query}%", limit)).fetchall()
+        if not rows:
+            return [{"status": "NOT_VERIFIED", "note": "nothing stored for this query"}]
+        return [{"content": r[0], "source": r[1], "confidence": r[2], "status": r[3], "time": r[4]} for r in rows]
+
