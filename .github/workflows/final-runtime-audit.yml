@@ -45,7 +45,7 @@ jobs:
       - name: Minimal demo
         run: python demo/simorgh_minimal.py --test
       - name: Regression tests
-        run: pytest -q
+        run: PYTHONPATH=. pytest -q
       - name: Database integrity
         run: |
           python - <<'PY'
