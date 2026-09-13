@@ -33,11 +33,13 @@ from core.memory import MemoryEngine
 from core.why_engine import WhyEngine
 from agents.agent_manager import AgentManager
 from core.chat import ask as chat_ask
+from core.orchestration import Orchestrator
 
 understanding = UnderstandingEngine()
 memory = MemoryEngine()
 why_engine = WhyEngine()
 agent_manager = AgentManager()
+orchestrator = Orchestrator()
 
 @app.post("/ask")
 async def ask(query: str = Form(...)):
@@ -61,6 +63,33 @@ async def chat(query: str = Form(...), agent: str = Form("hakim")):
     except Exception as exc:
         logger.exception("chat failed")
         raise HTTPException(500, "Chat processing failed") from exc
+
+@app.post("/orchestrate")
+async def orchestrate(query: str = Form(...)):
+    try:
+        result = orchestrator.run(query, max_agents=2)
+        response = "\n\n".join(
+            f"[{agent}]\n{text}"
+            for agent, text in result["outputs"].items()
+            if text
+        )
+        memory.store_conversation(
+            "default",
+            query,
+            response,
+            {
+                "mode": "orchestrated",
+                "selected_agents": result["selected_agents"],
+                "review": result["review"],
+            },
+        )
+        return {
+            "response": response,
+            **result,
+        }
+    except Exception as exc:
+        logger.exception("orchestration failed")
+        raise HTTPException(500, "Orchestration failed") from exc
 
 @app.get("/quran-search")
 async def quran_search_route(q: str):

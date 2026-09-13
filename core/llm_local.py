@@ -7,6 +7,8 @@ from typing import Optional
 logger = logging.getLogger(__name__)
 FAST_URL = os.environ.get("SIMORGH_LLM_FAST_URL", "http://127.0.0.1:8080/v1/chat/completions")
 QUALITY_URL = os.environ.get("SIMORGH_LLM_QUALITY_URL", "http://127.0.0.1:8081/v1/chat/completions")
+FAST_TIMEOUT = float(os.getenv("SIMORGH_FAST_TIMEOUT", "8"))
+QUALITY_TIMEOUT = float(os.getenv("SIMORGH_QUALITY_TIMEOUT", "2"))
 FAST_MODELS_URL = os.environ.get("SIMORGH_LLM_FAST_MODELS_URL", "http://127.0.0.1:8080/v1/models")
 QUALITY_MODELS_URL = os.environ.get("SIMORGH_LLM_QUALITY_MODELS_URL", "http://127.0.0.1:8081/v1/models")
 
@@ -48,7 +50,7 @@ def generate(system_prompt: str, user_message: str, max_tokens: int = 350, needs
                 "repeat_penalty": 1.15,
                 "top_p": 0.9,
             },
-            timeout=120,
+            timeout=QUALITY_TIMEOUT,
         )
         resp.raise_for_status()
         text = resp.json()["choices"][0]["message"]["content"]
