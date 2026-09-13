@@ -53,5 +53,5 @@ jobs:
 
       - name: Run tests
         run: |
-          python3 -m pip install pytest httpx
+          python3 -m pip install pytest httpx2
           pytest -q
