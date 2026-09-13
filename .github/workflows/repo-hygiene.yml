@@ -58,4 +58,4 @@ jobs:
       - name: Run tests
         run: |
           python3 -m pip install pytest httpx2
-          pytest -q
+          PYTHONPATH=. pytest -q
