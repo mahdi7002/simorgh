@@ -1,4 +1,4 @@
-from . import memory_graph
+from .. import memory_graph
 
 def find_cause(user_text):
     if "چرا" in user_text:

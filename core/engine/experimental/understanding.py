@@ -1,5 +1,5 @@
 import re
-from . import memory_graph
+from .. import memory_graph
 
 def extract_entities(text):
     entities = memory_graph.search_nodes_by_keyword(text)

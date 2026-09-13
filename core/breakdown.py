@@ -2,7 +2,8 @@ import json
 from collections import Counter
 from pathlib import Path
 
-catalog = json.loads((Path.home() / "simorgh" / "catalog.json").read_text(encoding="utf-8"))
+from core.paths import ROOT
+catalog = json.loads((ROOT / "catalog.json").read_text(encoding="utf-8"))
 docs = catalog.get("standalone_docs_unique", catalog["standalone_docs"])
 home = str(Path.home())
 
