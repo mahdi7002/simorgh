@@ -35,18 +35,28 @@ def get_poetic_wisdom(query: str, limit: int = 2) -> List[Dict]:
 
     match_query = " OR ".join(keywords)
 
+    rows = []
     try:
         conn = sqlite3.connect(DB_PATH)
-        rows = conn.execute(
-            """
-            SELECT poet, title, text
-            FROM poems_fts
-            WHERE poems_fts MATCH ?
-            ORDER BY rank
-            LIMIT ?
-            """,
-            (match_query, limit),
-        ).fetchall()
+        try:
+            rows = conn.execute(
+                """
+                SELECT poet, title, text
+                FROM poems_fts
+                WHERE poems_fts MATCH ?
+                ORDER BY rank
+                LIMIT ?
+                """,
+                (match_query, limit),
+            ).fetchall()
+        except Exception as e:
+            logger.warning(f"FTS شعر شکست خورد، fallback LIKE: {e}")
+            like_clause = " OR ".join(["text LIKE ?" for _ in keywords])
+            params = [f"%{k}%" for k in keywords] + [limit]
+            rows = conn.execute(
+                f"SELECT poet, title, text FROM poems WHERE {like_clause} LIMIT ?",
+                params,
+            ).fetchall()
         conn.close()
     except Exception as e:
         logger.warning(f"جستجوی شعر شکست خورد: {e}")

@@ -1,8 +1,16 @@
 import os
-import yaml, os
+import os
+try:
+    import yaml
+    _HAS_YAML = True
+except ImportError:
+    yaml = None
+    _HAS_YAML = False
 from . import simorgh_mirror
 
 def load_agents():
+    if not _HAS_YAML:
+        raise RuntimeError("PyYAML is not installed (optional dependency)")
     agents = {}
     for f in os.listdir("agents"):
         if f.endswith(".yaml"):
