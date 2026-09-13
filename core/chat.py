@@ -82,7 +82,7 @@ PERSONAS = {
             "رویدادهای تاریخی یزد — و درس امروز را از گذشته پیدا می‌کند."
             " حفظش پیوسته است، نه یک نگاه گذرا؛ پیش از نگه‌داشتن هرچیز دیگر، اول خودش را نگه می‌دارد."
         ),
-        "tools": ["book_search", "yazd_lore"],
+        "tools": ["poetry_search", "book_search", "yazd_lore"],
         "handoff_if": {},
     },
     "moalem": {
@@ -187,7 +187,13 @@ def suggest_handoff(question: str, current_agent: str) -> str | None:
     return None
 
 
-def ask(question: str, agent: str = "hakim") -> str:
+def ask(
+    question: str,
+    agent: str = "hakim",
+    *,
+    tool_context: str = "",
+    use_builtin_tools: bool = True,
+) -> str:
     if not question or not question.strip():
         return "بله؟ چیزی بپرس."
 
@@ -202,10 +208,18 @@ def ask(question: str, agent: str = "hakim") -> str:
         + FIDELITY_RULE + STORYTELLING_RULE
     )
 
-    quran = format_quran(get_quran_wisdom(question, limit=1))
-    poetry = format_poetry(get_poetic_wisdom(question))
-    books = format_books(get_book_wisdom(question, limit=2))
-    extra = "\n\n".join(p for p in [quran, poetry, books] if p)
+    extra_parts = []
+
+    if use_builtin_tools:
+        quran = format_quran(get_quran_wisdom(question, limit=1))
+        poetry = format_poetry(get_poetic_wisdom(question))
+        books = format_books(get_book_wisdom(question, limit=2))
+        extra_parts.extend([quran, poetry, books])
+
+    if tool_context:
+        extra_parts.append(tool_context)
+
+    extra = "\n\n".join(p for p in extra_parts if p)
     message = f"{question}\n\n{extra}" if extra else question
 
     needs_quality = (
