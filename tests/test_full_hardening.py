@@ -65,7 +65,7 @@ def test_reviewer_does_not_claim_truth():
     )
 
     assert r.approved is False
-    assert "evidence_sensitive_request_without_evidence" in r.warnings
+    assert "evidence_sensitive_request_without_tool_evidence" in r.warnings
 
 
 def test_governance_never_allows_privilege_or_policy_changes():

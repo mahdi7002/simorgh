@@ -31,10 +31,6 @@ class Orchestrator:
         # Until the selected persona tool adapters are exposed as a
         # first-class interface, the reviewer must see an empty evidence
         # set rather than pretending model output is tool evidence.
-        # Evidence is deliberately not invented here.
-        # Until the selected persona tool adapters are exposed as a
-        # first-class interface, the reviewer must see an empty evidence
-        # set rather than pretending model output is tool evidence.
         review = self.reviewer.review(
             query=query,
             outputs=board.outputs,
