@@ -94,3 +94,31 @@ python3 demo/simorgh_minimal.py "عدالت چیست؟"
 - **Author:** [Mahdi Jafari Najafabadi](https://github.com/mahdi7002) · Yazd, Iran  
 
 همکاری با همان روحیهٔ شفافیت خوش‌آمد است — اول Issue، بعد PR کوچک و قابل‌تست.
+
+---
+
+## Capability Matrix
+
+| Capability | Status | Verification |
+|---|---|---|
+| Offline-first core | IMPLEMENTED | CI runtime audit |
+| Local LLM provider | IMPLEMENTED | Runtime-dependent |
+| 12 personas | IMPLEMENTED | `/personas` + tests |
+| Shared request blackboard | IMPLEMENTED | `core/orchestration/` |
+| Lightweight dispatcher | IMPLEMENTED | `core/orchestration/dispatcher.py` |
+| Deterministic reviewer gate | IMPLEMENTED | `core/orchestration/reviewer.py` |
+| Provenance memory | IMPLEMENTED | SQLite regression tests |
+| Governed self-improvement | IMPLEMENTED | policy regression tests |
+| Automatic knowledge mutation | DISABLED | Human gate required |
+| Full external tool-calling | EXPERIMENTAL | Persona-specific tools remain isolated |
+| Semantic/LLM dispatcher | PLANNED | Lightweight rules used by default |
+| Release package | PLANNED | No GitHub release yet |
+
+### Verification policy
+
+A capability is considered implemented only when the repository contains:
+1. an executable implementation,
+2. a regression test,
+3. a CI path that executes the test.
+
+Anything else is documented as experimental or planned.
