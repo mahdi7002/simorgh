@@ -7,13 +7,18 @@ core/activity_tracker.py
 """
 
 import os
+from pathlib import Path
 import re
 import sqlite3
 import subprocess
 import time
 from datetime import datetime
 
-DB_PATH = "/home/mahdi/SimorghCore/data/activity.db"
+try:
+    from core.paths import ACTIVITY_DB
+    DB_PATH = str(ACTIVITY_DB)
+except Exception:
+    DB_PATH = str(Path(__file__).resolve().parents[1] / "data" / "activity.db")
 POLL_SECONDS = 15
 
 
