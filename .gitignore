@@ -56,6 +56,10 @@ memory/*.db
 data/activity.db
 data/terminal.log
 
+# Generated compliance artifacts
+*.spdx.json
+compliance/generated/
+
 # IDE / OS
 .idea/
 .vscode/
