@@ -8,54 +8,80 @@ SIMORGH explores a practical question:
 
 > **How capable can an AI system become while the human remains the owner and final authority?**
 
-This repository is not a claim to AGI, superintelligence, or industrial-scale model performance. It is a working software experiment built around constraints that are easy to say and harder to enforce in code: local-first operation, user-owned memory, provenance, bounded tools, verification, and human gates for consequential self-improvement.
+SIMORGH is not presented as AGI, a replacement for frontier labs, or a system that is incapable of failure. It is a bounded engineering experiment focused on human authority, inspectability, provenance, local execution, and honest capability reporting.
 
----
+## What SIMORGH is
 
-## Why SIMORGH?
+- **Offline-first:** the core can run without a mandatory cloud account, API key, or internet connection.
+- **Human-accountable:** proposals are not commands, and knowledge mutation is gated rather than silently applied.
+- **Evidence-aware:** retrieved evidence and model-generated text are kept conceptually distinct, with provenance and reviewer checks.
+- **User-owned memory:** memory is treated as user data, with explicit controls rather than invisible personalization.
+- **Bounded tools:** tool access is intended to be explicit, local-first, deterministic where practical, and constrained by policy.
+- **Provider-agnostic:** a local model is the preferred path; external providers are optional rather than required.
 
-Most AI projects are introduced through model size, benchmark scores, or a cloud service. SIMORGH starts somewhere else: **authority**.
+## The core principles
 
-Its design vocabulary is deliberately simple:
+### Proposal ≠ Command
 
-- **Proposal ≠ Command** — the system may propose; it does not automatically receive authority to act.
-- **Known ≠ Inferred** — retrieved evidence, model inference, and user-provided facts should not be silently mixed.
-- **Provenance > elegance** — an answer that exposes where its evidence came from is preferable to a smoother unsupported answer.
-- **Human Gate** — consequential changes and increases in authority require human approval.
-- **Offline-first** — the core should remain useful without a mandatory cloud account, API key, or network connection.
-- **Graceful degradation** — missing optional dependencies or a missing local model should produce an honest limitation, not a fake success.
+A system may propose an action or change. It does not gain authority merely by proposing it.
 
-The project is developed with human direction and AI-assisted code generation/review. The repository itself is treated as evidence: **verification over claims**.
+### Known ≠ Inferred
 
----
+Retrieved or verified information must not be silently presented as though it were directly known when it is actually an inference.
 
-## What you can run today
+### Provenance > elegance
 
-The public repository currently contains a runnable Python service, a dependency-free minimal demo, 12 personas, shared request orchestration, provenance-aware memory, a deterministic reviewer gate, sentence-level citation verification, and governed self-improvement policy paths.
+When evidence matters, SIMORGH prefers traceability and an honest limitation over a polished unsupported answer.
 
-The minimal demo can run immediately with Python alone:
+### Human authority remains explicit
 
-```bash
-python3 demo/simorgh_minimal.py --test
-python3 demo/simorgh_minimal.py "عدالت چیست؟"
-```
+Self-improvement and knowledge mutation are governed surfaces. Automatic mutation is disabled unless a policy and human gate explicitly permit the operation.
 
-With a local OpenAI-compatible LLM endpoint, the demo can use local generation. Without one, it falls back to its small embedded offline demonstration corpus and explicitly labels the mode.
+## Verification policy
 
-For the full service:
+SIMORGH uses a deliberately conservative capability matrix. A capability is considered **IMPLEMENTED** only when the repository contains:
+
+1. an executable implementation,
+2. a regression test,
+3. a CI path that executes the test.
+
+Otherwise it is documented as **EXPERIMENTAL**, **PLANNED**, or **DISABLED**.
+
+## Current capability matrix
+
+| Capability | Status | Verification |
+|---|---|---|
+| Offline-first core | IMPLEMENTED | CI runtime audit |
+| Local LLM provider | IMPLEMENTED | Runtime-dependent |
+| 12 personas | IMPLEMENTED | `/personas` + tests |
+| Shared request blackboard | IMPLEMENTED | `core/orchestration/` |
+| Lightweight dispatcher | IMPLEMENTED | dispatcher tests |
+| Deterministic reviewer gate | IMPLEMENTED | reviewer tests |
+| Sentence-level citation verification | IMPLEMENTED | reviewer regression tests |
+| Provenance memory | IMPLEMENTED | SQLite regression tests |
+| Governed self-improvement | IMPLEMENTED | policy regression tests |
+| Automatic knowledge mutation | DISABLED | Human gate required |
+| Governed external tool adapters | EXPERIMENTAL | See Issue #7 |
+| Full external tool-calling | EXPERIMENTAL | Persona-specific tools remain isolated |
+| Semantic/LLM dispatcher | PLANNED | Lightweight rules used by default |
+| Public release package | PLANNED | Release gate not yet satisfied |
+
+## Quick start
 
 ```bash
 git clone https://github.com/mahdi7002/simorgh.git
 cd simorgh
+
 python3 -m venv .venv
 source .venv/bin/activate
 python -m pip install -U pip
 python -m pip install -r requirements.txt
+
 python -c "import main; print('OK', len(main.app.routes))"
 python main.py
 ```
 
-Then:
+Then, in another terminal:
 
 ```bash
 curl -s http://127.0.0.1:8000/health
@@ -63,107 +89,75 @@ curl -s http://127.0.0.1:8000/personas
 curl -s -X POST http://127.0.0.1:8000/chat -d "query=سلام&agent=hakim"
 ```
 
-If no local model is available, the service must report that limitation rather than pretending that a model generated the answer.
+Without a local model server, SIMORGH should report that the model is unavailable rather than pretending that a model response exists.
 
-See [`QUICKSTART.md`](QUICKSTART.md) for the shortest installation path.
+With a local `llama-server`, the local provider can be used for persona responses. Exact model configuration is intentionally runtime-dependent.
 
----
+Minimal demo:
 
-## The architecture in one line
+```bash
+python3 demo/simorgh_minimal.py --test
+python3 demo/simorgh_minimal.py "عدالت چیست؟"
+```
 
-**Question → evidence / memory → shared request state → persona → reviewer → verified response → human decision**
+For the detailed first-run path, see [`QUICKSTART.md`](QUICKSTART.md).
 
-Not every path in that sentence is equally mature yet. The capability matrix below is the source of truth for current implementation status.
+## Repository map
 
----
+| Path | Purpose |
+|---|---|
+| `main.py` / `cli.py` | Service and command-line entry points |
+| `core/` | Chat, identity, memory, retrieval, orchestration, portable paths |
+| `agents/` | Persona and agent definitions |
+| `dashboard/` | Web interface |
+| `demo/` | Minimal runnable demonstrations |
+| `tests/` | Regression and governance tests |
+| `.github/workflows/` | CI and runtime/hygiene verification |
+| `docs/` | Architecture, verification, launch and development notes |
 
-## Capability matrix
+Optional integrations such as speech, PDF/OCR and richer metrics are intentionally separated from the minimal core installation.
 
-| Capability | Status | Verification / boundary |
-|---|---|---|
-| Offline-first core | **IMPLEMENTED** | CI runtime audit |
-| Local LLM provider | **IMPLEMENTED** | Runtime-dependent |
-| 12 personas | **IMPLEMENTED** | `/personas` + tests |
-| Shared request blackboard | **IMPLEMENTED** | `core/orchestration/` |
-| Lightweight dispatcher | **IMPLEMENTED** | `core/orchestration/dispatcher.py` |
-| Deterministic reviewer gate | **IMPLEMENTED** | reviewer regression tests |
-| Sentence-level citation verification | **IMPLEMENTED** | reviewer verification tests |
-| Provenance memory | **IMPLEMENTED** | SQLite regression tests |
-| Governed self-improvement | **IMPLEMENTED** | policy regression tests |
-| Automatic knowledge mutation | **DISABLED** | Human gate required |
-| Full external tool-calling | **EXPERIMENTAL** | Persona-specific tools remain isolated |
-| Semantic / LLM dispatcher | **PLANNED** | Lightweight rules are used by default |
-| Public release package | **PLANNED** | No GitHub release yet |
+## What SIMORGH does not claim
 
-### Verification policy
+SIMORGH does **not** claim to be:
 
-A capability is considered **implemented** only when the repository contains:
+- AGI or artificial general intelligence.
+- A replacement for frontier AI systems.
+- Impossible to jailbreak, misuse, or break.
+- Fully autonomous or independently authoritative.
+- A scientifically proven solution to AI alignment.
+- A system with capabilities that have not been demonstrated and tested.
 
-1. an executable implementation,
-2. a regression test,
-3. a CI path that executes that test.
+Those boundaries are part of the project, not an embarrassment to hide.
 
-Anything else is documented as experimental, planned, or disabled.
+## Development philosophy
 
----
+The project is developed under human direction with AI-assisted code generation and review. The human author determines requirements, architecture and acceptance. AI-generated code is treated as code to inspect and test, not as authority.
 
-## Governance and self-improvement
+The project favors:
 
-SIMORGH treats self-improvement as a governance problem, not merely an optimization problem.
+- small, inspectable changes,
+- executable demonstrations,
+- regression tests,
+- cold-start testing,
+- explicit failure states,
+- no secret telemetry,
+- no mandatory API keys,
+- no arbitrary shell execution as a tool capability,
+- and no silent elevation of model output into verified knowledge.
 
-The current policy distinguishes between changes that are informational/reversible and changes that can alter execution, authority, networking, evaluators, or governing rules. Higher-risk changes are gated by human approval.
+## Public launch status
 
-The intended principle is:
+The repository is being consolidated before the first public announcement. No public release is claimed until the release gate is satisfied.
 
-**The system can help design its next version. It does not own the right to approve that version.**
+See [`docs/PUBLIC_LAUNCH.md`](docs/PUBLIC_LAUNCH.md) for the current public positioning and release checklist.
 
-This is an engineering boundary, not a claim that the system is magically safe.
+## License
 
----
+MIT. See [`LICENSE`](LICENSE).
 
-## Persian identity and knowledge
+## Author
 
-The project includes Persian cultural and literary material and 12 wisdom-oriented personas. These are not presented as replacements for factual verification or human judgment.
+Mahdi Jafari Najafabadi · Yazd, Iran
 
-Cultural identity is part of the interface and knowledge layer. It is not a license to invent quotations, attribute text without evidence, or turn literary interpretation into factual certainty.
-
----
-
-## What SIMORGH is not
-
-SIMORGH is **not** claiming to be:
-
-- AGI or artificial superintelligence
-- a replacement for human judgment
-- a guarantee against AI failure or misuse
-- a competitor to frontier-scale industrial models
-- a fully autonomous agent with unrestricted computer access
-- a finished product
-
-The interesting question is narrower and more testable: **can authority boundaries, provenance, verification, and human ownership be made concrete in an AI system rather than left as product slogans?**
-
----
-
-## Current limitations
-
-The public repository is still an evolving engineering project. Local model quality depends on the model and hardware available to the user. Some richer data, speech, PDF, and tool workflows are optional or experimental. A planned capability is not a hidden promise.
-
-If something is unavailable, the preferred behavior is to say so.
-
----
-
-## Contributing
-
-Start with an Issue for a substantial change, then keep pull requests small, inspectable, and testable. Governance-sensitive changes should preserve the human-approval boundaries already established in the repository.
-
-See [`CONTRIBUTING.md`](CONTRIBUTING.md) and [`SECURITY.md`](SECURITY.md).
-
----
-
-## License and author
-
-- **License:** MIT
-- **Author:** Mahdi Jafari Najafabadi
-- **Primary repository:** [`mahdi7002/simorgh`](https://github.com/mahdi7002/simorgh)
-
-> **Run it. Inspect it. Break it. If the claim does not survive the test, change the claim or change the code.**
+For bugs, evidence gaps, or proposed changes, open an Issue first and keep pull requests small and testable.
