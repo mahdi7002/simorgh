@@ -37,6 +37,7 @@ def get_model_tier(needs_quality: bool = False) -> str:
 
 def generate(system_prompt: str, user_message: str, max_tokens: int = 350, needs_quality: bool = False) -> Optional[str]:
     url = QUALITY_URL if needs_quality else FAST_URL
+    timeout = QUALITY_TIMEOUT if needs_quality else FAST_TIMEOUT
     try:
         resp = requests.post(
             url,
@@ -50,7 +51,7 @@ def generate(system_prompt: str, user_message: str, max_tokens: int = 350, needs
                 "repeat_penalty": 1.15,
                 "top_p": 0.9,
             },
-            timeout=QUALITY_TIMEOUT,
+            timeout=timeout,
         )
         resp.raise_for_status()
         text = resp.json()["choices"][0]["message"]["content"]
