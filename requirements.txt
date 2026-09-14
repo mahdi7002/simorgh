@@ -1,7 +1,8 @@
-fastapi>=0.100.0
-uvicorn>=0.20.0
-python-multipart>=0.0.6
-pydantic>=2.0.0
-requests>=2.31.0
-psutil>=5.9.0
-python-dotenv>=1.0.0
+# Core runtime dependencies. Exact pins are part of release reproducibility.
+fastapi==0.141.1
+uvicorn==0.53.0
+python-multipart==0.0.32
+pydantic==2.13.5
+requests==2.34.2
+psutil==7.2.2
+python-dotenv==1.2.3
