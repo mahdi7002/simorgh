@@ -45,6 +45,7 @@ class Reviewer:
             "non_empty_output",
             "evidence_gate",
             "no_false_evidence_claim",
+            "quoted_text_matches_evidence",
         ]
 
         combined = "\n".join(v for v in outputs.values() if v).strip()
@@ -68,6 +69,20 @@ class Reviewer:
 
         if evidence_sensitive and not has_real_evidence:
             warnings.append("evidence_sensitive_request_without_tool_evidence")
+
+        # تأییدِ سطحِ جمله: اگر شاهدِ واقعی داریم، حداقل بخشی از خودِ
+        # متنِ بازیابی‌شده باید عیناً در پاسخِ پرسونا دیده بشه — وگرنه
+        # یعنی پرسونا چیزی «شبیهِ» نقلِ قول ساخته، نه خودِ نقلِ قول را آورده.
+        if evidence_sensitive and has_real_evidence:
+            evidence_texts = [
+                str(v) for v in tool_results.values() if v
+            ] if isinstance(tool_results, dict) else [str(tool_results)]
+            quoted_match = any(
+                len(ev) > 15 and ev[:40] in combined
+                for ev in evidence_texts
+            )
+            if not quoted_match:
+                warnings.append("quoted_text_does_not_match_retrieved_evidence")
 
         # Generated prose saying "طبق منبع" is not evidence.
         if not has_real_evidence:
