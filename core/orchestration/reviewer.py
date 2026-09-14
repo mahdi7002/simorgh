@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Any
 
 
 @dataclass(frozen=True)
@@ -15,9 +16,8 @@ class Reviewer:
     Conservative quality boundary.
 
     This component never claims that generated text is true.
-    For evidence-sensitive questions, missing evidence is a warning,
-    even when the model itself uses words such as 'source', 'according to',
-    'Quran', etc.
+    For evidence-sensitive questions, only successful tool results that
+    actually contain data count as evidence.
     """
 
     EVIDENCE_REQUESTS = (
@@ -33,13 +33,29 @@ class Reviewer:
         "citation",
     )
 
+    @staticmethod
+    def _successful_evidence(tool_results: dict[str, Any]) -> list[str]:
+        fragments: list[str] = []
+        if not isinstance(tool_results, dict):
+            return fragments
+
+        for result in tool_results.values():
+            if not isinstance(result, dict):
+                continue
+            if result.get("status") != "OK":
+                continue
+            data = result.get("data")
+            if data is None or data == "" or data == [] or data == {}:
+                continue
+            fragments.append(str(data))
+        return fragments
+
     def review(
         self,
         query: str,
         outputs: dict[str, str],
         tool_results: dict,
     ) -> ReviewResult:
-
         warnings: list[str] = []
         checks = [
             "non_empty_output",
@@ -62,29 +78,26 @@ class Reviewer:
             or "شعر" in q
             or "غزل" in q
             or "مولوی" in q
-            or "حافظ" in q and "حافظه" not in q
+            or ("حافظ" in q and "حافظه" not in q)
         )
 
-        has_real_evidence = bool(tool_results)
+        evidence_fragments = self._successful_evidence(tool_results)
+        has_real_evidence = bool(evidence_fragments)
 
         if evidence_sensitive and not has_real_evidence:
             warnings.append("evidence_sensitive_request_without_tool_evidence")
 
-        # تأییدِ سطحِ جمله: اگر شاهدِ واقعی داریم، حداقل بخشی از خودِ
-        # متنِ بازیابی‌شده باید عیناً در پاسخِ پرسونا دیده بشه — وگرنه
-        # یعنی پرسونا چیزی «شبیهِ» نقلِ قول ساخته، نه خودِ نقلِ قول را آورده.
         if evidence_sensitive and has_real_evidence:
-            evidence_texts = [
-                str(v) for v in tool_results.values() if v
-            ] if isinstance(tool_results, dict) else [str(tool_results)]
+            # Tool data may be structured rather than plain quoted text.
+            # We only flag a mismatch when a substantial literal fragment
+            # should reasonably be present but none is visible in the output.
             quoted_match = any(
-                len(ev) > 15 and ev[:40] in combined
-                for ev in evidence_texts
+                len(fragment) > 15 and fragment[:40] in combined
+                for fragment in evidence_fragments
             )
             if not quoted_match:
                 warnings.append("quoted_text_does_not_match_retrieved_evidence")
 
-        # Generated prose saying "طبق منبع" is not evidence.
         if not has_real_evidence:
             generated_claim_markers = (
                 "طبق منابع",
