@@ -1,4 +1,6 @@
 # Reproducible test/security tooling baseline for CI and release validation
+pip==26.2.1
+setuptools==84.0.0
 pytest==9.1.1
 httpx2==2.12.0
 pip-audit==2.10.1
