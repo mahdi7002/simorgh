@@ -44,7 +44,7 @@ jobs:
             -e 'gsk_' \
             -e 'sk-[A-Za-z0-9]{20,}' \
             -e "api[_-]?key[[:space:]]*[:=][[:space:]]*['\"][A-Za-z0-9]{16,}['\"]" \
-            -e 'simorgh123' \
+            -e 'simorgh[0-9]{3}' \
             -- ':!*.md' ':!.github/workflows/*')
           rc=$?
           set -e
