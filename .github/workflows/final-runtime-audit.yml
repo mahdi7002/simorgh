@@ -11,20 +11,37 @@ on:
 jobs:
   runtime:
     runs-on: ubuntu-latest
-    timeout-minutes: 12
+    timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-python@v7
         with:
           python-version: '3.11'
-      - name: Install core and test dependencies
-        run: python -m pip install -r requirements.txt pytest httpx
-      - name: Install optional dependencies (best-effort)
-        run: python -m pip install -r requirements-optional.txt || true
+          cache: 'pip'
+
+      - name: Install core, test and security dependencies
+        run: |
+          python -m pip install -r requirements.txt
+          python -m pip install -r requirements-dev.txt
+
+      - name: Install optional dependencies
+        run: python -m pip install -r requirements-optional.txt
+
+      - name: Verify dependency consistency
+        run: python -m pip check
+
+      - name: Audit known Python vulnerabilities
+        run: python -m pip_audit --local --strict
+
       - name: Compile source
         run: python -m compileall -q .
+
       - name: Import main with core dependencies only
         run: python -c "import main; print('MAIN_IMPORT_PASS', len(main.app.routes))"
+
       - name: Import all core modules
         run: |
           python - <<'PY'
@@ -36,16 +53,22 @@ jobs:
               mods.append('.'.join(p.with_suffix('').parts))
           failures=[]
           for mod in sorted(set(mods)):
-              try: importlib.import_module(mod)
-              except Exception as exc: failures.append((mod,type(exc).__name__,str(exc)))
+              try:
+                  importlib.import_module(mod)
+              except Exception as exc:
+                  failures.append((mod,type(exc).__name__,str(exc)))
           print('CORE_MODULES',len(set(mods)))
-          for x in failures: print('FAIL',*x)
+          for x in failures:
+              print('FAIL',*x)
           raise SystemExit(1 if failures else 0)
           PY
+
       - name: Minimal demo
         run: python demo/simorgh_minimal.py --test
-      - name: Regression tests
-        run: PYTHONPATH=. pytest -q
+
+      - name: Regression tests with warnings treated as errors
+        run: PYTHONWARNINGS='error::DeprecationWarning,error::PendingDeprecationWarning,error::FutureWarning' PYTHONPATH=. python -m pytest -q
+
       - name: Database integrity
         run: |
           python - <<'PY'
@@ -60,6 +83,13 @@ jobs:
                   bad += result != 'ok'
           raise SystemExit(1 if bad else 0)
           PY
+
+      - name: Generate exact evidence
+        run: |
+          python scripts/generate_sbom.py --output /tmp/simorgh-sbom.spdx.json
+          python scripts/generate_asset_manifest.py --output /tmp/simorgh-asset-manifest.json
+          python3 scripts/compliance_gate.py --sbom /tmp/simorgh-sbom.spdx.json
+
       - name: API smoke
         run: |
           python - <<'PY'
