@@ -1,6 +1,6 @@
-# SIMORGH public launch kit
+# SIMORGH public launch gate
 
-This document defines the public-facing language for the first SIMORGH announcement. It is intentionally narrower than the project's long-term vision.
+This document is the internal/public-facing checklist for the first SIMORGH announcement. It is intentionally narrower than the long-term vision.
 
 ## Positioning
 
@@ -8,152 +8,93 @@ This document defines the public-facing language for the first SIMORGH announcem
 
 Persian:
 
-**سیمرغ، یک آزمایش متن‌باز و آفلاین‌محور برای ساخت هوش مصنوعی پاسخ‌گو به انسان است.**
-
-Slogan:
-
 **هوش در خدمت انسان، نه انسان در خدمت هوش**
 
-## The question
+The central engineering question is:
 
 > How capable can an AI system become while the human remains the owner and final authority?
 
-This question is stronger than a claim such as “we built safe AGI” because it can be tested against code, policy, logs, regression tests, and actual behavior.
+SIMORGH should be presented as an experiment, not as AGI, a solved alignment system, or a competitor claim against frontier labs.
 
-## Five things to show
+## Claims we can make
 
-1. **Offline-first**
-   Run the minimal demo without an API key or cloud account.
+Only make claims supported by executable code, tests, and CI where applicable.
 
-2. **Proposal ≠ Command**
-   Show that a proposed self-improvement action is not automatically an execution authorization.
+- Offline-first core exists.
+- Local LLM support exists, but model availability is runtime-dependent.
+- Twelve personas exist.
+- Shared request blackboard, dispatcher and reviewer components exist.
+- Provenance and governed self-improvement have regression coverage.
+- Sentence-level citation verification is implemented and regression-tested.
+- Automatic knowledge mutation is disabled behind human governance.
 
-3. **Known ≠ Inferred**
-   Explain the distinction between evidence, user-provided information, and model inference.
+## Claims we must not make
 
-4. **Provenance and verification**
-   Show that evidence-sensitive answers are expected to carry evidence, and that sentence-level citation verification can reject mismatched quoted text.
-
-5. **Human authority**
-   Show the governance boundary around higher-risk self-improvement and automatic knowledge mutation.
-
-## What not to claim
-
-Do not describe SIMORGH as:
-
-- AGI
-- superintelligence
-- “unhackable” or “cannot go rogue”
-- a replacement for human judgment
-- better than frontier models
-- the world's first human-centered AI
-- a fully autonomous agent
-
-The public story should remain evidence-first. A limitation is useful information, not a marketing failure.
-
-## First X post
-
-```text
-I’ve been building something quietly.
-
-SIMORGH is an open-source experiment in human-accountable AI.
-
-Offline-first.
-User-owned memory.
-Provenance.
-Bounded tools.
-Human gates for self-improvement.
-
-Not a claim to have built AGI.
-
-A question turned into code:
-
-How capable can an AI system become while the human remains the owner?
-
-→ https://github.com/mahdi7002/simorgh
-```
-
-## Follow-up sequence
-
-### Post 2: Proposal ≠ Command
-
-```text
-One rule sits near the center of SIMORGH:
-
-Proposal ≠ Command.
-
-An AI system may suggest a change.
-That suggestion is not permission to execute it.
-
-For consequential self-improvement, the human remains the gate.
-
-The interesting part is not the sentence.
-It is making the boundary executable and testable.
-```
-
-### Post 3: Known ≠ Inferred
-
-```text
-Another rule:
-
-Known ≠ Inferred.
-
-Retrieved evidence, user-provided facts, and model inference should not silently become one undifferentiated “memory.”
-
-SIMORGH treats provenance as part of the architecture, not decoration for the UI.
-```
-
-### Post 4: Verification
-
-```text
-A citation existing is not enough.
-
-SIMORGH now checks whether quoted text actually matches the retrieved evidence, rather than merely checking that “some evidence” exists.
-
-Small feature.
-Important boundary.
-
-Verification over claims.
-```
-
-### Post 5: Run it
-
-```text
-You don't have to trust the description.
-
-Clone it.
-Run the minimal demo.
-Inspect the code.
-Break it.
-
-python3 demo/simorgh_minimal.py --test
-
-If the claim and the behavior disagree, the behavior wins.
-```
-
-## Demo narrative
-
-For a short video or screen recording, use this order:
-
-1. Show the repository and README.
-2. Run `python3 demo/simorgh_minimal.py --test`.
-3. Run one Persian question and show the explicit execution mode.
-4. Start the local service and call `/health` and `/personas`.
-5. Show one governance test or reviewer regression test.
-6. End on the sentence: **“The goal is not autonomous power. The goal is inspectable capability under human authority.”**
-
-Do not use simulated screenshots or fabricated benchmark numbers.
+- "SIMORGH is AGI."
+- "SIMORGH cannot go rogue."
+- "SIMORGH cannot be jailbroken or misused."
+- "SIMORGH solves AI alignment."
+- "SIMORGH is better than OpenAI/Anthropic/Google/xAI."
+- "SIMORGH is fully autonomous."
+- "SIMORGH has capabilities that have not been demonstrated."
 
 ## Release gate
 
-Before creating `v0.1.0`, confirm all of the following:
+Do not create the first public release until all of these are true:
 
-- main branch CI is green
-- minimal demo passes from a clean checkout
-- full test suite passes
-- README capability statuses still match executable code and tests
-- no secrets or machine-specific paths are required
-- release notes distinguish implemented, experimental, planned, and disabled behavior
-- at least one real end-to-end demo is reproducible by a new user
+- [ ] Main branch CI is green after the final documentation and code changes.
+- [ ] A clean checkout can install the minimal dependency set.
+- [ ] `import main` succeeds in a clean environment.
+- [ ] Health endpoint succeeds.
+- [ ] Persona endpoint succeeds and exposes all expected personas.
+- [ ] Minimal demo passes its self-test.
+- [ ] Reviewer/citation verification regression tests pass.
+- [ ] Governance/self-improvement regression tests pass.
+- [ ] No secrets or API keys are present in tracked source/configuration.
+- [ ] No unsupported capability is labelled IMPLEMENTED.
+- [ ] Release notes explicitly state runtime-dependent limitations.
+- [ ] A version tag and GitHub Release are created only after the checks above.
 
-Until these conditions are met, the repository should remain a project under active verification rather than being presented as a finished product.
+## First demonstration
+
+The strongest first demonstration is not a polished chatbot screenshot. It should show the control path:
+
+`Question → Evidence retrieval → Provenance → Persona response → Reviewer → Citation verification → Human decision`
+
+If evidence is unavailable, the system should say so rather than manufacture support.
+
+## First public announcement
+
+Recommended first post:
+
+> I’ve been building something quietly.
+>
+> SIMORGH is an open-source experiment in human-accountable AI.
+>
+> Offline-first.  
+> User-owned memory.  
+> Provenance.  
+> Bounded tools.  
+> Human gates for self-improvement.
+>
+> Not a claim to have built AGI.
+>
+> A question turned into code:
+>
+> **How capable can an AI system become while the human remains the owner?**
+>
+> → https://github.com/mahdi7002/simorgh
+
+Do not publish the announcement until the release gate is satisfied.
+
+## Follow-up sequence
+
+1. **Proposal ≠ Command**
+2. **Known ≠ Inferred**
+3. **Provenance > elegance**
+4. Citation verification, with a concrete test/result
+5. A runnable local demonstration
+6. The human-directed development story
+7. Limitations and failures discovered by users
+
+The project should earn attention by showing evidence, not by inflating the claim.
