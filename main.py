@@ -2,9 +2,10 @@ from pathlib import Path
 import logging
 import os
 import subprocess
+import secrets
 import uvicorn
 import psutil
-from fastapi import FastAPI, Form, HTTPException
+from fastapi import FastAPI, Form, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from core.paths import DASHBOARD_HTML, LOG_DIR
@@ -23,7 +24,8 @@ SIMORGH_KEY = os.getenv("SIMORGH_KEY")
 
 # Fail closed: an unconfigured external bind must never expose the API.
 LOOPBACK_HOSTS = {"127.0.0.1", "localhost", "::1"}
-if HOST not in LOOPBACK_HOSTS and not SIMORGH_KEY:
+EXTERNAL_BIND = HOST not in LOOPBACK_HOSTS
+if EXTERNAL_BIND and not SIMORGH_KEY:
     raise RuntimeError(
         "Refusing non-loopback bind without explicit SIMORGH_KEY. "
         "Use 127.0.0.1/localhost for local-only mode or configure authentication."
@@ -36,6 +38,16 @@ from core.voice_endpoint import router as voice_endpoint_router
 app.include_router(voice_docs_router)
 app.include_router(dashboard_api_router)
 app.include_router(voice_endpoint_router)
+
+if EXTERNAL_BIND:
+    @app.middleware("http")
+    async def require_api_token(request: Request, call_next):
+        if request.url.path == "/health":
+            return await call_next(request)
+        token = request.headers.get("x-token", "")
+        if not token or not secrets.compare_digest(token, SIMORGH_KEY or ""):
+            raise HTTPException(status_code=401, detail="Authentication required")
+        return await call_next(request)
 
 origins = [o.strip() for o in os.getenv("SIMORGH_CORS_ORIGINS", "http://127.0.0.1:8000,http://localhost:8000").split(",") if o.strip()]
 app.add_middleware(CORSMiddleware, allow_origins=origins, allow_methods=["GET", "POST"], allow_headers=["*"])
