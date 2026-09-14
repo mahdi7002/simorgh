@@ -40,7 +40,12 @@ jobs:
       - name: Block obvious secret patterns
         run: |
           set +e
-          hits=$(git grep -nE 'gsk_|sk-[A-Za-z0-9]{20,}|api[_-]?key[[:space:]]*[:=][[:space:]]*["'"'][A-Za-z0-9]{16,}["'"']|simorgh123' -- ':!*.md' ':!.github/workflows/*')
+          hits=$(git grep -nE \
+            -e 'gsk_' \
+            -e 'sk-[A-Za-z0-9]{20,}' \
+            -e "api[_-]?key[[:space:]]*[:=][[:space:]]*['\"][A-Za-z0-9]{16,}['\"]" \
+            -e 'simorgh123' \
+            -- ':!*.md' ':!.github/workflows/*')
           rc=$?
           set -e
           if [ "$rc" -gt 1 ]; then
