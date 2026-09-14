@@ -59,7 +59,7 @@ jobs:
       - name: Compile source tree
         run: python3 -m compileall -q . -x '(^|/)(\.git|\.venv|venv|__pycache__)(/|$)'
 
-      - name: Run full regression suite with warnings treated as errors
+      - name: Run full regression suite with pytest warning policy
         run: PYTHONPATH=. python -m pytest -q
 
       - name: Upload audit evidence

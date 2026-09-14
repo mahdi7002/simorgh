@@ -66,8 +66,8 @@ jobs:
       - name: Minimal demo
         run: python demo/simorgh_minimal.py --test
 
-      - name: Regression tests with warnings treated as errors
-        run: PYTHONPATH=. python -W error::DeprecationWarning -W error::PendingDeprecationWarning -W error::FutureWarning -m pytest -q
+      - name: Regression tests with pytest warning policy
+        run: PYTHONPATH=. python -m pytest -q
 
       - name: Database integrity
         run: |
