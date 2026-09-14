@@ -39,13 +39,13 @@ jobs:
 
       - name: Block obvious secret patterns
         run: |
-          hits=$(git grep -nE "(gsk_|sk-[A-Za-z0-9]{20,}|api[_-]?key['\"]?\s*[:=]\s*['\"][A-Za-z0-9]{16,})" -- . ':!*.md' ':!.github/workflows/*' || true)
+          hits=$(git grep -nE '(gsk_|sk-[A-Za-z0-9]{20,}|api[_-]?key["'"']?[[:space:]]*[:=][[:space:]]*["'"'][A-Za-z0-9]{16,}|SECRET_KEY[[:space:]]*=[[:space:]]*os\.environ\.get\("SIMORGH_KEY",)' -- . ':!*.md' ':!.github/workflows/*' || true)
           if [ -n "$hits" ]; then
-            echo "❌ Possible secret found:"
+            echo "❌ Possible secret or insecure default detected:"
             echo "$hits"
             exit 1
           fi
-          echo "✅ No obvious secrets."
+          echo "✅ No obvious secrets or insecure auth defaults."
 
       - name: Verify minimal demo
         run: python3 demo/simorgh_minimal.py --test
@@ -57,5 +57,5 @@ jobs:
 
       - name: Run tests
         run: |
-          python3 -m pip install pytest httpx2
+          python3 -m pip install pytest httpx
           PYTHONPATH=. pytest -q
