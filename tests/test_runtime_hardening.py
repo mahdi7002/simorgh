@@ -1,3 +1,7 @@
+import os
+import subprocess
+import sys
+
 import pytest
 
 
@@ -83,3 +87,43 @@ def test_default_registry_exposes_sensor_status():
     assert result.provenance["execution"] == "local"
     assert 0.0 <= result.data["memory_percent"] <= 100.0
     assert 0.0 <= result.data["disk_percent"] <= 100.0
+
+
+def test_external_bind_without_key_fails_closed():
+    env = os.environ.copy()
+    env["SIMORGH_HOST"] = "0.0.0.0"
+    env.pop("SIMORGH_KEY", None)
+
+    result = subprocess.run(
+        [sys.executable, "-c", "import main"],
+        env=env,
+        capture_output=True,
+        text=True,
+        timeout=15,
+    )
+
+    assert result.returncode != 0
+    combined = result.stdout + result.stderr
+    assert "Refusing non-loopback bind" in combined
+
+
+def test_external_bind_with_key_installs_auth_middleware():
+    env = os.environ.copy()
+    env["SIMORGH_HOST"] = "0.0.0.0"
+    env["SIMORGH_KEY"] = "test-only-key"
+
+    script = (
+        "import main; "
+        "print(any(getattr(m, 'cls', None).__name__ == 'BaseHTTPMiddleware' "
+        "for m in main.app.user_middleware))"
+    )
+    result = subprocess.run(
+        [sys.executable, "-c", script],
+        env=env,
+        capture_output=True,
+        text=True,
+        timeout=15,
+    )
+
+    assert result.returncode == 0, result.stderr
+    assert "True" in result.stdout
