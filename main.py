@@ -1,13 +1,16 @@
 from pathlib import Path
+import hashlib
 import logging
 import os
-import subprocess
 import secrets
-import uvicorn
+import subprocess
+
 import psutil
+import uvicorn
 from fastapi import FastAPI, Form, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
+
 from core.paths import DASHBOARD_HTML, LOG_DIR
 
 LOG_DIR.mkdir(parents=True, exist_ok=True)
@@ -31,6 +34,21 @@ if EXTERNAL_BIND and not SIMORGH_KEY:
         "Use 127.0.0.1/localhost for local-only mode or configure authentication."
     )
 
+AI_DISCLOSURE = "این پاسخ توسط یک سامانه هوش مصنوعی تولید شده است؛ پیش از تصمیم‌گیری، آن را بررسی کنید."
+MAX_SESSION_HEADER = 128
+
+
+def _session_id(request: Request) -> str:
+    """Return a stable, non-reversible session identifier for local memory storage."""
+    raw = request.headers.get("x-simorgh-session", "").strip()
+    if EXTERNAL_BIND and not raw:
+        raise HTTPException(400, "X-SIMORGH-SESSION is required for external sessions")
+    if len(raw) > MAX_SESSION_HEADER:
+        raise HTTPException(400, "X-SIMORGH-SESSION is too long")
+    raw = raw or "local"
+    return hashlib.sha256(raw.encode("utf-8")).hexdigest()
+
+
 app = FastAPI(title="SIMORGH", version=os.getenv("SIMORGH_VERSION", "0.1.0"))
 from core.voice_docs import router as voice_docs_router
 from core.dashboard_api import router as dashboard_api_router
@@ -46,11 +64,35 @@ if EXTERNAL_BIND:
             return await call_next(request)
         token = request.headers.get("x-token", "")
         if not token or not secrets.compare_digest(token, SIMORGH_KEY or ""):
-            raise HTTPException(status_code=401, detail="Authentication required")
+            return JSONResponse(status_code=401, content={"detail": "Authentication required"})
         return await call_next(request)
 
-origins = [o.strip() for o in os.getenv("SIMORGH_CORS_ORIGINS", "http://127.0.0.1:8000,http://localhost:8000").split(",") if o.strip()]
-app.add_middleware(CORSMiddleware, allow_origins=origins, allow_methods=["GET", "POST"], allow_headers=["*"])
+
+@app.middleware("http")
+async def security_headers(request: Request, call_next):
+    response = await call_next(request)
+    response.headers.setdefault("X-Content-Type-Options", "nosniff")
+    response.headers.setdefault("X-Frame-Options", "DENY")
+    response.headers.setdefault("Referrer-Policy", "no-referrer")
+    if request.url.path in {"/ask", "/chat", "/orchestrate", "/voice"}:
+        response.headers.setdefault("X-SIMORGH-AI-GENERATED", "true")
+    return response
+
+
+origins = [
+    o.strip()
+    for o in os.getenv(
+        "SIMORGH_CORS_ORIGINS",
+        "http://127.0.0.1:8000,http://localhost:8000",
+    ).split(",")
+    if o.strip()
+]
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_methods=["GET", "POST"],
+    allow_headers=["*"],
+)
 
 from core.understanding import UnderstandingEngine
 from core.memory import MemoryEngine
@@ -65,31 +107,50 @@ why_engine = WhyEngine()
 agent_manager = AgentManager()
 orchestrator = Orchestrator()
 
+
 @app.post("/ask")
-async def ask(query: str = Form(...)):
+async def ask(request: Request, query: str = Form(...)):
     try:
         intent = understanding.detect_intent(query)
         goal, obstacle = understanding.extract_goal_obstacle(query)
         cause = why_engine.find_cause(obstacle) if obstacle else None
         response = agent_manager.consult(goal, obstacle, cause, query)
-        memory.store_conversation("default", query, response, {"intent": intent, "goal": goal, "obstacle": obstacle, "cause": cause})
-        return {"response": response, "goal": goal, "obstacle": obstacle, "cause": cause, "intent": intent}
+        memory.store_conversation(
+            _session_id(request),
+            query,
+            response,
+            {"intent": intent, "goal": goal, "obstacle": obstacle, "cause": cause},
+        )
+        return {
+            "response": response,
+            "goal": goal,
+            "obstacle": obstacle,
+            "cause": cause,
+            "intent": intent,
+            "ai_disclosure": AI_DISCLOSURE,
+        }
+    except HTTPException:
+        raise
     except Exception as exc:
         logger.exception("ask failed")
         raise HTTPException(500, "Request processing failed") from exc
 
+
 @app.post("/chat")
-async def chat(query: str = Form(...), agent: str = Form("hakim")):
+async def chat(request: Request, query: str = Form(...), agent: str = Form("hakim")):
     try:
         response = chat_ask(query, agent=agent)
-        memory.store_conversation("default", query, response, {"agent": agent})
-        return {"response": response, "agent": agent}
+        memory.store_conversation(_session_id(request), query, response, {"agent": agent})
+        return {"response": response, "agent": agent, "ai_disclosure": AI_DISCLOSURE}
+    except HTTPException:
+        raise
     except Exception as exc:
         logger.exception("chat failed")
         raise HTTPException(500, "Chat processing failed") from exc
 
+
 @app.post("/orchestrate")
-async def orchestrate(query: str = Form(...)):
+async def orchestrate(request: Request, query: str = Form(...)):
     try:
         result = orchestrator.run(query, max_agents=2)
         response = "\n\n".join(
@@ -98,7 +159,7 @@ async def orchestrate(query: str = Form(...)):
             if text
         )
         memory.store_conversation(
-            "default",
+            _session_id(request),
             query,
             response,
             {
@@ -107,13 +168,13 @@ async def orchestrate(query: str = Form(...)):
                 "review": result["review"],
             },
         )
-        return {
-            "response": response,
-            **result,
-        }
+        return {"response": response, "ai_disclosure": AI_DISCLOSURE, **result}
+    except HTTPException:
+        raise
     except Exception as exc:
         logger.exception("orchestration failed")
         raise HTTPException(500, "Orchestration failed") from exc
+
 
 @app.get("/quran-search")
 async def quran_search_route(q: str):
@@ -124,16 +185,19 @@ async def quran_search_route(q: str):
         logger.exception("quran search failed")
         raise HTTPException(500, "Quran search failed") from exc
 
+
 @app.get("/personas")
 async def personas_route():
     from core.chat import PERSONAS
     return {"personas": [{"id": k, **v} for k, v in PERSONAS.items()]}
+
 
 @app.get("/dashboard/")
 async def dashboard():
     if not DASHBOARD_HTML.is_file():
         raise HTTPException(404, "Dashboard not found")
     return FileResponse(DASHBOARD_HTML)
+
 
 @app.get("/status")
 async def status():
@@ -145,11 +209,18 @@ async def status():
         except Exception:
             up = False
         services.append({"name": name, "port": port, "up": up})
-    return {"cpu": psutil.cpu_percent(interval=0.1), "ram": psutil.virtual_memory().percent, "disk": psutil.disk_usage("/").percent, "services": services}
+    return {
+        "cpu": psutil.cpu_percent(interval=0.1),
+        "ram": psutil.virtual_memory().percent,
+        "disk": psutil.disk_usage("/").percent,
+        "services": services,
+    }
+
 
 @app.get("/health")
 async def health_check():
     return {"status": "healthy", "version": app.version, "python_version": os.sys.version.split()[0]}
+
 
 if __name__ == "__main__":
     uvicorn.run(app, host=HOST, port=PORT, log_level="info")
