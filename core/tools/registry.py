@@ -88,6 +88,7 @@ def build_default_registry() -> ToolRegistry:
     from core.poetry_search import get_poetic_wisdom
     from core.quran_search import get_quran_wisdom
     from core.yazd_lore import format_for_prompt as format_yazd
+    from core.tools.sensor_status import get_sensor_status
 
     registry = ToolRegistry()
 
@@ -113,6 +114,12 @@ def build_default_registry() -> ToolRegistry:
         "yazd_lore",
         lambda query: format_yazd(query),
         source="core.yazd_lore",
+    )
+
+    registry.register(
+        "sensor_status",
+        get_sensor_status,
+        source="core.tools.sensor_status",
     )
 
     return registry
