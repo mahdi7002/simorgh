@@ -1,5 +1,5 @@
 path,type,source,rights_holder,license,copyright_status,database_rights,translation_rights,redistribution,commercial_use,attribution,verification,status,notes
 catalog.json,metadata,[NOT VERIFIED],[NOT VERIFIED],[NOT VERIFIED],[NOT VERIFIED],[NOT VERIFIED],[NOT VERIFIED],[NOT VERIFIED],[NOT VERIFIED],[NOT VERIFIED],[NOT VERIFIED],NOT_VERIFIED,Repository asset manifest needs provenance
- data/,directory,[NOT VERIFIED],[NOT VERIFIED],[NOT VERIFIED],[NOT VERIFIED],[NOT VERIFIED],[NOT VERIFIED],[NOT VERIFIED],[NOT VERIFIED],[NOT VERIFIED],[NOT VERIFIED],[NOT VERIFIED],NOT_VERIFIED,Every shipped data asset must be mapped before release
+data/,directory,[NOT VERIFIED],[NOT VERIFIED],[NOT VERIFIED],[NOT VERIFIED],[NOT VERIFIED],[NOT VERIFIED],[NOT VERIFIED],[NOT VERIFIED],[NOT VERIFIED],[NOT VERIFIED],[NOT VERIFIED],NOT_VERIFIED,Every shipped data asset must be mapped before release
 quran/,directory,[NOT VERIFIED],[NOT VERIFIED],[NOT VERIFIED],[NOT VERIFIED],[NOT VERIFIED],[NOT VERIFIED],[NOT VERIFIED],[NOT VERIFIED],[NOT VERIFIED],[NOT VERIFIED],NOT_VERIFIED,Religious text/source metadata must be separately verified
 music/,directory,[NOT VERIFIED],[NOT VERIFIED],[NOT VERIFIED],[NOT VERIFIED],[NOT VERIFIED],[NOT VERIFIED],[NOT VERIFIED],[NOT VERIFIED],[NOT VERIFIED],[NOT VERIFIED],NOT_VERIFIED,Audio rights require separate provenance
