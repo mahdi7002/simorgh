@@ -14,12 +14,42 @@ from fastapi.responses import FileResponse, JSONResponse
 from core.paths import DASHBOARD_HTML, LOG_DIR
 
 LOG_DIR.mkdir(parents=True, exist_ok=True)
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-    handlers=[logging.FileHandler(LOG_DIR / "simorgh.log"), logging.StreamHandler()],
-)
-logger = logging.getLogger(__name__)
+_LOG_FORMAT = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+_LOGGER_NAME = "simorgh"
+
+
+def _configure_logging():
+    """Configure SIMORGH logging once without mutating the root logger."""
+    app_logger = logging.getLogger(_LOGGER_NAME)
+    app_logger.setLevel(logging.INFO)
+    app_logger.propagate = False
+
+    formatter = logging.Formatter(_LOG_FORMAT)
+    has_file = False
+    has_stream = False
+
+    for handler in list(app_logger.handlers):
+        if isinstance(handler, logging.FileHandler):
+            has_file = True
+            handler.setFormatter(formatter)
+        elif isinstance(handler, logging.StreamHandler):
+            has_stream = True
+            handler.setFormatter(formatter)
+
+    if not has_file:
+        file_handler = logging.FileHandler(LOG_DIR / "simorgh.log")
+        file_handler.setFormatter(formatter)
+        app_logger.addHandler(file_handler)
+
+    if not has_stream:
+        stream_handler = logging.StreamHandler()
+        stream_handler.setFormatter(formatter)
+        app_logger.addHandler(stream_handler)
+
+    return app_logger
+
+
+logger = _configure_logging()
 
 HOST = os.getenv("SIMORGH_HOST", "127.0.0.1")
 PORT = int(os.getenv("SIMORGH_PORT", "8000"))
