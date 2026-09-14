@@ -22,10 +22,16 @@ DOCUMENT_NAMESPACE_BASE = "https://github.com/mahdi7002/simorgh/sbom/"
 
 
 def _license(dist: metadata.Distribution) -> str:
+    """Prefer modern PEP 639 License-Expression metadata, then legacy fields."""
+    expression = dist.metadata.get("License-Expression")
+    if expression:
+        return expression.strip()
+
     values = dist.metadata.get_all("Classifier") or []
     for value in values:
         if value.startswith("License ::"):
             return value.split("::", 2)[-1].strip()
+
     value = dist.metadata.get("License")
     return value.strip() if value else "NOASSERTION"
 
