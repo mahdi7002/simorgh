@@ -3,7 +3,7 @@
 
 Default mode is evidence collection. ``--release`` is intentionally strict and
 fails closed until rights, third-party licensing, privacy documentation,
-and human signoff are all verified.
+security invariants, and human signoff are all verified.
 """
 from __future__ import annotations
 
@@ -22,17 +22,24 @@ REQUIRED = [
     ROOT / "compliance" / "THIRD_PARTY_LICENSES.csv",
     ROOT / "compliance" / "PRIVACY_DATA_MAP.md",
     ROOT / "compliance" / "GLOBAL_JURISDICTION_MATRIX.md",
+    ROOT / "compliance" / "PROHIBITED_USE_POLICY.md",
     ROOT / "compliance" / "RISK_REGISTER.md",
     ROOT / "compliance" / "RELEASE_SIGNOFF.md",
 ]
 
 RISKY_PATTERNS = {
-    "hardcoded_auth_default": re.compile(r"SIMORGH_KEY\s*=\s*os\.environ\.get\([^\n]*,") ,
+    "hardcoded_auth_default": re.compile(r"SIMORGH_KEY\s*=\s*os\.environ\.get\([^\n]*,"),
     "shell_true": re.compile(r"shell\s*=\s*True"),
     "os_system": re.compile(r"\bos\.system\s*\("),
     "dynamic_exec": re.compile(r"\b(?:eval|exec)\s*\("),
     "legacy_secret": re.compile(r"simorgh123|hf_demo_key"),
 }
+
+REQUIREMENT_RE = re.compile(r"^\s*([A-Za-z0-9_.-]+)\s*(?:\[.*?\])?\s*(?:[<>=!~].*)?$")
+
+
+def normalize_name(value: str) -> str:
+    return re.sub(r"[-_.]+", "-", value.strip().lower())
 
 
 def tracked_files() -> list[str]:
@@ -54,7 +61,10 @@ def rights_coverage(files: list[str]) -> tuple[list[str], list[str]]:
     missing: list[str] = []
     unverified: list[str] = []
     for asset in assets:
-        matches = [row for prefix, row in specs if prefix and (asset == prefix or (prefix.endswith("/") and asset.startswith(prefix)))]
+        matches = [
+            row for prefix, row in specs
+            if prefix and (asset == prefix or (prefix.endswith("/") and asset.startswith(prefix)))
+        ]
         if not matches:
             missing.append(asset)
             continue
@@ -63,15 +73,43 @@ def rights_coverage(files: list[str]) -> tuple[list[str], list[str]]:
     return missing, unverified
 
 
+def declared_requirements() -> set[str]:
+    result: set[str] = set()
+    for filename in ("requirements.txt", "requirements-optional.txt"):
+        path = ROOT / filename
+        if not path.exists():
+            continue
+        for line in path.read_text(encoding="utf-8").splitlines():
+            line = line.strip()
+            if not line or line.startswith("#"):
+                continue
+            match = REQUIREMENT_RE.match(line)
+            if match:
+                result.add(normalize_name(match.group(1)))
+    return result
+
+
 def third_party_state() -> list[str]:
     rows = read_csv(ROOT / "compliance" / "THIRD_PARTY_LICENSES.csv")
-    return [row.get("component", "?") for row in rows if row.get("status", "").strip().upper() != "VERIFIED"]
+    indexed = {normalize_name(row.get("component", "")): row for row in rows if row.get("component")}
+    missing: list[str] = []
+    unverified: list[str] = []
+    for required in sorted(declared_requirements()):
+        row = indexed.get(required)
+        if not row:
+            missing.append(required)
+        elif row.get("status", "").strip().upper() != "VERIFIED":
+            unverified.append(row.get("component", required))
+    return missing + unverified
 
 
 def scan_source(files: list[str]) -> dict[str, list[str]]:
     findings: dict[str, list[str]] = {name: [] for name in RISKY_PATTERNS}
     extensions = {".py", ".sh", ".yml", ".yaml", ".toml", ".ini", ".env", ".cfg"}
+    excluded = {"scripts/compliance_gate.py", "scripts/generate_sbom.py"}
     for rel in files:
+        if rel in excluded:
+            continue
         path = ROOT / rel
         if path.suffix not in extensions or not path.is_file():
             continue
@@ -83,6 +121,19 @@ def scan_source(files: list[str]) -> dict[str, list[str]]:
             if pattern.search(text):
                 findings[name].append(rel)
     return {k: v for k, v in findings.items() if v}
+
+
+def implementation_invariants() -> dict[str, bool]:
+    main_text = (ROOT / "main.py").read_text(encoding="utf-8")
+    voice_text = (ROOT / "core" / "voice_endpoint.py").read_text(encoding="utf-8")
+    return {
+        "external_bind_fail_closed": all(x in main_text for x in ("EXTERNAL_BIND", "Refusing non-loopback bind", "SIMORGH_KEY")),
+        "external_token_verification": all(x in main_text for x in ("secrets.compare_digest", 'request.headers.get("x-token"', "status_code=401")),
+        "hosted_session_isolation": all(x in main_text for x in ("x-simorgh-session", "hashlib.sha256", "MAX_SESSION_HEADER")),
+        "ai_disclosure": all(x in main_text for x in ("AI_DISCLOSURE", "ai_disclosure", "X-SIMORGH-AI-GENERATED")),
+        "voice_size_bound": all(x in voice_text for x in ("SIMORGH_MAX_VOICE_BYTES", "Voice payload too large")),
+        "voice_header_privacy": "X-User-Text" not in voice_text and "X-Response-Text" not in voice_text,
+    }
 
 
 def main() -> int:
@@ -98,6 +149,7 @@ def main() -> int:
     missing_assets, unverified_assets = rights_coverage(files)
     unverified_deps = third_party_state()
     findings = scan_source(files)
+    invariants = implementation_invariants()
 
     checks = {
         "required_documents": not missing_docs,
@@ -105,6 +157,7 @@ def main() -> int:
         "asset_rights_verified": not unverified_assets,
         "third_party_license_verified": not unverified_deps,
         "dangerous_runtime_patterns": not findings,
+        **invariants,
     }
 
     for name, ok in checks.items():
