@@ -156,3 +156,45 @@ print("AUTH_E2E_PASS")
 
     assert result.returncode == 0, result.stderr
     assert "AUTH_E2E_PASS" in result.stdout
+
+
+def test_session_ids_are_hashed_and_distinct(monkeypatch):
+    import main
+    from fastapi import Request
+
+    def fake_request(value):
+        scope = {
+            "type": "http",
+            "headers": [(b"x-simorgh-session", value.encode())],
+        }
+        return Request(scope)
+
+    one = main._session_id(fake_request("alice-session"))
+    two = main._session_id(fake_request("bob-session"))
+
+    assert one != two
+    assert len(one) == 64
+    assert "alice-session" not in one
+
+
+def test_chat_response_disclosure_and_security_headers(monkeypatch):
+    from fastapi.testclient import TestClient
+    import main
+
+    monkeypatch.setattr(main, "chat_ask", lambda query, agent="hakim": "پاسخ آزمایشی")
+    monkeypatch.setattr(main.memory, "store_conversation", lambda *args, **kwargs: None)
+
+    client = TestClient(main.app)
+    response = client.post(
+        "/chat",
+        data={"query": "سلام", "agent": "hakim"},
+        headers={"x-simorgh-session": "test-session"},
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["ai_disclosure"] == main.AI_DISCLOSURE
+    assert response.headers["x-simorgh-ai-generated"] == "true"
+    assert response.headers["x-content-type-options"] == "nosniff"
+    assert response.headers["x-frame-options"] == "DENY"
+    assert response.headers["referrer-policy"] == "no-referrer"
