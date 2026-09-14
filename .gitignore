@@ -1,7 +1,9 @@
 # Virtual environments
 venv/
 .venv/
+.venv-*/
 env/
+SimorghCore/venv/
 
 # Python cache & build
 __pycache__/
@@ -51,6 +53,7 @@ data/reports.log
 imports/
 transcripts/
 memory/*.db
+data/activity.db
 
 # IDE / OS
 .idea/
