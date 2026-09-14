@@ -67,7 +67,7 @@ jobs:
         run: python demo/simorgh_minimal.py --test
 
       - name: Regression tests with warnings treated as errors
-        run: PYTHONWARNINGS='error::DeprecationWarning,error::PendingDeprecationWarning,error::FutureWarning' PYTHONPATH=. python -m pytest -q
+        run: PYTHONPATH=. python -W error::DeprecationWarning -W error::PendingDeprecationWarning -W error::FutureWarning -m pytest -q
 
       - name: Database integrity
         run: |
