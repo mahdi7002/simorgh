@@ -1,0 +1,8 @@
+component,declared_constraint,source,detected_version,license,license_url,notice_required,commercial_use,verification,status,notes
+fastapi,>=0.100.0,PyPI,[RESOLVE IN CI],[RESOLVE IN CI],https://pypi.org/project/fastapi/,[RESOLVE IN CI],[RESOLVE IN CI],[NOT VERIFIED],NOT_VERIFIED,Exact shipped version and license must be captured in release SBOM
+uvicorn,>=0.20.0,PyPI,[RESOLVE IN CI],[RESOLVE IN CI],https://pypi.org/project/uvicorn/,[RESOLVE IN CI],[RESOLVE IN CI],[NOT VERIFIED],NOT_VERIFIED,Exact shipped version and license must be captured in release SBOM
+python-multipart,>=0.0.6,PyPI,[RESOLVE IN CI],[RESOLVE IN CI],https://pypi.org/project/python-multipart/,[RESOLVE IN CI],[RESOLVE IN CI],[NOT VERIFIED],NOT_VERIFIED,Exact shipped version and license must be captured in release SBOM
+pydantic,>=2.0.0,PyPI,[RESOLVE IN CI],[RESOLVE IN CI],https://pypi.org/project/pydantic/,[RESOLVE IN CI],[RESOLVE IN CI],[NOT VERIFIED],NOT_VERIFIED,Exact shipped version and license must be captured in release SBOM
+requests,>=2.31.0,PyPI,[RESOLVE IN CI],[RESOLVE IN CI],https://pypi.org/project/requests/,[RESOLVE IN CI],[RESOLVE IN CI],[NOT VERIFIED],NOT_VERIFIED,Exact shipped version and license must be captured in release SBOM
+psutil,>=5.9.0,PyPI,[RESOLVE IN CI],[RESOLVE IN CI],https://pypi.org/project/psutil/,[RESOLVE IN CI],[RESOLVE IN CI],[NOT VERIFIED],NOT_VERIFIED,Exact shipped version and license must be captured in release SBOM
+python-dotenv,>=1.0.0,PyPI,[RESOLVE IN CI],[RESOLVE IN CI],https://pypi.org/project/python-dotenv/,[RESOLVE IN CI],[RESOLVE IN CI],[NOT VERIFIED],NOT_VERIFIED,Exact shipped version and license must be captured in release SBOM
