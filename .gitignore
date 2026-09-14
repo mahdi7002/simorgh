@@ -54,6 +54,7 @@ imports/
 transcripts/
 memory/*.db
 data/activity.db
+data/terminal.log
 
 # IDE / OS
 .idea/
