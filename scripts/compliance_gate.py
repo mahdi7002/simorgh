@@ -3,12 +3,13 @@
 
 Default mode is evidence collection. ``--release`` is intentionally strict and
 fails closed until rights, third-party licensing, privacy documentation,
-security invariants, and human signoff are all verified.
+security invariants, SBOM evidence, and human signoff are all verified.
 """
 from __future__ import annotations
 
 import argparse
 import csv
+import json
 import re
 import subprocess
 from pathlib import Path
@@ -32,7 +33,7 @@ RISKY_PATTERNS = {
     "shell_true": re.compile(r"shell\s*=\s*True"),
     "os_system": re.compile(r"\bos\.system\s*\("),
     "dynamic_exec": re.compile(r"\b(?:eval|exec)\s*\("),
-    "legacy_secret": re.compile(r"simorgh123|hf_demo_key"),
+    "legacy_secret": re.compile(r"simorgh[0-9]{3}|hf_demo_key"),
 }
 
 REQUIREMENT_RE = re.compile(r"^\s*([A-Za-z0-9_.-]+)\s*(?:\[.*?\])?\s*(?:[<>=!~].*)?$")
@@ -73,19 +74,18 @@ def rights_coverage(files: list[str]) -> tuple[list[str], list[str]]:
     return missing, unverified
 
 
-def declared_requirements() -> set[str]:
+def declared_requirements(filename: str = "requirements.txt") -> set[str]:
     result: set[str] = set()
-    for filename in ("requirements.txt", "requirements-optional.txt"):
-        path = ROOT / filename
-        if not path.exists():
+    path = ROOT / filename
+    if not path.exists():
+        return result
+    for line in path.read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if not line or line.startswith("#"):
             continue
-        for line in path.read_text(encoding="utf-8").splitlines():
-            line = line.strip()
-            if not line or line.startswith("#"):
-                continue
-            match = REQUIREMENT_RE.match(line)
-            if match:
-                result.add(normalize_name(match.group(1)))
+        match = REQUIREMENT_RE.match(line)
+        if match:
+            result.add(normalize_name(match.group(1)))
     return result
 
 
@@ -94,7 +94,7 @@ def third_party_state() -> list[str]:
     indexed = {normalize_name(row.get("component", "")): row for row in rows if row.get("component")}
     missing: list[str] = []
     unverified: list[str] = []
-    for required in sorted(declared_requirements()):
+    for required in sorted(declared_requirements("requirements.txt") | declared_requirements("requirements-optional.txt")):
         row = indexed.get(required)
         if not row:
             missing.append(required)
@@ -123,6 +123,46 @@ def scan_source(files: list[str]) -> dict[str, list[str]]:
     return {k: v for k, v in findings.items() if v}
 
 
+def sbom_state(path: Path) -> tuple[bool, list[str]]:
+    if not path.is_file():
+        return False, [f"SBOM_NOT_FOUND:{path}"]
+    try:
+        document = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        return False, [f"SBOM_INVALID:{type(exc).__name__}"]
+
+    problems: list[str] = []
+    if document.get("spdxVersion") != "SPDX-2.3":
+        problems.append("SBOM_BAD_SPDX_VERSION")
+    packages = document.get("packages")
+    if not isinstance(packages, list) or not packages:
+        problems.append("SBOM_NO_PACKAGES")
+        return False, problems
+
+    indexed = {}
+    for package in packages:
+        name = package.get("name")
+        version = package.get("versionInfo")
+        if not name or not version:
+            problems.append("SBOM_PACKAGE_WITHOUT_NAME_OR_VERSION")
+            continue
+        key = normalize_name(name)
+        if key in indexed:
+            problems.append(f"SBOM_DUPLICATE_PACKAGE:{name}")
+        indexed[key] = package
+
+    for required in sorted(declared_requirements("requirements.txt")):
+        package = indexed.get(required)
+        if not package:
+            problems.append(f"SBOM_MISSING_CORE_PACKAGE:{required}")
+            continue
+        license_declared = str(package.get("licenseDeclared", "")).strip()
+        if not license_declared or license_declared == "NOASSERTION":
+            problems.append(f"SBOM_NO_LICENSE_METADATA:{package.get('name', required)}")
+
+    return not problems, problems
+
+
 def implementation_invariants() -> dict[str, bool]:
     main_text = (ROOT / "main.py").read_text(encoding="utf-8")
     voice_text = (ROOT / "core" / "voice_endpoint.py").read_text(encoding="utf-8")
@@ -139,6 +179,7 @@ def implementation_invariants() -> dict[str, bool]:
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--release", action="store_true")
+    parser.add_argument("--sbom", type=Path, default=None)
     args = parser.parse_args()
 
     print("SIMORGH compliance gate")
@@ -159,6 +200,17 @@ def main() -> int:
         "dangerous_runtime_patterns": not findings,
         **invariants,
     }
+
+    if args.sbom is not None:
+        sbom_ok, sbom_problems = sbom_state(args.sbom)
+        checks["sbom_core_dependency_metadata"] = sbom_ok
+        if sbom_problems:
+            print("sbom_problems:", ", ".join(sbom_problems))
+    elif args.release:
+        checks["sbom_core_dependency_metadata"] = False
+        print("sbom_problems: SBOM_REQUIRED_FOR_RELEASE")
+    else:
+        print("sbom_check: not supplied in audit mode")
 
     for name, ok in checks.items():
         print(f"[{ 'PASS' if ok else 'BLOCK' }] {name}")
