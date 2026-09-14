@@ -16,6 +16,7 @@ from pathlib import Path
 from urllib.parse import urlparse
 
 SPDX_VERSION = "SPDX-2.3"
+SPDX_LICENSE_LIST_VERSION = "3.28.0"
 CREATOR = "Tool: SIMORGH SBOM generator"
 DOCUMENT_NAMESPACE_BASE = "https://github.com/mahdi7002/simorgh/sbom/"
 
@@ -30,25 +31,25 @@ def _license(dist: metadata.Distribution) -> str:
 
 
 def _home(dist: metadata.Distribution) -> str:
-    for key in ("Project-URL", "Home-page"):
-        if key == "Home-page":
-            value = dist.metadata.get("Home-page")
-            if value:
-                return value
-            continue
-        values = dist.metadata.get_all(key) or []
-        for item in values:
-            if "," in item:
-                _, url = item.split(",", 1)
-                parsed = urlparse(url.strip())
-                if parsed.scheme:
-                    return url.strip()
+    value = dist.metadata.get("Home-page")
+    if value:
+        return value
+    for item in dist.metadata.get_all("Project-URL") or []:
+        if "," in item:
+            _, url = item.split(",", 1)
+            parsed = urlparse(url.strip())
+            if parsed.scheme:
+                return url.strip()
     return "NOASSERTION"
 
 
 def _spdx_id(name: str, version: str) -> str:
     safe = "".join(ch if ch.isalnum() else "-" for ch in f"{name}-{version}")
     return f"SPDXRef-Package-{safe}"
+
+
+def _norm_name(value: str) -> str:
+    return value.lower().replace("_", "-").replace(".", "-")
 
 
 def main() -> int:
@@ -65,7 +66,7 @@ def main() -> int:
         if not name:
             continue
         sid = _spdx_id(name, version)
-        by_name[name.lower().replace("_", "-")] = sid
+        by_name[_norm_name(name)] = sid
         packages.append(
             {
                 "SPDXID": sid,
@@ -84,15 +85,23 @@ def main() -> int:
         name = dist.metadata.get("Name")
         if not name:
             continue
-        src = by_name.get(name.lower().replace("_", "-"))
+        src = by_name.get(_norm_name(name))
         if not src:
             continue
         for requirement in dist.requires or []:
             dep = requirement.split(";", 1)[0].strip()
-            dep_name = dep.split("[", 1)[0].split("<", 1)[0].split(">", 1)[0].split("=", 1)[0].split("!", 1)[0].split("~", 1)[0].strip()
-            dst = by_name.get(dep_name.lower().replace("_", "-"))
+            dep_name = dep.split("[", 1)[0]
+            for marker in ("<", ">", "=", "!", "~"):
+                dep_name = dep_name.split(marker, 1)[0]
+            dst = by_name.get(_norm_name(dep_name.strip()))
             if dst:
-                relationships.append({"spdxElementId": src, "relationshipType": "DEPENDS_ON", "relatedSpdxElement": dst})
+                relationships.append(
+                    {
+                        "spdxElementId": src,
+                        "relationshipType": "DEPENDS_ON",
+                        "relatedSpdxElement": dst,
+                    }
+                )
 
     created = datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
     nonce = hashlib.sha256(f"{created}:{platform.python_version()}".encode()).hexdigest()[:16]
@@ -105,7 +114,7 @@ def main() -> int:
         "creationInfo": {
             "created": created,
             "creators": [CREATOR],
-            "licenseListVersion": "3.26",
+            "licenseListVersion": SPDX_LICENSE_LIST_VERSION,
         },
         "packages": packages,
         "relationships": relationships,
