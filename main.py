@@ -17,6 +17,18 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+HOST = os.getenv("SIMORGH_HOST", "127.0.0.1")
+PORT = int(os.getenv("SIMORGH_PORT", "8000"))
+SIMORGH_KEY = os.getenv("SIMORGH_KEY")
+
+# Fail closed: an unconfigured external bind must never expose the API.
+LOOPBACK_HOSTS = {"127.0.0.1", "localhost", "::1"}
+if HOST not in LOOPBACK_HOSTS and not SIMORGH_KEY:
+    raise RuntimeError(
+        "Refusing non-loopback bind without explicit SIMORGH_KEY. "
+        "Use 127.0.0.1/localhost for local-only mode or configure authentication."
+    )
+
 app = FastAPI(title="SIMORGH", version=os.getenv("SIMORGH_VERSION", "0.1.0"))
 from core.voice_docs import router as voice_docs_router
 from core.dashboard_api import router as dashboard_api_router
@@ -128,4 +140,4 @@ async def health_check():
     return {"status": "healthy", "version": app.version, "python_version": os.sys.version.split()[0]}
 
 if __name__ == "__main__":
-    uvicorn.run(app, host=os.getenv("SIMORGH_HOST", "127.0.0.1"), port=int(os.getenv("SIMORGH_PORT", "8000")), log_level="info")
+    uvicorn.run(app, host=HOST, port=PORT, log_level="info")
