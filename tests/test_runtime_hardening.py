@@ -127,3 +127,32 @@ def test_external_bind_with_key_installs_auth_middleware():
 
     assert result.returncode == 0, result.stderr
     assert "True" in result.stdout
+
+
+def test_external_bind_auth_enforced_end_to_end():
+    env = os.environ.copy()
+    env["SIMORGH_HOST"] = "0.0.0.0"
+    env["SIMORGH_KEY"] = "test-only-key"
+
+    script = r'''
+from fastapi.testclient import TestClient
+import main
+
+client = TestClient(main.app)
+
+assert client.get("/health").status_code == 200
+assert client.get("/personas").status_code == 401
+assert client.get("/personas", headers={"x-token": "wrong"}).status_code == 401
+assert client.get("/personas", headers={"x-token": "test-only-key"}).status_code == 200
+print("AUTH_E2E_PASS")
+'''
+    result = subprocess.run(
+        [sys.executable, "-c", script],
+        env=env,
+        capture_output=True,
+        text=True,
+        timeout=15,
+    )
+
+    assert result.returncode == 0, result.stderr
+    assert "AUTH_E2E_PASS" in result.stdout
