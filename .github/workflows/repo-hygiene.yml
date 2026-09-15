@@ -4,9 +4,14 @@ on:
   push:
   pull_request:
 
+# Hygiene checks only need read access to repository contents.
+permissions:
+  contents: read
+
 jobs:
   hygiene:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
         with:
@@ -60,6 +65,9 @@ jobs:
             exit 1
           fi
           echo "✅ No obvious secrets or insecure auth defaults."
+
+      - name: Verify strict public surface
+        run: python3 scripts/public_surface_audit.py
 
       - name: Verify minimal demo
         run: python3 demo/simorgh_minimal.py --test
