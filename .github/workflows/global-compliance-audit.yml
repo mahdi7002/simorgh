@@ -45,8 +45,12 @@ jobs:
       - name: Verify core dependency consistency
         run: python -m pip check
 
-      - name: Generate exact core-environment SPDX SBOM
-        run: python scripts/generate_sbom.py --output /tmp/simorgh-sbom-core.spdx.json
+      - name: Generate exact core-dependency-closure SPDX SBOM
+        run: >-
+          python scripts/generate_sbom.py
+          --requirements requirements.txt
+          --requirements requirements-dev.txt
+          --output /tmp/simorgh-sbom-core.spdx.json
 
       - name: Generate exact content asset manifest
         run: python scripts/generate_asset_manifest.py --output /tmp/simorgh-asset-manifest-core.json
@@ -63,8 +67,13 @@ jobs:
       - name: Verify optional dependency consistency
         run: python -m pip check
 
-      - name: Generate exact optional-environment SPDX SBOM
-        run: python scripts/generate_sbom.py --output /tmp/simorgh-sbom-optional.spdx.json
+      - name: Generate exact optional-dependency-closure SPDX SBOM
+        run: >-
+          python scripts/generate_sbom.py
+          --requirements requirements.txt
+          --requirements requirements-dev.txt
+          --requirements requirements-optional.txt
+          --output /tmp/simorgh-sbom-optional.spdx.json
 
       - name: Run optional feature compliance audit
         run: python scripts/compliance_gate.py --include-optional --sbom /tmp/simorgh-sbom-optional.spdx.json
