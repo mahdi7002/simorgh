@@ -14,7 +14,6 @@ import argparse
 import json
 import re
 import sqlite3
-import sys
 import time
 import urllib.error
 import urllib.request
@@ -76,10 +75,10 @@ def load_quarantine(db_path: Path, table: str) -> tuple[list[dict[str, Any]], li
     return [dict(zip(columns, row)) for row in rows], columns
 
 
-def crawl_poet(ref: str, slug: str, timeout: float) -> dict[str, dict[str, Any]]:
-    """Return normalized poem-title -> list of poem metadata for one poet."""
+def crawl_poet(ref: str, slug: str, timeout: float) -> dict[str, list[dict[str, Any]]]:
+    """Return normalized poem-title -> all matching poem metadata for one poet."""
     seen_cats: set[str] = set()
-    poems: dict[str, dict[str, Any]] = {}
+    poems: dict[str, list[dict[str, Any]]] = {}
     queue = [f"poets/{slug}/_cat.json"]
 
     while queue:
@@ -91,21 +90,21 @@ def crawl_poet(ref: str, slug: str, timeout: float) -> dict[str, dict[str, Any]]
             category = fetch_json(upstream_url(ref, relative), timeout)
         except urllib.error.HTTPError as exc:
             if exc.code == 404 and relative == f"poets/{slug}/_cat.json":
-                # Some snapshots expose only child categories at the root.
-                continue
+                raise RuntimeError(f"Ganjoor root category missing for poet {slug!r}") from exc
             raise
         for child in category.get("ChildCats") or []:
             full_url = child.get("FullUrl")
-            if not full_url:
-                continue
-            queue.append(f"poets{full_url}/_cat.json")
+            if full_url:
+                queue.append(f"poets{full_url}/_cat.json")
         for poem in category.get("Poems") or []:
             full_url = poem.get("FullUrl")
             title = poem.get("Title")
             if not full_url or not title:
                 continue
             key = norm(str(title))
-            poems.setdefault(key, {"title": title, "full_url": full_url})
+            poems.setdefault(key, []).append(
+                {"title": title, "full_url": full_url, "id": poem.get("Id")}
+            )
     return poems
 
 
@@ -145,7 +144,7 @@ def main() -> int:
     if not poet_col or not title_col:
         raise SystemExit(
             "Cannot infer poet/title columns. "
-            f"Columns: {', '.join(columns)}. Use a reviewed mapping before proceeding."
+            f"Columns: {', '.join(columns)}. Review schema before proceeding."
         )
 
     manifest = fetch_json(upstream_url(args.ref, "manifest.json"))
@@ -159,9 +158,16 @@ def main() -> int:
         if item.get("Nickname") and item.get("FullUrl")
     }
 
-    crawl_cache: dict[str, dict[str, dict[str, Any]]] = {}
+    crawl_cache: dict[str, dict[str, list[dict[str, Any]]]] = {}
     candidates: list[dict[str, Any]] = []
-    stats = {"rows": len(rows), "matched": 0, "ambiguous": 0, "missing_poet": 0, "missing_title": 0, "oversize": 0}
+    stats = {
+        "rows": len(rows),
+        "matched": 0,
+        "ambiguous": 0,
+        "missing_poet": 0,
+        "missing_title": 0,
+        "oversize": 0,
+    }
 
     for row_index, row in enumerate(rows, start=1):
         poet = str(row.get(poet_col, "")).strip()
@@ -186,13 +192,20 @@ def main() -> int:
         slug = poet_info["slug"]
         if slug not in crawl_cache:
             crawl_cache[slug] = crawl_poet(args.ref, slug, timeout=20.0)
-        match = crawl_cache[slug].get(norm(title))
-        if match is None:
+        matches = crawl_cache[slug].get(norm(title), [])
+        if not matches:
             item["status"] = "MISSING_TITLE"
             stats["missing_title"] += 1
             candidates.append(item)
             continue
+        if len(matches) != 1:
+            item["status"] = "AMBIGUOUS_TITLE"
+            item["matches"] = matches
+            stats["ambiguous"] += 1
+            candidates.append(item)
+            continue
 
+        match = matches[0]
         url = upstream_url(args.ref, f"poets{match['full_url']}.json")
         poem = fetch_json(url)
         text = poem_text(poem)
@@ -233,7 +246,7 @@ def main() -> int:
     args.output.write_text(json.dumps(output, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     print(json.dumps(stats, ensure_ascii=False))
     print(f"Candidate written: {args.output}")
-    return 0 if stats["missing_poet"] == 0 and stats["missing_title"] == 0 and stats["oversize"] == 0 else 2
+    return 0 if all(stats[key] == 0 for key in ("ambiguous", "missing_poet", "missing_title", "oversize")) else 2
 
 
 if __name__ == "__main__":
