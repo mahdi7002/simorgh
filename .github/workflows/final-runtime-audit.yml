@@ -43,24 +43,37 @@ jobs:
       - name: Import main with core dependencies only
         run: python -c "import main; print('MAIN_IMPORT_PASS', len(main.app.routes))"
 
-      - name: Import all core modules with core dependencies only
+      - name: Import core runtime modules with core dependencies only
         run: |
           python - <<'PY'
-          import importlib, pathlib
+          import importlib
+          import pathlib
+
+          optional_prefixes = (
+              'core.engine.experimental.',
+          )
+          optional_modules = {
+              'core.library_builder',
+          }
           mods=[]
           for p in pathlib.Path('core').rglob('*.py'):
               if p.name.startswith('test_') or p.name.endswith('_test.py'):
                   continue
-              mods.append('.'.join(p.with_suffix('').parts))
+              mod='.'.join(p.with_suffix('').parts)
+              if mod in optional_modules or mod.startswith(optional_prefixes):
+                  continue
+              mods.append(mod)
+
           failures=[]
           for mod in sorted(set(mods)):
               try:
                   importlib.import_module(mod)
               except Exception as exc:
                   failures.append((mod,type(exc).__name__,str(exc)))
-          print('CORE_MODULES',len(set(mods)))
+
+          print('CORE_RUNTIME_MODULES', len(set(mods)))
           for x in failures:
-              print('FAIL',*x)
+              print('FAIL', *x)
           raise SystemExit(1 if failures else 0)
           PY
 
@@ -72,6 +85,31 @@ jobs:
 
       - name: Verify full dependency consistency
         run: python -m pip check
+
+      - name: Import all core modules with optional dependencies
+        run: |
+          python - <<'PY'
+          import importlib
+          import pathlib
+
+          mods=[]
+          for p in pathlib.Path('core').rglob('*.py'):
+              if p.name.startswith('test_') or p.name.endswith('_test.py'):
+                  continue
+              mods.append('.'.join(p.with_suffix('').parts))
+
+          failures=[]
+          for mod in sorted(set(mods)):
+              try:
+                  importlib.import_module(mod)
+              except Exception as exc:
+                  failures.append((mod,type(exc).__name__,str(exc)))
+
+          print('ALL_CORE_MODULES', len(set(mods)))
+          for x in failures:
+              print('FAIL', *x)
+          raise SystemExit(1 if failures else 0)
+          PY
 
       - name: Regression tests with pytest warning policy
         run: PYTHONPATH=. python -m pytest -q
