@@ -28,13 +28,19 @@ SIMORGH has a separate draft rebuild path for a pinned `ganjoor/ganjoor-data` sn
 
 Do not mark the Ganjoor-derived portion of `data/simorgh_full.db` `VERIFIED` merely because individual historical works are old enough to be public domain.
 
-### Quran text
+### Quran translation: Tanzil `fa.ansarian`
 
-Tanzil publishes Quran text under Creative Commons Attribution 3.0 and explicitly permits verbatim copying and distribution, with source attribution and a requirement not to change the text. This is a usable rights basis for a Tanzil-sourced verbatim Quran text, but SIMORGH has not yet established that `data/grid/quran.db` is actually derived from Tanzil or that its stored content is the exact Tanzil text covered by those terms.
+`data/grid/quran.db` has been identified as containing the Persian translation by Hussain Ansarian. The wording matches Tanzil's `fa.ansarian` translation, and Tanzil's official translation endpoint publishes the same 6236-ayah translation in the standard `sura|aya|translation` format. Tanzil's documentation states that every translation file has exactly 6236 lines, with one aya per line. citeturn322118search0turn322118search2
 
-Quran translations are a separate rights question. Tanzil states that its listed translations are for non-commercial use unless permission is obtained from the translator or publisher. No translation should therefore be classified as freely redistributable without identifying the exact translation and its license.
+SIMORGH now contains a reproducible build script, `scripts/build_tanzil_quran_db.py`, which fetches the translation directly from `https://tanzil.net/trans/fa.ansarian` at build time and inserts the rows verbatim into SQLite without editorial rewriting. `scripts/verify_tanzil_quran_db.py` compares the stored rows against the live Tanzil source. The repository CI invokes this verifier. fileciteturn185file0
 
-Quran Foundation's current developer terms are also not a suitable basis for shipping a raw local copy of API content: the terms restrict redistribution of QF Content and require a separate written commercial license for redistribution of QF Content or raw API data.
+The direct Tanzil endpoint is therefore the authoritative source for rebuilding the SIMORGH copy. The existing database becomes `VERIFIED` as a source match only after the rebuild or verifier succeeds on that exact checked-in file. The current CI run exposed a verifier parsing bug before content comparison, so the source match is presently **[NOT VERIFIED]** despite the source identity being established. fileciteturn441114view0
+
+### Rights boundary for `fa.ansarian`
+
+Tanzil's general translation terms state that translations are provided for non-commercial purposes only; other use requires permission from the translator or publisher. Therefore identifying the exact Tanzil source does **not** by itself establish commercial redistribution rights for SIMORGH. citeturn322118search2
+
+Tanzil's separate CC BY 3.0 license for the Quran text itself applies to Tanzil Quran text, not automatically to the third-party Persian translation. The Arabic Quran text terms permit verbatim distribution with attribution and prohibit changing the text. citeturn322118search1turn322118search11
 
 ## What remains to be proven
 
@@ -50,14 +56,19 @@ For each shipped database or JSON asset, a human maintainer must establish:
 8. redistribution and commercial-use restrictions;
 9. a reproducible source-to-shipped-asset mapping.
 
+For `data/grid/quran.db`, the remaining human/legal item is permission or a license basis covering the embedded Ansarian translation for the intended redistribution model. Do not infer that permission from the fact that Tanzil hosts a downloadable copy.
+
 ## Release rule
 
 Until those facts are established, `compliance/ASSET_RIGHTS.csv` must stay `NOT_VERIFIED` for the affected assets. A successful technical rebuild, SQLite integrity check, SBOM, CI run, or public-surface audit does not constitute rights clearance.
 
 ## References
 
-- Ganjoor data repository: https://github.com/ganjoor/ganjoor-data
+- Tanzil Quran translations: https://tanzil.net/trans/
+- Tanzil Hussain Ansarian translation: https://tanzil.net/trans/fa.ansarian
+- Tanzil translation format: https://tanzil.net/docs/adding_new_translations
 - Tanzil text license: https://tanzil.net/docs/Text_License
 - Tanzil download/terms: https://tanzil.net/download/
-- Tanzil translations terms: https://tanzil.net/trans/
+- Tanzil translation resources: https://tanzil.net/docs/translations_resources
+- Ganjoor data repository: https://github.com/ganjoor/ganjoor-data
 - Quran Foundation Developer Terms: https://api-docs.quran.com/legal/developer-terms/
