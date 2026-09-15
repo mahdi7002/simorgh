@@ -56,12 +56,16 @@ def tracked_files() -> list[str]:
 
 def read_csv(path: Path) -> list[dict[str, str]]:
     with path.open(newline="", encoding="utf-8") as fh:
-        return list(csv.DictReader(fh))
+        reader = csv.DictReader(fh)
+        return [
+            {key: (value or "") for key, value in row.items()}
+            for row in reader
+        ]
 
 
 def rights_coverage(files: list[str]) -> tuple[list[str], list[str]]:
     rows = read_csv(ROOT / "compliance" / "ASSET_RIGHTS.csv")
-    specs = [(str(row.get("path", "")).strip(), row) for row in rows if row.get("path")]
+    specs = [(row.get("path", "").strip(), row) for row in rows if row.get("path")]
     assets = [p for p in files if p.startswith(("data/", "quran/", "music/"))]
     missing: list[str] = []
     unverified: list[str] = []
@@ -101,7 +105,6 @@ def third_party_state(include_optional: bool = False) -> list[str]:
         required |= declared_requirements("requirements-optional.txt")
     missing: list[str] = []
     unverified: list[str] = []
-    optional = declared_requirements("requirements-optional.txt")
     for component in sorted(required):
         row = indexed.get(component)
         if not row:
