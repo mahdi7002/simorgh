@@ -8,7 +8,7 @@ echo "ROOT=$PWD DATE=$(date -Iseconds)"
 echo "--- git ---"; git rev-parse --short HEAD; git status -sb
 echo "--- python ---"; python3 --version
 echo "--- disk/mem ---"; df -h . | head -3; free -h 2>/dev/null | head -2 || true
-echo "--- hardcode ---"; grep -rn '/home/mahdi' --include='*.py' . 2>/dev/null | grep -v __pycache__ || echo none
+echo "--- absolute-home hardcode scan ---"; grep -rnE '/home/[A-Za-z0-9_.-]+' --include='*.py' . 2>/dev/null | grep -v __pycache__ || echo none
 echo "--- db ---"
 python3 - <<'PY'
 import sqlite3
