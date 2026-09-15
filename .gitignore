@@ -55,6 +55,7 @@ transcripts/
 memory/*.db
 data/activity.db
 data/terminal.log
+rebuild_staging/
 
 # Generated compliance artifacts
 *.spdx.json
