@@ -16,10 +16,11 @@ def test_breakdown_is_safe_without_catalog():
 
 def test_breakdown_loads_explicit_catalog(tmp_path):
     catalog = tmp_path / "catalog.json"
+    home = Path.home().as_posix()
     catalog.write_text(
         '{"standalone_docs_unique": ['
-        '"/home/example/docs/a.txt",'
-        '"/home/example/docs/b.txt",'
+        f'"{home}/docs/a.txt",'
+        f'"{home}/docs/b.txt",'
         '"relative/c.txt"]}',
         encoding="utf-8",
     )
