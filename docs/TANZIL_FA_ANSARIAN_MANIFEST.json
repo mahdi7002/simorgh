@@ -1,0 +1,11 @@
+{
+  "source_url": "https://tanzil.net/trans/fa.ansarian",
+  "translation_id": "fa.ansarian",
+  "translator": "Hussain Ansarian",
+  "expected_ayah_rows": 6236,
+  "actual_ayah_rows": 6236,
+  "source_sha256": "2926c77cac26de7541931aa7f63bd0e9f98ea4f0724735b251d15c929121cd70",
+  "sqlite_sha256": "929cc4183ccd4e036066b2457b7d524f7e9b4488cfe556a2f6fe604408373a94",
+  "output": "data/grid/quran.db",
+  "build_policy": "verbatim Tanzil translation rows; no editorial changes"
+}
