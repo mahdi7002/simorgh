@@ -42,6 +42,18 @@ The `Apply` step is outside autonomous planning authority.
 
 The governance layer deliberately does not execute actions. It is a gate, not an agent.
 
+## Native runtime
+
+`core/orchestration/runtime.py` now provides the dependency-free local control plane:
+
+- `RunCoordinator` manages a small explicit run lifecycle;
+- `AgentRun` records state without provider-owned persistence;
+- `EvidencePack` keeps evidence, proposals, evaluations, verification, and human decision together;
+- `ExecutionBoundary` separates sandbox preparation from application;
+- `apply()` requires explicit human approval and a registered applier.
+
+This runtime does not spawn a shell, call a cloud service, or modify the repository by itself.
+
 ## Provider adapters
 
 Future providers may implement an adapter around these contracts. A Cursor adapter, local shell worker, remote API, MCP server, or another executor must not become a privileged path around `Governance`.
@@ -52,7 +64,7 @@ External execution is always an explicit capability and an explicit boundary. Ne
 
 Tool output is not automatically truth. A successful tool result is evidence only when it is actually returned by the tool and carries usable provenance. Generated text remains generated text.
 
-Evidence artifacts should eventually be collected into an auditable evidence pack containing:
+Evidence artifacts are designed to be collected into an auditable evidence pack containing:
 
 1. request/context;
 2. retrieved evidence and provenance;
@@ -89,4 +101,4 @@ Provider conversation history, cloud session state, or external telemetry never 
 
 ## Current status
 
-The provider-neutral contracts and regression tests are implemented. Full multi-agent execution, MCP compatibility, external adapters, durable agent runs, and sandbox executors remain separate implementation work and must not be marked `IMPLEMENTED` until executable code, regression tests, and CI coverage exist.
+Provider-neutral contracts, the local run coordinator, evidence-pack model, execution boundary, and regression tests are implemented. Full multi-agent orchestration, MCP compatibility, external provider adapters, arbitrary sandbox executors, and provider-specific integrations remain separate implementation work and must not be marked `IMPLEMENTED` until executable code, regression tests, and CI coverage exist.
