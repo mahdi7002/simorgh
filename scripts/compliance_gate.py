@@ -22,6 +22,7 @@ REQUIRED = [
     ROOT / "LICENSE",
     ROOT / "SECURITY.md",
     ROOT / "docs" / "LEGAL_AND_COMPLIANCE.md",
+    ROOT / "docs" / "ASSET_PROVENANCE.md",
     ROOT / "compliance" / "ASSET_RIGHTS.csv",
     ROOT / "compliance" / "THIRD_PARTY_LICENSES.csv",
     ROOT / "compliance" / "PRIVACY_DATA_MAP.md",
@@ -100,6 +101,7 @@ def third_party_state(include_optional: bool = False) -> list[str]:
         required |= declared_requirements("requirements-optional.txt")
     missing: list[str] = []
     unverified: list[str] = []
+    optional = declared_requirements("requirements-optional.txt")
     for component in sorted(required):
         row = indexed.get(component)
         if not row:
