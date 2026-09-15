@@ -26,15 +26,12 @@ jobs:
           python-version: '3.11'
           cache: 'pip'
 
-      - name: Install core, test and security dependencies
+      - name: Install core and test/security dependencies
         run: |
           python -m pip install -r requirements.txt
           python -m pip install -r requirements-dev.txt
 
-      - name: Install optional dependencies
-        run: python -m pip install -r requirements-optional.txt
-
-      - name: Verify dependency consistency
+      - name: Verify core dependency consistency
         run: python -m pip check
 
       - name: Audit known Python vulnerabilities
@@ -46,7 +43,7 @@ jobs:
       - name: Import main with core dependencies only
         run: python -c "import main; print('MAIN_IMPORT_PASS', len(main.app.routes))"
 
-      - name: Import all core modules
+      - name: Import all core modules with core dependencies only
         run: |
           python - <<'PY'
           import importlib, pathlib
@@ -70,6 +67,12 @@ jobs:
       - name: Minimal demo
         run: python demo/simorgh_minimal.py --test
 
+      - name: Install optional dependencies
+        run: python -m pip install -r requirements-optional.txt
+
+      - name: Verify full dependency consistency
+        run: python -m pip check
+
       - name: Regression tests with pytest warning policy
         run: PYTHONPATH=. python -m pytest -q
 
@@ -88,9 +91,9 @@ jobs:
           raise SystemExit(1 if bad else 0)
           PY
 
-      - name: Generate exact evidence
+      - name: Generate exact core SBOM and compliance evidence
         run: |
-          python scripts/generate_sbom.py --output /tmp/simorgh-sbom.spdx.json
+          python scripts/generate_sbom.py --requirements requirements.txt --output /tmp/simorgh-sbom.spdx.json
           python scripts/generate_asset_manifest.py --output /tmp/simorgh-asset-manifest.json
           python scripts/compliance_gate.py --sbom /tmp/simorgh-sbom.spdx.json
 
