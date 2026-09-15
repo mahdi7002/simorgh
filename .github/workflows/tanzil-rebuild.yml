@@ -1,0 +1,43 @@
+name: SIMORGH Tanzil Direct Rebuild
+
+on:
+  push:
+    branches:
+      - tanzil-sync
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  rebuild:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: true
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.11'
+
+      - name: Rebuild Quran DB directly from Tanzil
+        run: python scripts/build_tanzil_quran_db.py --output data/grid/quran.db
+
+      - name: Verify exact Tanzil content
+        run: python scripts/verify_tanzil_quran_db.py --db data/grid/quran.db
+
+      - name: Commit rebuilt DB and manifest
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/grid/quran.db docs/TANZIL_FA_ANSARIAN_MANIFEST.json
+          if git diff --cached --quiet; then
+            echo "No Tanzil rebuild changes detected."
+            exit 0
+          fi
+          git commit -m "data: rebuild Quran DB from official Tanzil fa.ansarian [tanzil-bot]"
+          git push origin HEAD:tanzil-sync
