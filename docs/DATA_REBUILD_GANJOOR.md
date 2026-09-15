@@ -1,7 +1,8 @@
 # Ganjoor-backed poetry rebuild
 
-This document defines the safe path for rebuilding the historical local
-quarantine backup without mutating canonical shipped data.
+This document defines the recovery path for SIMORGH poetry data. The previous
+attempt to repair 215 historical rows individually is no longer the primary path:
+the poetry layer can instead be rebuilt from a pinned Ganjoor snapshot.
 
 ## Source snapshot
 
@@ -10,128 +11,142 @@ quarantine backup without mutating canonical shipped data.
 - Source generation timestamp: `2026-09-12T12:47:59.2264145Z`
 - Source snapshot: 240 poets / 135319 poems
 
-The pinned commit is intentional. Do not rebuild from a moving `main` URL when a
-reproducible release candidate is being prepared.
+The pinned commit is intentional. Do not rebuild a release candidate from a
+moving `main` URL. Ganjoor's API documents a static file layout and supports
+commit-pinned snapshots for reproducibility.
 
-## Provenance of the quarantined rows
+## Why the individual-row path was retired
 
-The current canonical database does **not** contain a `poems_quarantine` table.
-The historical recovery input is the local ignored file:
+The current canonical SQLite database has no `poems_quarantine` table. The
+historical quarantine is stored only in the ignored local file:
 
 ```text
 data/quarantined_poems_backup.json
 ```
 
 Git commit `c21ea7646215485c53768976943b4fc1934f3cbf` records the historical
-operation as quarantining **215 corrupted poem rows** while keeping **2274
+operation as quarantining **215 corrupted poem rows** while retaining **2274
 verified-clean poems** in the 31 MB canonical database. The backup file itself
 is deliberately ignored and is not part of the public repository.
 
-Because the backup is local-only, a clean checkout cannot reproduce its contents
-without obtaining the local file from the maintainer. The rebuild tool therefore
-supports both the historical JSON backup and, for compatibility with older local
-states, a SQLite quarantine table.
+Several backup rows have generic titles such as `مجموعه اشعار` and reasons such
+as `concatenated-multi-poem (len > 3000)`. Treating these as ordinary one-to-one
+poet/title matches is therefore unreliable.
 
-## Important rights distinction
+## Primary recovery path: full poetry-layer rebuild
 
-The Ganjoor repository describes itself as a public, git-tracked export of Ganjoor
-poetry content and excludes user-account-linked data. The repository does
-**not** contain a `LICENSE` file. Therefore this project must not manufacture a
-license for the compilation, metadata, summaries, or other editorial material.
+Use `scripts/rebuild_poems_from_ganjoor.py` to construct a fresh staging database
+from the pinned Ganjoor snapshot. The script:
 
-### 1. Underlying poem texts
+1. Fetches or reuses a local checkout of the exact Ganjoor commit.
+2. Reads `manifest.json` as the source of truth for poets and corpus counts.
+3. Walks poem JSON files under `poets/`, excluding poet and category descriptor files.
+4. Reconstructs text from ordered `Verses`, with `Sections.PlainText` as fallback.
+5. Preserves the existing SIMORGH four-column `poems` contract:
+   `id, poet, title, text, source`.
+6. Deduplicates identical `(poet, title, text)` rows.
+7. Applies the existing 3000-character safety boundary by default.
+8. Copies the current canonical DB to staging first, preserving all non-poetry tables.
+9. Recreates the `poems_fts` table from the existing SQLite definition when one
+   exists, then rebuilds its index.
+10. Runs `PRAGMA integrity_check` before declaring the staging DB valid.
+11. Leaves the canonical DB untouched unless `--apply` is explicitly supplied.
+12. When applying, creates a timestamped pre-rebuild backup and replaces the DB
+   atomically.
 
-For classical authors such as Hafez, Saadi, Ferdowsi, Bidel, and similar historical
-poets, the underlying original literary works are expected to be outside the
-normal copyright term because of their age. This is a **public-domain candidate
-status**, not an automatic release approval. The project must still consider the
-applicable jurisdiction and whether the shipped text includes any separately
-protectable modern editorial layer, such as a translation, critical edition,
-annotation, summary, correction, formatting, or other contributed material.
+The builder does not silently alter the canonical database. The explicit
+`--apply` flag is the human authorization boundary.
 
-Accordingly, do not record `Public Domain` as a universal legal conclusion for an
-entire Ganjoor record merely because the named poet is historical.
-
-### 2. Ganjoor compilation and editorial structure
-
-The dataset's collection, identifiers, category hierarchy, metadata, summaries,
-formatting, and other editorial structure are distinct from the underlying
-classical works. The upstream repository currently provides no explicit LICENSE
-file for that compilation. Its public availability is evidence of provenance,
-not by itself a grant of redistribution rights.
-
-Therefore the SIMORGH rights ledger must keep the Ganjoor-derived compilation /
-editorial layer **NOT_VERIFIED** until a human maintainer has reviewed a concrete
-legal basis for redistributing the exact fields that SIMORGH intends to ship.
-
-This distinction is deliberate:
-
-```text
-original classical work            -> likely public-domain candidate
-Ganjoor compilation / structure    -> rights not established by LICENSE file
-modern editorial/translation text  -> must be assessed separately
-SIMORGH release decision           -> human decision required
-```
-
-## Rebuild rule
-
-`scripts/prepare_ganjoor_rebuild.py` is deliberately non-destructive:
-
-1. It accepts either `data/quarantined_poems_backup.json` or a local SQLite
-   quarantine table.
-2. It resolves poet/title pairs against the pinned Ganjoor snapshot.
-3. It downloads the matched poem JSON and reconstructs text from ordered `Verses`.
-4. It enforces the 3000-character row limit.
-5. For generic titles such as `مجموعه اشعار`, an optional text-evidence fallback
-   can fetch poems for the identified poet and return ranked candidates. It does
-   **not** silently select a fuzzy match.
-6. It writes a reviewable candidate JSON file.
-7. It never replaces `data/simorgh_full.db` and never edits the local backup.
-
-A human must review the candidate before any database mutation or commit.
-
-## Local invocation
-
-Primary invocation using the historical backup:
+## Build staging database
 
 ```bash
 cd ~/simorgh
-mkdir -p rebuild_staging
-python3 scripts/prepare_ganjoor_rebuild.py \
-  --input-json data/quarantined_poems_backup.json \
-  --output rebuild_staging/ganjoor_candidate.json \
-  --enable-text-fallback
+python3 scripts/rebuild_poems_from_ganjoor.py \
+  --db data/simorgh_full.db \
+  --output rebuild_staging/ganjoor_simorgh_full.db \
+  --source-dir rebuild_staging/ganjoor-data
 ```
 
-Compatibility invocation for an older local SQLite quarantine state:
+The source checkout and resulting DB remain under `rebuild_staging/`, which is
+already ignored by Git.
+
+## Apply the rebuilt poetry layer
+
+After inspecting the printed statistics and verifying that the staging DB opens
+correctly:
 
 ```bash
-python3 scripts/prepare_ganjoor_rebuild.py \
+python3 scripts/rebuild_poems_from_ganjoor.py \
   --db data/simorgh_full.db \
-  --table poems_quarantine \
-  --output rebuild_staging/ganjoor_candidate.json
+  --output rebuild_staging/ganjoor_simorgh_full.db \
+  --source-dir rebuild_staging/ganjoor-data \
+  --apply
 ```
 
-The command returns exit code `0` only when every input row has a unique matching
-upstream poet/title and every reconstructed row is at or below the 3000-character
-limit. Otherwise the non-zero result is intentional evidence that manual review
-is still required.
+The command prints the backup path before replacing `data/simorgh_full.db`.
+Never delete that backup until post-rebuild tests pass.
 
-## Multi-poem / concatenated rows
+## About the 3000-character boundary
 
-Some historical quarantine rows have reasons such as
-`concatenated-multi-poem (len > 3000)` and may contain several poems under a
-single generic title. These rows must not be treated as one canonical poem.
-The current text fallback returns ranked upstream candidates only; segmentation
-and final replacement remain human-reviewed operations.
+The default is `--max-chars 3000` to preserve the existing SIMORGH poetry-data
+contract used during the previous cleanup. Set `--max-chars 0` only when the
+application contract has been deliberately changed to support unrestricted poem
+lengths and the relevant tests have been updated.
+
+A full Ganjoor rebuild is intentionally different from the old 215-row backup
+repair: a long poem is not evidence of corruption merely because an old local
+row exceeded 3000 characters. It is skipped by the default staging policy and is
+reported in build statistics for a deliberate policy decision.
+
+## Source and rights boundary
+
+The pinned Ganjoor README and API document the repository as a public,
+git-tracked export of published poetry content and state that user-account-linked
+data such as comments, bookmarks, reading history, and edit history are not
+included. The API defines the exact poem file layout and JSON structure.
+
+The `ganjoor-data` repository does **not** provide a `LICENSE` file in the pinned
+snapshot. Therefore SIMORGH must not manufacture a license for the compilation,
+metadata, formatting, or other editorial layers.
+
+For classical authors, the underlying original literary works are expected to be
+outside normal copyright terms because of their age, but this remains a
+**public-domain candidate status** rather than a universal legal conclusion for
+every shipped record. Modern translations, critical editions, annotations,
+corrections, summaries, and other contributed editorial material require separate
+assessment.
+
+Accordingly, keep the Ganjoor-derived compilation/editorial layer
+**NOT_VERIFIED** in `compliance/ASSET_RIGHTS.csv` until the human maintainer has
+accepted a concrete redistribution basis and attribution requirements.
 
 ## Release gate
 
-Do not change `compliance/ASSET_RIGHTS.csv` to `VERIFIED` merely because the
-source is official or because the underlying poet is historical. The rights ledger
-should be updated only after the exact redistribution basis, attribution
-requirements, and included derivative/editorial fields have been reviewed and
-accepted by the human maintainer.
+The rebuild script can create or apply a database, but it must not change the
+rights ledger automatically. A successful technical rebuild does not imply legal
+clearance.
 
-Do not commit `rebuild_staging/` or any local quarantine backup containing private
-or unverified source material.
+Do not commit:
+
+```text
+rebuild_staging/
+data/quarantined_poems_backup.json
+*.pre_ganjoor_*.bak
+```
+
+Those are local recovery/build artifacts.
+
+## Verification after apply
+
+Run at minimum:
+
+```bash
+cd ~/simorgh
+sqlite3 data/simorgh_full.db "PRAGMA integrity_check;"
+sqlite3 data/simorgh_full.db "SELECT COUNT(*) FROM poems;"
+sqlite3 data/simorgh_full.db ".schema poems"
+python3 -m pytest -q
+```
+
+Then run the repository compliance and runtime audits before treating the rebuilt
+database as release-ready.
