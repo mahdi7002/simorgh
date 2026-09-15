@@ -14,5 +14,5 @@ PyYAML>=6.0
 networkx>=3.0
 
 # Optional CLI and alternate offline speech recognition
-rich>=13.0.0
+rich>=15.0.0
 vosk>=0.3.45
