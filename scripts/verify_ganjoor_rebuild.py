@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """Verify a SIMORGH poetry SQLite rebuild against a pinned Ganjoor snapshot.
 
-The verifier is intentionally independent of the rebuild database contents:
-it walks the pinned JSON corpus, reconstructs expected poet/title/text values,
-and compares every source path/id to the SQLite row carrying that provenance.
-It also checks manifest/file/row counts, SQLite integrity, empty-text rows and
-optional FTS row coverage.
+The verifier walks the pinned JSON corpus and compares every source path/id to
+its SQLite row. It deliberately uses the same lossless text projection as the
+rebuild tool, including empty verse records and their resulting line breaks.
+It also checks manifest/file/row cardinality, parse failures, unknown poets,
+missing/orphan rows, SQLite integrity and FTS row coverage.
 """
 from __future__ import annotations
 
@@ -13,7 +13,6 @@ import argparse
 import json
 import sqlite3
 import subprocess
-import sys
 from pathlib import Path
 from typing import Any
 
@@ -28,18 +27,14 @@ def poem_text(poem: dict[str, Any]) -> str:
             (v for v in verses if isinstance(v, dict)),
             key=lambda v: v.get("VOrder", 0),
         )
-        text = "\n".join(
-            str(v.get("Text", "")).strip()
-            for v in ordered
-            if str(v.get("Text", "")).strip()
-        )
+        text = "\n".join(str(v.get("Text", "")).strip() for v in ordered)
         if text:
             return text
     sections = poem.get("Sections") or []
     return "\n".join(
         str(s.get("PlainText", "")).strip()
         for s in sections
-        if isinstance(s, dict) and str(s.get("PlainText", "")).strip()
+        if isinstance(s, dict)
     )
 
 
@@ -80,6 +75,8 @@ def load_poet_map(manifest: dict[str, Any]) -> dict[str, str]:
 
 def iter_poem_files(source_dir: Path):
     root = source_dir / "poets"
+    if not root.is_dir():
+        raise SystemExit(f"Ganjoor poets directory missing: {root}")
     for path in root.rglob("*.json"):
         if path.name not in {"poet.json", "_cat.json"}:
             yield path
@@ -104,10 +101,14 @@ def main() -> int:
             print(f"FAIL integrity={integrity}")
             return 1
         db_rows = {}
+        duplicate_sources = 0
         for poet, title, text, source in conn.execute(
             "SELECT poet,title,text,source FROM poems"
         ):
+            if source in db_rows:
+                duplicate_sources += 1
             db_rows[source] = (poet, title, text)
+        db_total = conn.execute("SELECT COUNT(*) FROM poems").fetchone()[0]
         db_count = len(db_rows)
         empty_count = conn.execute(
             "SELECT COUNT(*) FROM poems WHERE text IS NULL OR trim(text)=''"
@@ -141,6 +142,7 @@ def main() -> int:
             if len(mismatches) < args.max_mismatches:
                 mismatches.append(f"invalid_object:{path}")
             continue
+
         rel = path.relative_to(repo).as_posix()
         parts = path.relative_to(repo / "poets").parts
         slug = parts[0]
@@ -151,27 +153,30 @@ def main() -> int:
         text = poem_text(poem)
         poem_id = poem.get("Id") or poem.get("id") or path.stem
         source = f"ganjoor-data@{args.ref}#{poem_id}::{rel}"
+        if source in expected_sources and len(mismatches) < args.max_mismatches:
+            mismatches.append(f"duplicate_expected_source:{source}")
         expected_sources.add(source)
+
         row = db_rows.get(source)
         if row is None:
             if len(mismatches) < args.max_mismatches:
                 mismatches.append(f"missing:{source}")
             continue
-        if row != (poet, title, text):
-            if len(mismatches) < args.max_mismatches:
-                mismatches.append(
-                    f"content:{source}: db={row!r} expected={(poet,title,text)!r}"
-                )
+        expected = (poet, title, text)
+        if row != expected and len(mismatches) < args.max_mismatches:
+            mismatches.append(f"content:{source}: db={row!r} expected={expected!r}")
 
     orphan_sources = set(db_rows) - expected_sources
     expected_count = int(manifest["PoemsCount"])
     ok = (
-        files == expected_count == db_count == len(expected_sources)
+        files == expected_count == db_total == db_count == len(expected_sources)
         and parsed == files
         and invalid == 0
         and unknown_poet == 0
+        and duplicate_sources == 0
         and not mismatches
         and not orphan_sources
+        and (fts_count is None or fts_count == db_total)
     )
 
     print(json.dumps({
@@ -181,7 +186,9 @@ def main() -> int:
         "json_parsed": parsed,
         "invalid_json": invalid,
         "unknown_poet": unknown_poet,
-        "db_rows": db_count,
+        "db_rows": db_total,
+        "db_unique_sources": db_count,
+        "duplicate_source_rows": duplicate_sources,
         "empty_text_rows": empty_count,
         "fts_rows": fts_count,
         "missing_or_mismatched": len(mismatches),
@@ -203,5 +210,4 @@ if __name__ == "__main__":
     try:
         raise SystemExit(main())
     except subprocess.CalledProcessError as exc:
-        print(f"ERROR: external command failed with exit {exc.returncode}", file=sys.stderr)
         raise SystemExit(exc.returncode)
