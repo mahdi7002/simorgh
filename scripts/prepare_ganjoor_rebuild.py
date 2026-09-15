@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """Prepare a non-destructive candidate rebuild from Ganjoor public data.
 
-This tool NEVER modifies the source SQLite database. It reads a quarantine table
-from a local copy, resolves poet/title pairs against a pinned ganjoor-data
-snapshot, downloads the matched poem JSON, validates text-size constraints, and
-writes a reviewable JSON candidate outside the canonical database.
+The tool accepts either the historical local JSON quarantine backup or a
+quarantine table in SQLite. It never mutates canonical data. It resolves
+poet/title pairs against a pinned ganjoor-data snapshot, reconstructs matched
+poems, validates text-size constraints, and writes a reviewable JSON candidate.
 
 Human review is required before any candidate is copied into shipped data.
 """
@@ -27,11 +27,14 @@ USER_AGENT = "SIMORGH/ganjoor-rebuild-review-tool"
 
 
 def norm(value: str) -> str:
-    value = value.strip().replace("\u200c", " ")
+    value = str(value or "").strip().replace("\u200c", " ")
     value = re.sub(r"[\u064B-\u065F\u0670\u06D6-\u06ED]", "", value)
     value = re.sub(r"\s+", " ", value)
-    value = value.replace("ي", "ی").replace("ك", "ک")
-    return value.casefold()
+    return value.replace("ي", "ی").replace("ك", "ک").casefold()
+
+
+def compact_text(value: str) -> str:
+    return re.sub(r"\s+", "", norm(value))
 
 
 def fetch_json(url: str, timeout: float = 20.0) -> Any:
@@ -56,7 +59,7 @@ def choose_column(columns: list[str], candidates: tuple[str, ...]) -> str | None
     return None
 
 
-def load_quarantine(db_path: Path, table: str) -> tuple[list[dict[str, Any]], list[str]]:
+def load_quarantine_db(db_path: Path, table: str) -> list[dict[str, Any]]:
     uri = f"file:{db_path.resolve()}?mode=ro"
     with sqlite3.connect(uri, uri=True) as connection:
         tables = [
@@ -72,7 +75,38 @@ def load_quarantine(db_path: Path, table: str) -> tuple[list[dict[str, Any]], li
         info = connection.execute(f"PRAGMA table_info({table})").fetchall()
         columns = [row[1] for row in info]
         rows = connection.execute(f"SELECT * FROM {table}").fetchall()
-    return [dict(zip(columns, row)) for row in rows], columns
+    return [dict(zip(columns, row)) for row in rows]
+
+
+def load_quarantine_json(path: Path) -> list[dict[str, Any]]:
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise SystemExit(f"Cannot read quarantine JSON {path}: {exc}") from exc
+
+    if isinstance(payload, list):
+        rows = payload
+    elif isinstance(payload, dict):
+        rows = payload.get("rows") or payload.get("quarantine") or payload.get("items")
+    else:
+        rows = None
+
+    if not isinstance(rows, list) or not all(isinstance(row, dict) for row in rows):
+        raise SystemExit(
+            "Quarantine JSON must be a list of objects or an object containing "
+            "a 'rows', 'quarantine', or 'items' list."
+        )
+    return rows
+
+
+def load_input(args: argparse.Namespace) -> tuple[list[dict[str, Any]], str]:
+    if args.input_json and args.db:
+        raise SystemExit("Use exactly one input: --input-json or --db")
+    if not args.input_json and not args.db:
+        raise SystemExit("Provide --input-json or --db")
+    if args.input_json:
+        return load_quarantine_json(args.input_json), "json"
+    return load_quarantine_db(args.db, args.table), "sqlite"
 
 
 def crawl_poet(ref: str, slug: str, timeout: float) -> dict[str, list[dict[str, Any]]]:
@@ -101,7 +135,7 @@ def crawl_poet(ref: str, slug: str, timeout: float) -> dict[str, list[dict[str, 
             title = poem.get("Title")
             if not full_url or not title:
                 continue
-            key = norm(str(title))
+            key = norm(title)
             poems.setdefault(key, []).append(
                 {"title": title, "full_url": full_url, "id": poem.get("Id")}
             )
@@ -128,19 +162,105 @@ def poem_text(poem: dict[str, Any]) -> str:
     )
 
 
+def generic_title(title: str) -> bool:
+    key = norm(title)
+    return key in {
+        "مجموعه اشعار",
+        "غزلیات",
+        "اشعار",
+        "قصاید",
+        "قطعات",
+        "رباعیات",
+    }
+
+
+def text_similarity_score(source: str, target: str) -> int:
+    """Cheap evidence score, based on long exact normalized fragments."""
+    a = compact_text(source)
+    b = compact_text(target)
+    if not a or not b:
+        return 0
+    probes = []
+    if len(a) >= 80:
+        probes.append(a[:80])
+        probes.append(a[-80:])
+    elif len(a) >= 30:
+        probes.append(a[:30])
+    return sum(len(p) for p in probes if p and p in b)
+
+
+def resolve_by_text(
+    ref: str,
+    slug: str,
+    title_map: dict[str, list[dict[str, Any]]],
+    source_text: str,
+    timeout: float,
+    max_candidates: int = 8,
+) -> list[dict[str, Any]]:
+    """Fetch candidate poems and rank exact long-fragment matches.
+
+    This is deliberately evidence-based: no fuzzy acceptance threshold is used
+    to silently choose a poem. Callers receive ranked candidates and must review
+    ties or weak evidence.
+    """
+    scored: list[dict[str, Any]] = []
+    seen_urls: set[str] = set()
+    for entries in title_map.values():
+        for entry in entries:
+            url = upstream_url(ref, f"poets{entry['full_url']}.json")
+            if url in seen_urls:
+                continue
+            seen_urls.add(url)
+            poem = fetch_json(url, timeout)
+            text = poem_text(poem)
+            score = text_similarity_score(source_text, text)
+            if score:
+                scored.append(
+                    {
+                        "title": entry["title"],
+                        "full_url": entry["full_url"],
+                        "id": poem.get("Id"),
+                        "score": score,
+                        "text_chars": len(text),
+                    }
+                )
+    scored.sort(key=lambda item: (item["score"], -item["text_chars"]), reverse=True)
+    return scored[:max_candidates]
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--db", type=Path, required=True, help="local SQLite database; opened read-only")
+    group = parser.add_mutually_exclusive_group(required=True)
+    group.add_argument(
+        "--input-json",
+        type=Path,
+        help="historical local quarantine JSON backup; read-only",
+    )
+    group.add_argument(
+        "--db",
+        type=Path,
+        help="local SQLite database; opened read-only",
+    )
     parser.add_argument("--table", default="poems_quarantine")
     parser.add_argument("--output", type=Path, required=True, help="candidate JSON; never the canonical DB")
     parser.add_argument("--ref", default=DEFAULT_REF, help="pinned ganjoor-data commit SHA")
     parser.add_argument("--max-chars", type=int, default=DEFAULT_MAX_CHARS)
     parser.add_argument("--sleep", type=float, default=0.05)
+    parser.add_argument(
+        "--enable-text-fallback",
+        action="store_true",
+        help="for unresolved generic titles, fetch poet poems and produce ranked text-evidence candidates",
+    )
     args = parser.parse_args()
 
-    rows, columns = load_quarantine(args.db, args.table)
+    rows, input_kind = load_input(args)
+    if not rows:
+        raise SystemExit("Quarantine input is empty")
+
+    columns = list(rows[0].keys())
     poet_col = choose_column(columns, ("poet", "poet_name", "author", "nickname"))
     title_col = choose_column(columns, ("title", "poem_title", "name", "subject"))
+    text_col = choose_column(columns, ("text", "body", "content", "poem_text"))
     if not poet_col or not title_col:
         raise SystemExit(
             "Cannot infer poet/title columns. "
@@ -167,15 +287,22 @@ def main() -> int:
         "missing_poet": 0,
         "missing_title": 0,
         "oversize": 0,
+        "text_fallback_candidates": 0,
+        "text_fallback_ambiguous": 0,
     }
 
     for row_index, row in enumerate(rows, start=1):
         poet = str(row.get(poet_col, "")).strip()
         title = str(row.get(title_col, "")).strip()
+        original_text = str(row.get(text_col, "")).strip() if text_col else ""
         item: dict[str, Any] = {
             "quarantine_row": row_index,
+            "input_id": row.get("id"),
             "poet": poet,
             "title": title,
+            "input_reason": row.get("reason"),
+            "input_source": row.get("source"),
+            "input_text_chars": len(original_text),
             "upstream_ref": args.ref,
             "upstream_url": None,
             "upstream_id": None,
@@ -193,6 +320,24 @@ def main() -> int:
         if slug not in crawl_cache:
             crawl_cache[slug] = crawl_poet(args.ref, slug, timeout=20.0)
         matches = crawl_cache[slug].get(norm(title), [])
+
+        if not matches and args.enable_text_fallback and generic_title(title) and original_text:
+            ranked = resolve_by_text(
+                args.ref,
+                slug,
+                crawl_cache[slug],
+                original_text,
+                timeout=20.0,
+            )
+            if ranked:
+                item["status"] = "TEXT_FALLBACK_REVIEW"
+                item["text_matches"] = ranked
+                stats["text_fallback_candidates"] += 1
+                if len(ranked) > 1 and ranked[0]["score"] == ranked[1]["score"]:
+                    stats["text_fallback_ambiguous"] += 1
+                candidates.append(item)
+                continue
+
         if not matches:
             item["status"] = "MISSING_TITLE"
             stats["missing_title"] += 1
@@ -227,8 +372,9 @@ def main() -> int:
         time.sleep(max(args.sleep, 0.0))
 
     output = {
-        "schema_version": 1,
+        "schema_version": 2,
         "tool": "SIMORGH prepare_ganjoor_rebuild",
+        "input": {"kind": input_kind, "path": str(args.input_json or args.db)},
         "source_repository": "ganjoor/ganjoor-data",
         "source_commit": args.ref,
         "source_manifest": {
@@ -246,7 +392,10 @@ def main() -> int:
     args.output.write_text(json.dumps(output, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     print(json.dumps(stats, ensure_ascii=False))
     print(f"Candidate written: {args.output}")
-    return 0 if all(stats[key] == 0 for key in ("ambiguous", "missing_poet", "missing_title", "oversize")) else 2
+    return 0 if all(
+        stats[key] == 0
+        for key in ("ambiguous", "missing_poet", "missing_title", "oversize")
+    ) else 2
 
 
 if __name__ == "__main__":
