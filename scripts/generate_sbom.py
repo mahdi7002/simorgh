@@ -1,8 +1,11 @@
 #!/usr/bin/env python3
-"""Generate an SPDX 2.3 JSON SBOM from the installed Python environment.
+"""Generate an SPDX 2.3 SBOM for the installed dependency closure.
 
-This records the exact environment used by CI/release packaging. It is not a
-substitute for legal review of datasets, models, or non-Python assets.
+The generator intentionally scopes the SBOM to packages named by the supplied
+requirements files and their installed transitive dependencies. This avoids
+mistaking unrelated packages preinstalled on a CI runner for SIMORGH
+requirements. It is not a substitute for legal review of datasets, models, or
+non-Python assets.
 """
 from __future__ import annotations
 
@@ -14,6 +17,8 @@ import platform
 from datetime import datetime, timezone
 from pathlib import Path
 from urllib.parse import urlparse
+
+from packaging.requirements import Requirement
 
 SPDX_VERSION = "SPDX-2.3"
 SPDX_LICENSE_LIST_VERSION = "3.28.0"
@@ -58,15 +63,74 @@ def _norm_name(value: str) -> str:
     return value.lower().replace("_", "-").replace(".", "-")
 
 
+def _seed_names(requirement_files: list[Path]) -> set[str]:
+    names: set[str] = set()
+    for path in requirement_files:
+        if not path.is_file():
+            raise FileNotFoundError(path)
+        for raw_line in path.read_text(encoding="utf-8").splitlines():
+            line = raw_line.strip()
+            if not line or line.startswith("#") or line.startswith("-"):
+                continue
+            try:
+                requirement = Requirement(line)
+            except Exception:
+                continue
+            names.add(_norm_name(requirement.name))
+    return names
+
+
+def _dependency_closure(seed_names: set[str], distributions: dict[str, metadata.Distribution]) -> set[str]:
+    selected = set(seed_names)
+    queue = list(seed_names)
+    while queue:
+        name = queue.pop()
+        dist = distributions.get(name)
+        if dist is None:
+            continue
+        for raw_requirement in dist.requires or []:
+            try:
+                requirement = Requirement(raw_requirement)
+            except Exception:
+                continue
+            try:
+                if requirement.marker and not requirement.marker.evaluate({"extra": ""}):
+                    continue
+            except Exception:
+                continue
+            dep_name = _norm_name(requirement.name)
+            if dep_name not in selected and dep_name in distributions:
+                selected.add(dep_name)
+                queue.append(dep_name)
+    return selected
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--requirements",
+        action="append",
+        type=Path,
+        required=True,
+        help="requirements file to include; may be repeated",
+    )
     parser.add_argument("--output", default="compliance/sbom.spdx.json")
     args = parser.parse_args()
 
-    dists = sorted(metadata.distributions(), key=lambda d: (d.metadata.get("Name") or "").lower())
+    all_distributions = {
+        _norm_name(dist.metadata.get("Name", "")): dist
+        for dist in metadata.distributions()
+        if dist.metadata.get("Name")
+    }
+    seed_names = _seed_names(args.requirements)
+    selected_names = _dependency_closure(seed_names, all_distributions)
+
     packages = []
     by_name: dict[str, str] = {}
-    for dist in dists:
+    selected_dists = [all_distributions[name] for name in selected_names]
+    selected_dists.sort(key=lambda d: (d.metadata.get("Name") or "").lower())
+
+    for dist in selected_dists:
         name = dist.metadata.get("Name")
         version = dist.version
         if not name:
@@ -86,28 +150,27 @@ def main() -> int:
             }
         )
 
-    relationships = []
-    for dist in dists:
+    relationships = set()
+    for dist in selected_dists:
         name = dist.metadata.get("Name")
         if not name:
             continue
         src = by_name.get(_norm_name(name))
         if not src:
             continue
-        for requirement in dist.requires or []:
-            dep = requirement.split(";", 1)[0].strip()
-            dep_name = dep.split("[", 1)[0]
-            for marker in ("<", ">", "=", "!", "~"):
-                dep_name = dep_name.split(marker, 1)[0]
-            dst = by_name.get(_norm_name(dep_name.strip()))
+        for raw_requirement in dist.requires or []:
+            try:
+                requirement = Requirement(raw_requirement)
+            except Exception:
+                continue
+            try:
+                if requirement.marker and not requirement.marker.evaluate({"extra": ""}):
+                    continue
+            except Exception:
+                continue
+            dst = by_name.get(_norm_name(requirement.name))
             if dst:
-                relationships.append(
-                    {
-                        "spdxElementId": src,
-                        "relationshipType": "DEPENDS_ON",
-                        "relatedSpdxElement": dst,
-                    }
-                )
+                relationships.add((src, dst))
 
     created = datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
     nonce = hashlib.sha256(f"{created}:{platform.python_version()}".encode()).hexdigest()[:16]
@@ -115,7 +178,7 @@ def main() -> int:
         "spdxVersion": SPDX_VERSION,
         "dataLicense": "CC0-1.0",
         "SPDXID": "SPDXRef-DOCUMENT",
-        "name": "SIMORGH Python environment",
+        "name": "SIMORGH declared Python dependency closure",
         "documentNamespace": DOCUMENT_NAMESPACE_BASE + nonce,
         "creationInfo": {
             "created": created,
@@ -123,8 +186,15 @@ def main() -> int:
             "licenseListVersion": SPDX_LICENSE_LIST_VERSION,
         },
         "packages": packages,
-        "relationships": relationships,
-        "comment": "Generated from the exact installed Python environment. Review dataset/model licenses separately.",
+        "relationships": [
+            {
+                "spdxElementId": src,
+                "relationshipType": "DEPENDS_ON",
+                "relatedSpdxElement": dst,
+            }
+            for src, dst in sorted(relationships)
+        ],
+        "comment": "Generated from the installed closure of the explicitly supplied requirements files. Review dataset/model licenses separately.",
     }
 
     output = Path(args.output)
