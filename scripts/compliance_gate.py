@@ -2,8 +2,11 @@
 """Machine-checkable compliance/release gate for SIMORGH.
 
 Default mode is evidence collection. ``--release`` is intentionally strict and
-fails closed until rights, third-party licensing, privacy documentation,
+fails closed until rights, core third-party licensing, privacy documentation,
 security invariants, SBOM evidence, and human signoff are all verified.
+Optional integrations have their own feature-specific gate via
+``--include-optional`` and must not be treated as shipped core dependencies
+unless they are actually selected for a release.
 """
 from __future__ import annotations
 
@@ -74,7 +77,7 @@ def rights_coverage(files: list[str]) -> tuple[list[str], list[str]]:
     return missing, unverified
 
 
-def declared_requirements(filename: str = "requirements.txt") -> set[str]:
+def declared_requirements(filename: str) -> set[str]:
     result: set[str] = set()
     path = ROOT / filename
     if not path.exists():
@@ -89,17 +92,20 @@ def declared_requirements(filename: str = "requirements.txt") -> set[str]:
     return result
 
 
-def third_party_state() -> list[str]:
+def third_party_state(include_optional: bool = False) -> list[str]:
     rows = read_csv(ROOT / "compliance" / "THIRD_PARTY_LICENSES.csv")
     indexed = {normalize_name(row.get("component", "")): row for row in rows if row.get("component")}
+    required = declared_requirements("requirements.txt")
+    if include_optional:
+        required |= declared_requirements("requirements-optional.txt")
     missing: list[str] = []
     unverified: list[str] = []
-    for required in sorted(declared_requirements("requirements.txt") | declared_requirements("requirements-optional.txt")):
-        row = indexed.get(required)
+    for component in sorted(required):
+        row = indexed.get(component)
         if not row:
-            missing.append(required)
+            missing.append(component)
         elif row.get("status", "").strip().upper() != "VERIFIED":
-            unverified.append(row.get("component", required))
+            unverified.append(row.get("component", component))
     return missing + unverified
 
 
@@ -179,16 +185,18 @@ def implementation_invariants() -> dict[str, bool]:
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--release", action="store_true")
+    parser.add_argument("--include-optional", action="store_true", help="include optional feature dependencies in the license gate")
     parser.add_argument("--sbom", type=Path, default=None)
     args = parser.parse_args()
 
     print("SIMORGH compliance gate")
     print("mode:", "RELEASE" if args.release else "AUDIT")
+    print("dependency_scope:", "core+optional" if args.include_optional else "core")
 
     missing_docs = [str(p.relative_to(ROOT)) for p in REQUIRED if not p.exists()]
     files = tracked_files()
     missing_assets, unverified_assets = rights_coverage(files)
-    unverified_deps = third_party_state()
+    unverified_deps = third_party_state(include_optional=args.include_optional)
     findings = scan_source(files)
     invariants = implementation_invariants()
 
