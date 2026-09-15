@@ -80,6 +80,7 @@ def test_change_proposal_serialization_is_explicit():
         target="docs/example.md",
         action=ActionKind.PROPOSE,
         risk=RiskLevel.LOW,
+        rationale="serialization test",
     )
     payload = proposal.as_dict()
 
