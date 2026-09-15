@@ -10,7 +10,7 @@ import uvicorn
 from fastapi import FastAPI, Form, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
-from starlette.middleware.body_limit import RequestBodyLimitMiddleware
+from core.body_limit import RequestBodyLimitMiddleware
 
 from core.paths import DASHBOARD_HTML, LOG_DIR
 
