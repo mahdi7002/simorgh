@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
-cd "$(dirname "$0")/.."
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$ROOT_DIR"
+
 echo "======== SIMORGH FULL SCAN ========"
 echo "ROOT=$PWD DATE=$(date -Iseconds)"
 echo "--- git ---"; git rev-parse --short HEAD; git status -sb
@@ -15,8 +17,10 @@ for p in Path('.').rglob('*.db'):
     if any(x in str(p) for x in ('.venv','.git')): continue
     try:
         c=sqlite3.connect(f'file:{p}?mode=ro', uri=True)
-        print(p, c.execute('PRAGMA integrity_check').fetchone()[0], p.stat().st_size); c.close()
-    except Exception as e: print(p, e)
+        print(p, c.execute('PRAGMA integrity_check').fetchone()[0], p.stat().st_size)
+        c.close()
+    except Exception as e:
+        print(p, e)
 PY
 echo "--- main + provenance ---"
 python3 - <<'PY'
