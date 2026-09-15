@@ -2,29 +2,29 @@ name: SIMORGH Global Compliance Audit
 
 on:
   push:
+    branches:
+      - main
   pull_request:
+    branches:
+      - main
   workflow_dispatch:
     inputs:
-      release_gate:
-        description: 'Run the strict human-approved release gate'
+      strict_release:
+        description: "Run the strict human release gate"
         required: false
         default: false
         type: boolean
 
-permissions:
-  contents: read
-
 jobs:
   compliance:
     strategy:
-      fail-fast: false
       matrix:
         python-version: ['3.10', '3.11']
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v7
         with:
-          fetch-depth: 0
           persist-credentials: false
 
       - uses: actions/setup-python@v7
@@ -32,41 +32,49 @@ jobs:
           python-version: ${{ matrix.python-version }}
           cache: 'pip'
 
-      - name: Install core, test and security dependencies
+      - name: Install core and compliance tooling
         run: |
           python -m pip install -r requirements.txt
           python -m pip install -r requirements-dev.txt
 
-      - name: Verify dependency consistency
+      - name: Verify core dependency consistency
         run: python -m pip check
 
       - name: Generate exact-environment SPDX SBOM
-        run: python3 scripts/generate_sbom.py --output /tmp/simorgh-sbom.spdx.json
+        run: python scripts/generate_sbom.py --output /tmp/simorgh-sbom.spdx.json
 
       - name: Generate exact content asset manifest
-        run: python3 scripts/generate_asset_manifest.py --output /tmp/simorgh-asset-manifest.json
+        run: python scripts/generate_asset_manifest.py --output /tmp/simorgh-asset-manifest.json
 
       - name: Audit known Python vulnerabilities
         run: python -m pip_audit --local --strict
 
-      - name: Run compliance audit with SBOM evidence
-        run: python3 scripts/compliance_gate.py --sbom /tmp/simorgh-sbom.spdx.json
+      - name: Run core compliance audit with SBOM evidence
+        run: python scripts/compliance_gate.py --sbom /tmp/simorgh-sbom.spdx.json
+
+      - name: Install optional dependencies for feature audit
+        run: python -m pip install -r requirements-optional.txt
+
+      - name: Verify optional dependency consistency
+        run: python -m pip check
+
+      - name: Run optional feature license audit
+        run: python scripts/compliance_gate.py --include-optional --sbom /tmp/simorgh-sbom.spdx.json
 
       - name: Run strict release gate when requested
-        if: ${{ inputs.release_gate == true && matrix.python-version == '3.11' }}
-        run: python3 scripts/compliance_gate.py --release --sbom /tmp/simorgh-sbom.spdx.json
+        if: ${{ inputs.strict_release == true && matrix.python-version == '3.11' }}
+        run: python scripts/compliance_gate.py --release --sbom /tmp/simorgh-sbom.spdx.json
 
       - name: Compile source tree
-        run: python3 -m compileall -q . -x '(^|/)(\.git|\.venv|venv|__pycache__)(/|$)'
+        run: python -m compileall -q .
 
-      - name: Run full regression suite with pytest warning policy
+      - name: Run full regression suite
         run: PYTHONPATH=. python -m pytest -q
 
       - name: Upload audit evidence
         uses: actions/upload-artifact@v6
         with:
-          name: simorgh-compliance-evidence-py${{ matrix.python-version }}
+          name: compliance-evidence-${{ matrix.python-version }}
           path: |
             /tmp/simorgh-sbom.spdx.json
             /tmp/simorgh-asset-manifest.json
-          if-no-files-found: error
