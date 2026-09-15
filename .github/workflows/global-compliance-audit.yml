@@ -45,7 +45,7 @@ jobs:
       - name: Verify core dependency consistency
         run: python -m pip check
 
-      - name: Generate exact-environment SPDX SBOM
+      - name: Generate exact core-environment SPDX SBOM
         run: python scripts/generate_sbom.py --output /tmp/simorgh-sbom-core.spdx.json
 
       - name: Generate exact content asset manifest
@@ -66,18 +66,41 @@ jobs:
       - name: Generate exact optional-environment SPDX SBOM
         run: python scripts/generate_sbom.py --output /tmp/simorgh-sbom-optional.spdx.json
 
-      - name: Audit optional dependencies with exact environment evidence
+      - name: Run optional feature compliance audit
         run: python scripts/compliance_gate.py --include-optional --sbom /tmp/simorgh-sbom-optional.spdx.json
-
-      - name: Run strict release gate when requested
-        if: ${{ inputs.strict_release == true && matrix.python-version == '3.11' }}
-        run: python scripts/compliance_gate.py --release --sbom /tmp/simorgh-sbom-core.spdx.json
 
       - name: Compile source tree
         run: python -m compileall -q .
 
       - name: Run full regression suite
         run: PYTHONPATH=. python -m pytest -q
+
+      - name: Run strict public surface audit
+        run: python scripts/public_surface_audit.py
+
+      - name: Enforce clean core compliance state
+        shell: bash
+        run: |
+          set -o pipefail
+          python scripts/compliance_gate.py --sbom /tmp/simorgh-sbom-core.spdx.json | tee /tmp/core-compliance-enforce.txt
+          if grep -q '^\[BLOCK\]' /tmp/core-compliance-enforce.txt; then
+            echo "Core compliance contains BLOCK findings; CI must fail closed."
+            exit 1
+          fi
+
+      - name: Enforce clean optional compliance state
+        shell: bash
+        run: |
+          set -o pipefail
+          python scripts/compliance_gate.py --include-optional --sbom /tmp/simorgh-sbom-optional.spdx.json | tee /tmp/optional-compliance-enforce.txt
+          if grep -q '^\[BLOCK\]' /tmp/optional-compliance-enforce.txt; then
+            echo "Optional compliance contains BLOCK findings; CI must fail closed."
+            exit 1
+          fi
+
+      - name: Run strict release gate when requested
+        if: ${{ inputs.strict_release == true && matrix.python-version == '3.11' }}
+        run: python scripts/compliance_gate.py --release --sbom /tmp/simorgh-sbom-core.spdx.json
 
       - name: Upload audit evidence
         uses: actions/upload-artifact@v6
@@ -87,3 +110,6 @@ jobs:
             /tmp/simorgh-sbom-core.spdx.json
             /tmp/simorgh-sbom-optional.spdx.json
             /tmp/simorgh-asset-manifest-core.json
+            /tmp/core-compliance-enforce.txt
+            /tmp/optional-compliance-enforce.txt
+          if-no-files-found: error
