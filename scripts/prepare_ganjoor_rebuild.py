@@ -100,10 +100,6 @@ def load_quarantine_json(path: Path) -> list[dict[str, Any]]:
 
 
 def load_input(args: argparse.Namespace) -> tuple[list[dict[str, Any]], str]:
-    if args.input_json and args.db:
-        raise SystemExit("Use exactly one input: --input-json or --db")
-    if not args.input_json and not args.db:
-        raise SystemExit("Provide --input-json or --db")
     if args.input_json:
         return load_quarantine_json(args.input_json), "json"
     return load_quarantine_db(args.db, args.table), "sqlite"
@@ -392,10 +388,14 @@ def main() -> int:
     args.output.write_text(json.dumps(output, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     print(json.dumps(stats, ensure_ascii=False))
     print(f"Candidate written: {args.output}")
-    return 0 if all(
-        stats[key] == 0
-        for key in ("ambiguous", "missing_poet", "missing_title", "oversize")
-    ) else 2
+    review_keys = (
+        "ambiguous",
+        "missing_poet",
+        "missing_title",
+        "oversize",
+        "text_fallback_candidates",
+    )
+    return 0 if all(stats[key] == 0 for key in review_keys) else 2
 
 
 if __name__ == "__main__":
