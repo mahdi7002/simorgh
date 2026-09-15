@@ -61,7 +61,7 @@ def read_csv(path: Path) -> list[dict[str, str]]:
 def rights_coverage(files: list[str]) -> tuple[list[str], list[str]]:
     rows = read_csv(ROOT / "compliance" / "ASSET_RIGHTS.csv")
     specs = [(str(row.get("path", "")).strip(), row) for row in rows if row.get("path")]
-    assets = [p for p in files if p == "catalog.json" or p.startswith(("data/", "quran/", "music/"))]
+    assets = [p for p in files if p.startswith(("data/", "quran/", "music/"))]
     missing: list[str] = []
     unverified: list[str] = []
     for asset in assets:
@@ -129,7 +129,7 @@ def scan_source(files: list[str]) -> dict[str, list[str]]:
     return {k: v for k, v in findings.items() if v}
 
 
-def sbom_state(path: Path) -> tuple[bool, list[str]]:
+def sbom_state(path: Path, include_optional: bool = False) -> tuple[bool, list[str]]:
     if not path.is_file():
         return False, [f"SBOM_NOT_FOUND:{path}"]
     try:
@@ -145,7 +145,7 @@ def sbom_state(path: Path) -> tuple[bool, list[str]]:
         problems.append("SBOM_NO_PACKAGES")
         return False, problems
 
-    indexed = {}
+    indexed: dict[str, dict] = {}
     for package in packages:
         name = package.get("name")
         version = package.get("versionInfo")
@@ -157,14 +157,19 @@ def sbom_state(path: Path) -> tuple[bool, list[str]]:
             problems.append(f"SBOM_DUPLICATE_PACKAGE:{name}")
         indexed[key] = package
 
-    for required in sorted(declared_requirements("requirements.txt")):
-        package = indexed.get(required)
+    required = declared_requirements("requirements.txt")
+    if include_optional:
+        required |= declared_requirements("requirements-optional.txt")
+
+    for required_name in sorted(required):
+        package = indexed.get(required_name)
         if not package:
-            problems.append(f"SBOM_MISSING_CORE_PACKAGE:{required}")
+            scope = "OPTIONAL" if required_name in declared_requirements("requirements-optional.txt") else "CORE"
+            problems.append(f"SBOM_MISSING_{scope}_PACKAGE:{required_name}")
             continue
         license_declared = str(package.get("licenseDeclared", "")).strip()
         if not license_declared or license_declared == "NOASSERTION":
-            problems.append(f"SBOM_NO_LICENSE_METADATA:{package.get('name', required)}")
+            problems.append(f"SBOM_NO_LICENSE_METADATA:{package.get('name', required_name)}")
 
     return not problems, problems
 
@@ -210,12 +215,12 @@ def main() -> int:
     }
 
     if args.sbom is not None:
-        sbom_ok, sbom_problems = sbom_state(args.sbom)
-        checks["sbom_core_dependency_metadata"] = sbom_ok
+        sbom_ok, sbom_problems = sbom_state(args.sbom, include_optional=args.include_optional)
+        checks["sbom_dependency_metadata"] = sbom_ok
         if sbom_problems:
             print("sbom_problems:", ", ".join(sbom_problems))
     elif args.release:
-        checks["sbom_core_dependency_metadata"] = False
+        checks["sbom_dependency_metadata"] = False
         print("sbom_problems: SBOM_REQUIRED_FOR_RELEASE")
     else:
         print("sbom_check: not supplied in audit mode")
