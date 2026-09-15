@@ -17,7 +17,6 @@ import shutil
 import sqlite3
 import subprocess
 import sys
-import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -29,7 +28,12 @@ BATCH = 1000
 
 
 def norm(value: str) -> str:
-    return " ".join(str(value or "").strip().replace("\u200c", " ").split()).replace("ي", "ی").replace("ك", "ک").casefold()
+    return (
+        " ".join(str(value or "").strip().replace("\u200c", " ").split())
+        .replace("ي", "ی")
+        .replace("ك", "ک")
+        .casefold()
+    )
 
 
 def poem_text(poem: dict[str, Any]) -> str:
@@ -55,25 +59,43 @@ def poem_text(poem: dict[str, Any]) -> str:
 
 
 def ensure_source(source_dir: Path, ref: str, remote: str) -> Path:
+    source_dir = source_dir.resolve()
     if (source_dir / ".git").exists():
         current = subprocess.check_output(
             ["git", "-C", str(source_dir), "rev-parse", "HEAD"], text=True
         ).strip()
         if current != ref:
-            subprocess.run(["git", "-C", str(source_dir), "fetch", "--depth", "1", "origin", ref], check=True)
-            subprocess.run(["git", "-C", str(source_dir), "checkout", "--detach", ref], check=True)
+            subprocess.run(
+                ["git", "-C", str(source_dir), "fetch", "--depth", "1", "origin", ref],
+                check=True,
+            )
+            subprocess.run(
+                ["git", "-C", str(source_dir), "checkout", "--detach", ref],
+                check=True,
+            )
     else:
         source_dir.parent.mkdir(parents=True, exist_ok=True)
-        subprocess.run(["git", "clone", "--filter=blob:none", remote, str(source_dir)], check=True)
-        subprocess.run(["git", "-C", str(source_dir), "fetch", "--depth", "1", "origin", ref], check=True)
-        subprocess.run(["git", "-C", str(source_dir), "checkout", "--detach", ref], check=True)
-    actual = subprocess.check_output(["git", "-C", str(source_dir), "rev-parse", "HEAD"], text=True).strip()
+        subprocess.run(
+            ["git", "clone", "--depth", "1", remote, str(source_dir)],
+            check=True,
+        )
+        subprocess.run(
+            ["git", "-C", str(source_dir), "fetch", "--depth", "1", "origin", ref],
+            check=True,
+        )
+        subprocess.run(
+            ["git", "-C", str(source_dir), "checkout", "--detach", ref],
+            check=True,
+        )
+    actual = subprocess.check_output(
+        ["git", "-C", str(source_dir), "rev-parse", "HEAD"], text=True
+    ).strip()
     if actual != ref:
         raise SystemExit(f"Pinned Ganjoor ref mismatch: requested {ref}, got {actual}")
     return source_dir
 
 
-def load_manifest(source_dir: Path, ref: str) -> dict[str, Any]:
+def load_manifest(source_dir: Path) -> dict[str, Any]:
     manifest = json.loads((source_dir / "manifest.json").read_text(encoding="utf-8"))
     if manifest.get("PoemsCount") is None or manifest.get("PoetsCount") is None:
         raise SystemExit("Ganjoor manifest is missing required counts")
@@ -82,14 +104,17 @@ def load_manifest(source_dir: Path, ref: str) -> dict[str, Any]:
 
 def iter_poem_files(source_dir: Path):
     poets_dir = source_dir / "poets"
+    if not poets_dir.is_dir():
+        raise SystemExit(f"Ganjoor poets directory missing: {poets_dir}")
     for path in poets_dir.rglob("*.json"):
-        if path.name in {"poet.json", "_cat.json"}:
-            continue
-        yield path
+        if path.name not in {"poet.json", "_cat.json"}:
+            yield path
 
 
 def infer_poet_slug(source_dir: Path, path: Path) -> str:
     rel = path.relative_to(source_dir / "poets")
+    if not rel.parts:
+        raise ValueError(f"Cannot infer poet slug from {path}")
     return rel.parts[0]
 
 
@@ -118,21 +143,15 @@ def recreate_poetry_layer(target: Path, rows: list[tuple[str, str, str, str]]) -
         )
 
         inserted = 0
-        seen: set[tuple[str, str, str]] = set()
         for i in range(0, len(rows), BATCH):
-            batch = []
-            for row in rows[i : i + BATCH]:
-                key = (row[0], row[1], row[2])
-                if key in seen:
-                    continue
-                seen.add(key)
-                batch.append(row)
-            if batch:
-                conn.executemany(
-                    "INSERT INTO poems(poet,title,text,source) VALUES (?,?,?,?)",
-                    batch,
-                )
-                inserted += len(batch)
+            batch = rows[i : i + BATCH]
+            if not batch:
+                continue
+            conn.executemany(
+                "INSERT INTO poems(poet,title,text,source) VALUES (?,?,?,?)",
+                batch,
+            )
+            inserted += len(batch)
 
         if fts_sql:
             conn.execute(fts_sql)
@@ -163,12 +182,10 @@ def main() -> int:
                         help="0 disables the size filter")
     parser.add_argument("--apply", action="store_true",
                         help="atomically replace --db after successful build and validation")
-    parser.add_argument("--keep-source", action="store_true",
-                        help="keep the local Ganjoor checkout; otherwise it remains in ignored staging")
     args = parser.parse_args()
 
-    repo = ensure_source(args.source_dir.resolve(), args.ref, args.remote)
-    manifest = load_manifest(repo, args.ref)
+    repo = ensure_source(args.source_dir, args.ref, args.remote)
+    manifest = load_manifest(repo)
     poet_map = load_poet_map(manifest)
 
     rows: list[tuple[str, str, str, str]] = []
@@ -182,6 +199,7 @@ def main() -> int:
         "empty_skipped": 0,
         "duplicate_skipped": 0,
         "unknown_poet": 0,
+        "invalid_json": 0,
     }
     dedupe: set[tuple[str, str, str]] = set()
 
@@ -191,9 +209,12 @@ def main() -> int:
             poem = json.loads(path.read_text(encoding="utf-8"))
             stats["json_parsed"] += 1
         except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+            stats["invalid_json"] += 1
             continue
         if not isinstance(poem, dict):
+            stats["invalid_json"] += 1
             continue
+
         slug = infer_poet_slug(repo, path)
         poet = poet_map.get(slug, slug)
         if slug not in poet_map:
@@ -206,11 +227,13 @@ def main() -> int:
         if args.max_chars > 0 and len(text) > args.max_chars:
             stats["oversize_skipped"] += 1
             continue
+
         key = (norm(poet), norm(title), norm(text))
         if key in dedupe:
             stats["duplicate_skipped"] += 1
             continue
         dedupe.add(key)
+
         poem_id = poem.get("Id") or poem.get("id") or path.stem
         rel = path.relative_to(repo).as_posix()
         source = f"ganjoor-data@{args.ref}#{poem_id}::{rel}"
@@ -219,6 +242,9 @@ def main() -> int:
     args.output.parent.mkdir(parents=True, exist_ok=True)
     if args.output.exists():
         args.output.unlink()
+    if not args.db.exists():
+        raise SystemExit(f"Canonical DB not found: {args.db}")
+
     shutil.copy2(args.db, args.output)
     inserted, count = recreate_poetry_layer(args.output, rows)
     stats["insertable"] = inserted
