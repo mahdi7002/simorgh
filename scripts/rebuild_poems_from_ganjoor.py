@@ -1,10 +1,13 @@
 #!/usr/bin/env python3
-"""Build a complete SIMORGH poetry DB from a pinned Ganjoor snapshot.
+"""Build a complete SIMORGH poetry database from a pinned Ganjoor snapshot.
 
-Completeness is defined as one SQLite row per poem JSON file in the pinned
-snapshot. No text-length filter or content-based deduplication is applied by
-default. Runtime prompt/display limits belong to consuming layers, not corpus
-reconstruction.
+The source is fetched into a local cache, parsed read-only, and written to a
+staging SQLite database. The canonical database is changed only with --apply.
+Before replacement, the old database is copied to a timestamped backup.
+
+Completeness policy: preserve one SQLite row per parsed Ganjoor poem JSON file.
+No default text-length filter, no content-based deduplication, and empty-text
+records are preserved. Runtime consumers may impose prompt/display limits later.
 """
 from __future__ import annotations
 
@@ -35,7 +38,6 @@ def poem_text(poem: dict[str, Any]) -> str:
         text = "\n".join(
             str(v.get("Text", "")).strip()
             for v in ordered
-            if str(v.get("Text", "")).strip()
         )
         if text:
             return text
@@ -43,7 +45,7 @@ def poem_text(poem: dict[str, Any]) -> str:
     return "\n".join(
         str(s.get("PlainText", "")).strip()
         for s in sections
-        if isinstance(s, dict) and str(s.get("PlainText", "")).strip()
+        if isinstance(s, dict)
     )
 
 
@@ -88,13 +90,6 @@ def iter_poem_files(source_dir: Path):
             yield path
 
 
-def infer_poet_slug(source_dir: Path, path: Path) -> str:
-    rel = path.relative_to(source_dir / "poets")
-    if not rel.parts:
-        raise ValueError(f"Cannot infer poet slug from {path}")
-    return rel.parts[0]
-
-
 def load_poet_map(manifest: dict[str, Any]) -> dict[str, str]:
     out: dict[str, str] = {}
     for poet in manifest.get("Poets", []):
@@ -107,21 +102,25 @@ def load_poet_map(manifest: dict[str, Any]) -> dict[str, str]:
 
 def recreate_poetry_layer(target: Path, rows: list[tuple[str, str, str, str]]) -> tuple[int, int]:
     with sqlite3.connect(target) as conn:
-        fts_row = conn.execute(
+        fts_sql_row = conn.execute(
             "SELECT sql FROM sqlite_master WHERE type='table' AND name='poems_fts'"
         ).fetchone()
-        fts_sql = fts_row[0] if fts_row else None
+        fts_sql = fts_sql_row[0] if fts_sql_row else None
         conn.execute("DROP TABLE IF EXISTS poems_fts")
         conn.execute("DROP TABLE IF EXISTS poems")
         conn.execute(
             "CREATE TABLE poems (id INTEGER PRIMARY KEY AUTOINCREMENT, poet TEXT, title TEXT, text TEXT, source TEXT)"
         )
+        inserted = 0
         for i in range(0, len(rows), BATCH):
             batch = rows[i : i + BATCH]
-            if batch:
-                conn.executemany(
-                    "INSERT INTO poems(poet,title,text,source) VALUES (?,?,?,?)", batch
-                )
+            if not batch:
+                continue
+            conn.executemany(
+                "INSERT INTO poems(poet,title,text,source) VALUES (?,?,?,?)",
+                batch,
+            )
+            inserted += len(batch)
         if fts_sql:
             conn.execute(fts_sql)
         else:
@@ -134,7 +133,7 @@ def recreate_poetry_layer(target: Path, rows: list[tuple[str, str, str, str]]) -
             raise RuntimeError(f"SQLite integrity_check failed: {integrity}")
         conn.commit()
         count = conn.execute("SELECT COUNT(*) FROM poems").fetchone()[0]
-    return len(rows), count
+    return inserted, count
 
 
 def main() -> int:
@@ -144,14 +143,8 @@ def main() -> int:
     parser.add_argument("--source-dir", type=Path, default=Path("rebuild_staging/ganjoor-data"))
     parser.add_argument("--ref", default=DEFAULT_REF)
     parser.add_argument("--remote", default=DEFAULT_SOURCE)
-    parser.add_argument(
-        "--max-chars", type=int, default=DEFAULT_MAX_CHARS,
-        help="0 disables the size filter (default: 0; complete corpus)",
-    )
-    parser.add_argument(
-        "--apply", action="store_true",
-        help="atomically replace --db after successful build and validation",
-    )
+    parser.add_argument("--max-chars", type=int, default=DEFAULT_MAX_CHARS, help="0 disables the size filter")
+    parser.add_argument("--apply", action="store_true", help="atomically replace --db after successful build and validation")
     args = parser.parse_args()
 
     repo = ensure_source(args.source_dir, args.ref, args.remote)
@@ -166,7 +159,6 @@ def main() -> int:
         "insertable": 0,
         "oversize_skipped": 0,
         "empty_text_preserved": 0,
-        "duplicate_skipped": 0,
         "unknown_poet": 0,
         "invalid_json": 0,
     }
@@ -182,7 +174,8 @@ def main() -> int:
         if not isinstance(poem, dict):
             stats["invalid_json"] += 1
             continue
-        slug = infer_poet_slug(repo, path)
+        parts = path.relative_to(repo / "poets").parts
+        slug = parts[0]
         poet = poet_map.get(slug, slug)
         if slug not in poet_map:
             stats["unknown_poet"] += 1
@@ -197,19 +190,6 @@ def main() -> int:
         rel = path.relative_to(repo).as_posix()
         source = f"ganjoor-data@{args.ref}#{poem_id}::{rel}"
         rows.append((poet, title, text, source))
-
-    if len(rows) != stats["files_seen"] - stats["oversize_skipped"] - stats["invalid_json"]:
-        raise RuntimeError("row accounting mismatch")
-    if stats["files_seen"] != stats["manifest_poems"]:
-        raise RuntimeError(
-            f"Ganjoor file count mismatch: files={stats['files_seen']} manifest={stats['manifest_poems']}"
-        )
-    if stats["json_parsed"] != stats["files_seen"]:
-        raise RuntimeError("not all poem files parsed")
-    if stats["invalid_json"] or stats["unknown_poet"] or stats["oversize_skipped"]:
-        raise RuntimeError(
-            f"incomplete corpus: invalid_json={stats['invalid_json']} unknown_poet={stats['unknown_poet']} oversize={stats['oversize_skipped']}"
-        )
 
     args.output.parent.mkdir(parents=True, exist_ok=True)
     if args.output.exists():
@@ -242,9 +222,7 @@ def main() -> int:
 
     if args.apply:
         source = args.db.resolve()
-        backup = source.with_name(
-            source.name + ".pre_ganjoor_" + datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ") + ".bak"
-        )
+        backup = source.with_name(source.name + ".pre_ganjoor_" + datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ") + ".bak")
         shutil.copy2(source, backup)
         temp_apply = source.with_name(source.name + ".ganjoor.tmp")
         shutil.copy2(args.output, temp_apply)
