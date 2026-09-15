@@ -19,10 +19,39 @@ Ganjoor poetry content and excludes user-account-linked data. The repository doe
 **not** contain a `LICENSE` file. Therefore this project must not manufacture a
 license for the compilation, metadata, summaries, or other editorial material.
 
-The classical poem texts may be public-domain works because of their age, but
-that does not by itself establish an open license for the Ganjoor compilation.
-The `ASSET_RIGHTS.csv` status must remain `NOT_VERIFIED` until the project has a
-reviewed legal basis for redistribution of the exact material being shipped.
+### 1. Underlying poem texts
+
+For classical authors such as Hafez, Saadi, Ferdowsi, Bidel, and similar historical
+poets, the underlying original literary works are expected to be outside the normal
+copyright term because of their age. This is a **public-domain candidate status**,
+not an automatic release approval. The project must still consider the applicable
+jurisdiction and whether the shipped text includes any separately protectable
+modern editorial layer, such as a translation, critical edition, annotation,
+summary, correction, formatting, or other contributed material.
+
+Accordingly, do not record `Public Domain` as a universal legal conclusion for an
+entire Ganjoor record merely because the named poet is historical.
+
+### 2. Ganjoor compilation and editorial structure
+
+The dataset's collection, identifiers, category hierarchy, metadata, summaries,
+formatting, and other editorial structure are distinct from the underlying
+classical works. The upstream repository currently provides no explicit LICENSE
+file for that compilation. Its public availability is evidence of provenance,
+not by itself a grant of redistribution rights.
+
+Therefore the SIMORGH rights ledger must keep the Ganjoor-derived compilation /
+editorial layer **NOT_VERIFIED** until a human maintainer has reviewed a concrete
+legal basis for redistributing the exact fields that SIMORGH intends to ship.
+
+This distinction is deliberate:
+
+```text
+original classical work            -> likely public-domain candidate
+Ganjoor compilation / structure    -> rights not established by LICENSE file
+modern editorial/translation text  -> must be assessed separately
+SIMORGH release decision           -> human decision required
+```
 
 ## Rebuild rule
 
@@ -57,9 +86,10 @@ required.
 ## Release gate
 
 Do not change `compliance/ASSET_RIGHTS.csv` to `VERIFIED` merely because the
-source is official. The rights ledger should be updated only after the exact
-redistribution basis, attribution requirements, and included derivative/editorial
-fields have been reviewed and accepted by the human maintainer.
+source is official or because the underlying poet is historical. The rights ledger
+should be updated only after the exact redistribution basis, attribution
+requirements, and included derivative/editorial fields have been reviewed and
+accepted by the human maintainer.
 
 Do not commit `rebuild_staging/` or any local quarantine backup containing
 private or unverified source material.
