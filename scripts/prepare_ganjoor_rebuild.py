@@ -30,7 +30,7 @@ def norm(value: str) -> str:
     value = str(value or "").strip().replace("\u200c", " ")
     value = re.sub(r"[\u064B-\u065F\u0670\u06D6-\u06ED]", "", value)
     value = re.sub(r"\s+", " ", value)
-    return value.replace("ي", "ی").replace("ك", "ک").casefold()
+    return value.replace("ي", "ی").replace("ك", "ک").casefold().strip()
 
 
 def compact_text(value: str) -> str:
