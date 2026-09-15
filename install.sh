@@ -20,7 +20,6 @@ printf '\n📦 Installing dependencies...\n'
 apt-get install -y -qq git python3.11 python3.11-dev python3.11-venv sqlite3 build-essential wget > /dev/null
 
 printf '\n🐍 Installing Python packages...\n'
-pip3 install --upgrade pip > /dev/null 2>&1
 pip3 install -r "$SCRIPT_DIR/requirements.txt" > /dev/null 2>&1
 
 MODEL_DIR="$SCRIPT_DIR/models"
