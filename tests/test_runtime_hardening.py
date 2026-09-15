@@ -198,3 +198,13 @@ def test_chat_response_disclosure_and_security_headers(monkeypatch):
     assert response.headers["x-content-type-options"] == "nosniff"
     assert response.headers["x-frame-options"] == "DENY"
     assert response.headers["referrer-policy"] == "no-referrer"
+
+
+def test_global_request_body_limit_is_configured():
+    import main
+
+    assert main.MAX_REQUEST_BYTES == 10 * 1024 * 1024
+    assert any(
+        getattr(m, "cls", None).__name__ == "RequestBodyLimitMiddleware"
+        for m in main.app.user_middleware
+    )
