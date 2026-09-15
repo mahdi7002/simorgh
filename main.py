@@ -10,6 +10,7 @@ import uvicorn
 from fastapi import FastAPI, Form, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
+from starlette.middleware.body_limit import RequestBodyLimitMiddleware
 
 from core.paths import DASHBOARD_HTML, LOG_DIR
 
@@ -54,6 +55,10 @@ logger = _configure_logging()
 HOST = os.getenv("SIMORGH_HOST", "127.0.0.1")
 PORT = int(os.getenv("SIMORGH_PORT", "8000"))
 SIMORGH_KEY = os.getenv("SIMORGH_KEY")
+MAX_REQUEST_BYTES = int(os.getenv("SIMORGH_MAX_REQUEST_BYTES", str(10 * 1024 * 1024)))
+
+if MAX_REQUEST_BYTES < 1:
+    raise RuntimeError("SIMORGH_MAX_REQUEST_BYTES must be a positive integer")
 
 # Fail closed: an unconfigured external bind must never expose the API.
 LOOPBACK_HOSTS = {"127.0.0.1", "localhost", "::1"}
@@ -80,6 +85,7 @@ def _session_id(request: Request) -> str:
 
 
 app = FastAPI(title="SIMORGH", version=os.getenv("SIMORGH_VERSION", "0.1.0"))
+app.add_middleware(RequestBodyLimitMiddleware, max_body_size=MAX_REQUEST_BYTES)
 from core.voice_docs import router as voice_docs_router
 from core.dashboard_api import router as dashboard_api_router
 from core.voice_endpoint import router as voice_endpoint_router
