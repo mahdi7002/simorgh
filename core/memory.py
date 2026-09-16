@@ -1,5 +1,6 @@
 import json
 import sqlite3
+from contextlib import contextmanager
 from pathlib import Path
 from core.paths import MEMORY_DB, MEMORY_DIR
 
@@ -9,6 +10,7 @@ class MemoryEngine:
         self.provenance_db = Path(MEMORY_DIR) / "provenance.db"
         self._init_db()
 
+    @contextmanager
     def _connect(self, path: Path):
         path = Path(path)
         path.parent.mkdir(parents=True, exist_ok=True)
@@ -16,7 +18,13 @@ class MemoryEngine:
             path.chmod(path.stat().st_mode | 0o200)  # u+w if possible
         except Exception:
             pass
-        return sqlite3.connect(str(path))
+
+        conn = sqlite3.connect(str(path))
+        try:
+            with conn:
+                yield conn
+        finally:
+            conn.close()
 
     def _init_db(self):
         with self._connect(self.db_path) as conn:
