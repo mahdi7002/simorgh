@@ -11,7 +11,6 @@ import sqlite3
 from typing import List, Dict
 
 logger = logging.getLogger(__name__)
-
 DB_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "simorgh_full.db")
 STOPWORDS = {"من", "تو", "او", "ما", "شما", "این", "که", "را", "به", "از", "با", "در", "و"}
 
@@ -31,18 +30,17 @@ def get_book_wisdom(query: str, limit: int = 2) -> List[Dict]:
     match_query = " OR ".join(keywords)
 
     try:
-        conn = sqlite3.connect(DB_PATH)
-        rows = conn.execute(
-            """
-            SELECT doc_name, category, chunk_text
-            FROM book_chunks_fts
-            WHERE book_chunks_fts MATCH ?
-            ORDER BY rank
-            LIMIT ?
-            """,
-            (match_query, limit),
-        ).fetchall()
-        conn.close()
+        with sqlite3.connect(DB_PATH) as conn:
+            rows = conn.execute(
+                """
+                SELECT doc_name, category, chunk_text
+                FROM book_chunks_fts
+                WHERE book_chunks_fts MATCH ?
+                ORDER BY rank
+                LIMIT ?
+                """,
+                (match_query, limit),
+            ).fetchall()
     except Exception as e:
         logger.warning(f"جستجوی کتاب شکست خورد: {e}")
         return []
