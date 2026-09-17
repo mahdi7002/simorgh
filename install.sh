@@ -163,14 +163,25 @@ EOF
     fi
 }
 
+if command -v systemctl >/dev/null 2>&1 && systemctl --user is-active --quiet simorgh.service 2>/dev/null; then
+    if "$VENV/bin/python" - <<PY >/dev/null 2>&1
+import urllib.request
+urllib.request.urlopen("http://127.0.0.1:\${PORT}/health", timeout=2).read()
+PY
+    then
+        printf 'سیمرغ از قبل به‌صورت سرویس پایدار در حال اجراست: http://127.0.0.1:%s/\n' "$PORT"
+        if command -v xdg-open >/dev/null 2>&1; then xdg-open "http://127.0.0.1:$PORT/" >/dev/null 2>&1 & fi
+        exit 0
+    fi
+    systemctl --user restart simorgh.service 2>/dev/null || true
+fi
+
 if [ -f "$PID_FILE" ]; then
     pid="$(cat "$PID_FILE" 2>/dev/null || true)"
     if [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null; then
-        if command -v systemctl >/dev/null 2>&1 && systemctl --user is-active --quiet simorgh.service 2>/dev/null; then
-            printf 'سیمرغ از قبل به‌صورت سرویس پایدار در حال اجراست: http://127.0.0.1:%s/\n' "$PORT"
-            if command -v xdg-open >/dev/null 2>&1; then xdg-open "http://127.0.0.1:$PORT/" >/dev/null 2>&1 & fi
-            exit 0
-        fi
+        printf 'سیمرغ از قبل در حال اجراست: http://127.0.0.1:%s/\n' "$PORT"
+        if command -v xdg-open >/dev/null 2>&1; then xdg-open "http://127.0.0.1:$PORT/" >/dev/null 2>&1 & fi
+        exit 0
     fi
     rm -f "$PID_FILE"
 fi
