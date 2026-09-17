@@ -19,7 +19,8 @@ def test_persistent_service_runner_has_valid_shell_syntax():
 
 def test_installer_enables_persistent_user_service():
     installer = (ROOT / "install.sh").read_text(encoding="utf-8")
-    assert "systemctl --user enable --now simorgh.service" in installer
+    assert "systemctl --user enable simorgh.service" in installer
+    assert "systemctl --user restart simorgh.service" in installer
     assert "Restart=always" in installer
     assert "loginctl enable-linger" in installer
     assert "scripts/simorgh-run.sh" in installer
