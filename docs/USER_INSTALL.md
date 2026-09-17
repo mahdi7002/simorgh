@@ -77,3 +77,36 @@ AppImage در حالت عادی هیچ دادهٔ شخصی را داخل خود 
 بستهٔ self-contained برای x86_64 Linux از طریق workflow رسمی repository ساخته می‌شود. نسخه‌های tag شده با الگوی `v*` می‌توانند به‌صورت release GitHub منتشر شوند.
 
 AppImage یک بستهٔ architecture-specific است. build فعلی x86_64 است و بستهٔ ARM64 هنوز جداگانه ساخته نمی‌شود.
+
+## اجرای دائمی پس‌زمینه
+
+در نصب معمولی با `./install.sh`، اگر systemd کاربر در دسترس باشد، سیمرغ به‌صورت یک سرویس کاربری نصب و فعال می‌شود:
+
+- `Restart=always` برای بازگشت خودکار سرویس پس از crash یا توقف ناخواسته
+- اجرای خودکار با user manager سیستم
+- فعال‌سازی linger برای ادامهٔ سرویس پس از خروج از نشست کاربر، در صورت پشتیبانی سیستم
+- اجرای هسته فقط روی `127.0.0.1`
+- داده و لاگ خارج از مخزن و در runtime کاربر
+
+وضعیت سرویس:
+
+```bash
+systemctl --user status simorgh.service
+journalctl --user -u simorgh.service -n 80 --no-pager
+```
+
+شروع دوباره:
+
+```bash
+systemctl --user restart simorgh.service
+```
+
+توقف موقت:
+
+```bash
+./stop.sh
+```
+
+پس از توقف، برای فعال‌سازی دوباره نصب‌کننده را اجرا کنید یا از `systemctl --user start simorgh.service` استفاده کنید.
+
+نصب‌کننده در نبود systemd کاربر، به launcher فعلی fallback می‌کند.
