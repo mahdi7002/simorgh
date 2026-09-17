@@ -1,0 +1,59 @@
+{
+  "schema_version": 1,
+  "policy": {
+    "download_default": false,
+    "integrity": "sha256",
+    "source_metadata": "official model repository metadata",
+    "custom_import": true
+  },
+  "models": [
+    {
+      "id": "qwen2.5-1.5b-instruct-q4-k-m",
+      "name": "Qwen2.5 1.5B Instruct Q4_K_M",
+      "family": "Qwen2.5",
+      "tier": "small",
+      "format": "GGUF",
+      "backend": "llama.cpp",
+      "filename": "qwen2.5-1.5b-instruct-q4_k_m.gguf",
+      "license": "Apache-2.0",
+      "min_ram_gb": 4,
+      "min_vram_gb": 0,
+      "min_disk_gb": 2,
+      "download_url": "https://huggingface.co/Qwen/Qwen2.5-1.5B-Instruct-GGUF/resolve/main/qwen2.5-1.5b-instruct-q4_k_m.gguf",
+      "metadata_url": "https://huggingface.co/api/models/Qwen/Qwen2.5-1.5B-Instruct-GGUF",
+      "notes": "Small local starting point; integrity is resolved from repository metadata before download."
+    },
+    {
+      "id": "qwen2.5-3b-instruct-q4-k-m",
+      "name": "Qwen2.5 3B Instruct Q4_K_M",
+      "family": "Qwen2.5",
+      "tier": "medium",
+      "format": "GGUF",
+      "backend": "llama.cpp",
+      "filename": "qwen2.5-3b-instruct-q4_k_m.gguf",
+      "license": "Apache-2.0",
+      "min_ram_gb": 8,
+      "min_vram_gb": 0,
+      "min_disk_gb": 4,
+      "download_url": "https://huggingface.co/Qwen/Qwen2.5-3B-Instruct-GGUF/resolve/main/qwen2.5-3b-instruct-q4_k_m.gguf",
+      "metadata_url": "https://huggingface.co/api/models/Qwen/Qwen2.5-3B-Instruct-GGUF",
+      "notes": "Medium local option for machines with more memory."
+    },
+    {
+      "id": "qwen2.5-7b-instruct-q4-k-m",
+      "name": "Qwen2.5 7B Instruct Q4_K_M",
+      "family": "Qwen2.5",
+      "tier": "large",
+      "format": "GGUF",
+      "backend": "llama.cpp",
+      "filename": "qwen2.5-7b-instruct-q4_k_m.gguf",
+      "license": "Apache-2.0",
+      "min_ram_gb": 12,
+      "min_vram_gb": 0,
+      "min_disk_gb": 8,
+      "download_url": "https://huggingface.co/Qwen/Qwen2.5-7B-Instruct-GGUF/resolve/main/qwen2.5-7b-instruct-q4_k_m.gguf",
+      "metadata_url": "https://huggingface.co/api/models/Qwen/Qwen2.5-7B-Instruct-GGUF",
+      "notes": "Larger local option; not recommended when memory is tight."
+    }
+  ]
+}
