@@ -60,7 +60,6 @@ MAX_REQUEST_BYTES = int(os.getenv("SIMORGH_MAX_REQUEST_BYTES", str(10 * 1024 * 1
 if MAX_REQUEST_BYTES < 1:
     raise RuntimeError("SIMORGH_MAX_REQUEST_BYTES must be a positive integer")
 
-# Fail closed: an unconfigured external bind must never expose the API.
 LOOPBACK_HOSTS = {"127.0.0.1", "localhost", "::1"}
 EXTERNAL_BIND = HOST not in LOOPBACK_HOSTS
 if EXTERNAL_BIND and not SIMORGH_KEY:
@@ -259,6 +258,7 @@ async def status():
         "cpu": psutil.cpu_percent(interval=0.1),
         "ram": psutil.virtual_memory().percent,
         "disk": psutil.disk_usage("/").percent,
+        "services": services,
     }
 
 
