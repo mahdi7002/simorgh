@@ -7,11 +7,9 @@ XDG_CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"
 RUNTIME_DIR="${SIMORGH_RUNTIME_DIR:-$XDG_DATA_HOME/simorgh}"
 CONFIG_DIR="$XDG_CONFIG_HOME/simorgh"
 ENV_FILE="$CONFIG_DIR/runtime.env"
-PID_FILE="$RUNTIME_DIR/simorgh.pid"
-LOG_FILE="$RUNTIME_DIR/logs/launcher.log"
 VENV="$ROOT/.venv"
 
-mkdir -p "$CONFIG_DIR" "$RUNTIME_DIR/logs"
+mkdir -p "$CONFIG_DIR"
 printf '\nSIMORGH | سیمرغ\n'
 printf 'اجرای محلی، بدون حساب، بدون API key و بدون اجبار به مدل.\n\n'
 
@@ -34,20 +32,17 @@ if [ ! -f "$ENV_FILE" ] && [ -t 0 ]; then
 fi
 
 RUNTIME_DIR="$(mkdir -p "$RUNTIME_DIR" && cd "$RUNTIME_DIR" && pwd)"
+PID_FILE="$RUNTIME_DIR/simorgh.pid"
+LOG_FILE="$RUNTIME_DIR/logs/launcher.log"
 mkdir -p "$RUNTIME_DIR"/{data,memory,models,logs,imports,transcripts,audio_out,bin}
 
-# Persist the selected runtime location and the actual application port.
 PORT="${SIMORGH_PORT:-}"
 if [ -z "$PORT" ] && [ -f "$ENV_FILE" ]; then
     # shellcheck disable=SC1090
     source "$ENV_FILE"
     PORT="${SIMORGH_PORT:-}"
 fi
-
-if [ -z "$PORT" ]; then
-    PORT="8000"
-fi
-
+if [ -z "$PORT" ]; then PORT=8000; fi
 if ! printf '%s' "$PORT" | grep -Eq '^[0-9]+$' || [ "$PORT" -lt 1024 ] || [ "$PORT" -gt 65535 ]; then
     PORT=8000
 fi
@@ -71,11 +66,6 @@ EOF
 # shellcheck disable=SC1090
 source "$ENV_FILE"
 
-# Mark first-run configuration as complete using the same runtime API used by the app.
-export SIMORGH_RUNTIME_DIR
-"$PYTHON" >/dev/null 2>&1 <<'PY' || true
-PY
-
 if [ -f "$ROOT/data/simorgh_full.db" ] && [ "$(wc -c < "$ROOT/data/simorgh_full.db")" -lt 1000 ]; then
     printf 'دیتابیس LFS هنوز materialize نشده است؛ تلاش برای دریافت آن...\n'
     if command -v git-lfs >/dev/null 2>&1; then
@@ -84,8 +74,6 @@ if [ -f "$ROOT/data/simorgh_full.db" ] && [ "$(wc -c < "$ROOT/data/simorgh_full.
     fi
 fi
 
-# Git LFS is optional for installation. When the pointer is still present,
-# fetch the current canonical object directly and verify its pointer SHA-256.
 if [ -f "$ROOT/data/simorgh_full.db" ] && [ "$(wc -c < "$ROOT/data/simorgh_full.db")" -lt 1000 ]; then
     POINTER_SHA="$(awk '/^oid sha256:/{sub(/^oid sha256:/,""); print}' "$ROOT/data/simorgh_full.db" 2>/dev/null || true)"
     if printf '%s' "$POINTER_SHA" | grep -Eq '^[0-9a-f]{64}$' && command -v curl >/dev/null 2>&1; then
@@ -136,7 +124,6 @@ fi
 
 "$VENV/bin/python" -m pip install --disable-pip-version-check -q -r "$ROOT/requirements.txt"
 
-# Persist runtime metadata after Python is available.
 SIMORGH_RUNTIME_DIR="$RUNTIME_DIR" SIMORGH_PORT="$PORT" "$VENV/bin/python" - <<'PY'
 from core.user_runtime import save_config
 import os
@@ -151,30 +138,13 @@ PY
 if [ -f "$PID_FILE" ]; then
     pid="$(cat "$PID_FILE" 2>/dev/null || true)"
     if [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null; then
-        # Read the port actually used by the running process before reporting it.
-        RUNNING_PORT="$("$VENV/bin/python" - <<PY
-import json
-from pathlib import Path
-p=Path(${ENV_FILE@Q})
-port=None
-try:
-    for line in p.read_text().splitlines():
-        if line.startswith("SIMORGH_PORT="):
-            port=int(line.split("=",1)[1].strip() or "0")
-            break
-except Exception:
-    pass
-print(port or ${PORT})
-PY
-)"
-        printf 'سیمرغ از قبل در حال اجراست: http://127.0.0.1:%s/\n' "$RUNNING_PORT"
-        if command -v xdg-open >/dev/null 2>&1; then xdg-open "http://127.0.0.1:$RUNNING_PORT/" >/dev/null 2>&1 & fi
+        printf 'سیمرغ از قبل در حال اجراست: http://127.0.0.1:%s/\n' "$PORT"
+        if command -v xdg-open >/dev/null 2>&1; then xdg-open "http://127.0.0.1:$PORT/" >/dev/null 2>&1 & fi
         exit 0
     fi
     rm -f "$PID_FILE"
 fi
 
-# If the persisted port is occupied, choose another local port and persist it.
 if ! "$VENV/bin/python" - <<PY >/dev/null 2>&1
 import socket
 s=socket.socket()
@@ -243,7 +213,6 @@ then
     exit 1
 fi
 
-# Make repeat launches one-click from the desktop/application menu.
 BIN_DIR="$HOME/.local/bin"
 APP_DIR="$HOME/.local/share/applications"
 mkdir -p "$BIN_DIR" "$APP_DIR"
