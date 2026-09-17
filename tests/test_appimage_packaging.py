@@ -33,6 +33,7 @@ def test_appimage_builder_pins_external_build_inputs():
     assert 'PY_VERSION="3.13.15"' in script
     assert 'APPIMAGETOOL_SHA256="a6d71e2b6cd66f8e8d16c37ad164658985e0cf5fcaa950c90a482890cb9d13e0"' in script
     assert 'sha256sum -c -' in script
+    assert 'cp "$ROOT/packaging/simorgh.desktop" "$APPDIR/simorgh.desktop"' in script
 
 
 def test_appimage_workflow_checks_lfs_database():
@@ -40,3 +41,12 @@ def test_appimage_workflow_checks_lfs_database():
     assert "lfs: true" in workflow
     assert "data/simorgh_full.db" in workflow
     assert "PRAGMA integrity_check" in workflow
+    assert "runtime.json" in workflow
+    assert "EXPECTED_PYTHON" in workflow
+
+
+def test_apprun_verifies_its_own_runtime():
+    apprun = (ROOT / "packaging" / "AppRun").read_text(encoding="utf-8")
+    assert '[[ "$cmdline" == *"$PYTHON"* && "$cmdline" == *"main.py"* ]]' in apprun
+    assert 'health.get("python_version") != expected_python' in apprun
+    assert 'response.status != 200' in apprun
