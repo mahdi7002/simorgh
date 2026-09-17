@@ -10,15 +10,15 @@
 </head>
 <body>
 <main>
-<header><div><h1>سیمرغ <small>هوش در خدمت انسان، نه انسان در خدمت هوش</small></h1><p class="lead">هستهٔ محلی، پایگاه دانش مستقل و مدل زبانی اختیاری.</p></div><button class="secondary" onclick="refreshAll()">بازخوانی وضعیت</button></header>
+<header><div><h1>سیمرغ <small>هوش در خدمت انسان، نه انسان در خدمت هوش</small></h1><p class="lead">هستهٔ محلی، پایگاه دانش مستقل و مدل زبانی اختیاری.</p></div><button class="secondary" id="refresh">بازخوانی وضعیت</button></header>
 <section class="grid">
 <div class="card"><h2>دستگاه</h2><div id="hardware" class="muted">در حال خواندن...</div></div>
 <div class="card"><h2>هسته</h2><div id="runtime" class="muted">در حال خواندن...</div></div>
 <div class="card"><h2>پایگاه دانش</h2><div id="knowledge" class="muted">در حال خواندن...</div></div>
 </section>
-<section class="card" style="margin-top:12px"><h2>مدل‌های محلی</h2><p class="muted">هیچ مدلی بدون درخواست کاربر دانلود نمی‌شود. SHA-256، مجوز و منبع پیش از ثبت بررسی می‌شوند. پس از تأیید، backend محلی نیز راه‌اندازی می‌شود.</p><div id="models"></div></section>
-<section class="card chat"><h2>گفت‌وگو</h2><div id="chatlog" class="chatlog"><div class="msg assistant">سیمرغ آماده است. حتی بدون مدل هم می‌توانی از پایگاه دانش محلی جست‌وجو کنی.</div></div><div class="composer"><textarea id="query" placeholder="مثلاً: درباره عدالت، حافظ، یا یک موضوع کتابی بپرس..."></textarea><button onclick="sendChat()">ارسال</button></div></section>
-<p class="foot">حریم خصوصی: این رابط در حالت پیش‌فرض فقط به سرویس محلی <code>127.0.0.1</code> وصل می‌شود. تولید متن با AI همیشه با metadata و برچسب روشن همراه است.</p>
+<section class="card" style="margin-top:12px"><h2>مدل‌های محلی</h2><p class="muted">هیچ مدلی بدون انتخاب کاربر دانلود نمی‌شود. SHA-256، مجوز و منبع قبل از ثبت بررسی می‌شوند. بعد از تأیید، backend محلی نیز راه‌اندازی می‌شود.</p><div id="models"></div></section>
+<section class="card chat"><h2>گفت‌وگو</h2><div id="chatlog" class="chatlog"><div class="msg assistant">سیمرغ آماده است. حتی بدون مدل هم می‌توانی از پایگاه دانش محلی استفاده کنی.</div></div><div class="composer"><textarea id="query" placeholder="مثلاً: درباره عدالت، حافظ، یا یک موضوع کتابی بپرس..."></textarea><button id="send">ارسال</button></div></section>
+<p class="foot">حریم خصوصی: رابط فقط به سرویس محلی <code>127.0.0.1</code> متصل است. متن تولیدشده توسط AI با metadata و disclosure روشن نمایش داده می‌شود.</p>
 </main>
 <script>
 let state=null;
@@ -30,10 +30,14 @@ async function refreshAll(){
 }
 function render(){
  const h=state.hardware; document.getElementById('hardware').innerHTML=[kv('سیستم',h.os_name),kv('معماری',h.architecture),kv('پردازنده',h.cpu_model),kv('رشته‌ها',h.cpu_threads),kv('RAM',h.ram_gb+' GB'),kv('فضای آزاد',h.disk_free_gb+' GB'),kv('GPU',h.gpu||'ناشناخته'),kv('ردهٔ پیشنهادی',h.tier)].join('');
- const r=state.runtime; const b=state.backend; document.getElementById('runtime').innerHTML=[kv('runtime',r.runtime_dir),kv('حافظه',r.memory_dir),kv('مدل‌ها',r.model_dir),kv('پیکربندی',r.configured?'انجام شده':'اولین اجرا'),kv('backend',b.ready?'آماده':'نصب/راه‌اندازی نشده'),kv('مدل فعال',b.managed_model||'ندارد')].join('');
+ const r=state.runtime, b=state.backend; document.getElementById('runtime').innerHTML=[kv('runtime',r.runtime_dir),kv('حافظه',r.memory_dir),kv('مدل‌ها',r.model_dir),kv('پیکربندی',r.configured?'انجام شده':'اولین اجرا'),kv('backend',b.ready?'آماده':'نصب/راه‌اندازی نشده'),kv('مدل فعال',b.managed_model||'ندارد')].join('');
  const k=state.knowledge; document.getElementById('knowledge').innerHTML=[kv('Database-First',k.database_first?'فعال':'غیرفعال'),kv('بدون مدل',k.requires_model?'نیاز دارد':'نیاز ندارد'),kv('Offline',k.offline_capable?'فعال':'غیرفعال')].join('');
  const box=document.getElementById('models'); box.innerHTML='';
- for(const m of state.models){ const installed=(state.installed_models||[]).some(x=>x.model_id===m.id&&x.verified); const disabled=!m.compatible||installed; box.insertAdjacentHTML('beforeend',`<div class="model"><div class="model-top"><strong>${esc(m.name)}</strong><span class="pill">${installed?'نصب‌شده':m.recommended?'پیشنهادی':m.compatible?'سازگار':'ناسازگار'}</span></div><div class="muted">${esc(m.format)} · ${esc(m.backend)} · حداقل RAM ${esc(m.min_ram_gb)} GB · مجوز ${esc(m.license)}</div><div style="margin-top:8px"><button ${disabled?'disabled':''} data-model-id="${esc(m.id)}">${installed?'تأییدشده':m.compatible?'دانلود، بررسی و راه‌اندازی':'نیازمند سخت‌افزار بیشتر'}</button></div></div>`);}
+ for(const m of state.models){
+   const installed=(state.installed_models||[]).some(x=>x.model_id===m.id&&x.trusted_provenance);
+   const disabled=!m.compatible||installed;
+   box.insertAdjacentHTML('beforeend',`<div class="model"><div class="model-top"><strong>${esc(m.name)}</strong><span class="pill">${installed?'تأییدشده':m.recommended?'پیشنهادی':m.compatible?'سازگار':'ناسازگار'}</span></div><div class="muted">${esc(m.format)} · ${esc(m.backend)} · حداقل RAM ${esc(m.min_ram_gb)} GB · مجوز ${esc(m.license)}</div><div style="margin-top:8px"><button ${disabled?'disabled':''} data-model-id="${esc(m.id)}">${installed?'نصب‌شده':m.compatible?'دانلود، بررسی و راه‌اندازی':'نیازمند سخت‌افزار بیشتر'}</button></div></div>`);
+ }
  box.querySelectorAll('button[data-model-id]').forEach(button=>button.addEventListener('click',()=>installModel(button.dataset.modelId,button)));
 }
 async function installModel(id,btn){
@@ -42,10 +46,12 @@ async function installModel(id,btn){
  catch(e){alert('نصب مدل انجام نشد: '+e.message); btn.disabled=false; btn.textContent='دانلود، بررسی و راه‌اندازی';}
 }
 async function sendChat(){
- const q=document.getElementById('query').value.trim(); if(!q)return; document.getElementById('query').value=''; const log=document.getElementById('chatlog'); log.insertAdjacentHTML('beforeend',`<div class="msg user">${esc(q)}</div>`); const f=new FormData(); f.append('query',q); f.append('agent','hakim');
- try{const r=await fetch('/chat',{method:'POST',body:f});const data=await r.json(); if(!r.ok)throw new Error(data.detail||'خطا'); log.insertAdjacentHTML('beforeend',`<div class="msg assistant">${esc(data.response)}\n\n[AI disclosure] ${esc(data.ai_disclosure||'')}</div>`)}catch(e){log.insertAdjacentHTML('beforeend',`<div class="msg assistant warn">${esc(e.message)}</div>`)} log.scrollTop=log.scrollHeight;
+ const button=document.getElementById('send'), q=document.getElementById('query').value.trim(); if(!q)return; button.disabled=true; document.getElementById('query').value=''; const log=document.getElementById('chatlog'); log.insertAdjacentHTML('beforeend',`<div class="msg user">${esc(q)}</div>`);
+ try{const f=new FormData(); f.append('query',q); f.append('agent','hakim'); const r=await fetch('/chat',{method:'POST',body:f}); const data=await r.json(); if(!r.ok)throw new Error(data.detail||'خطا'); log.insertAdjacentHTML('beforeend',`<div class="msg assistant">${esc(data.response)}\n\n[AI disclosure] ${esc(data.ai_disclosure||'')}</div>`)}catch(e){log.insertAdjacentHTML('beforeend',`<div class="msg assistant warn">${esc(e.message)}</div>`)} finally{button.disabled=false; log.scrollTop=log.scrollHeight;}
 }
-refreshAll();
+document.getElementById('refresh').addEventListener('click',refreshAll);
+document.getElementById('send').addEventListener('click',sendChat);
 document.getElementById('query').addEventListener('keydown',e=>{if(e.key==='Enter'&&(e.ctrlKey||e.metaKey)){e.preventDefault();sendChat();}});
+refreshAll();
 </script>
 </body></html>
