@@ -75,13 +75,13 @@ python -m pip install -r requirements-optional.txt
 ## 6. تست کامل
 
 ```bash
-python -m pip install pytest httpx
+python -m pip install -r requirements-dev.txt
 python -m pytest -q
 python demo/simorgh_minimal.py --test
 python persona_chat.py --test
 ```
 
-نکته: نام بستهٔ تست HTTP، `httpx` است، نه `httpx2`.
+نکته: تست‌های سخت‌گیرانه به بستهٔ `httpx2` (نه `httpx`) نیاز دارند که در `requirements-dev.txt` پین شده است.
 
 ## 7. مسیرهای قابل تنظیم
 
