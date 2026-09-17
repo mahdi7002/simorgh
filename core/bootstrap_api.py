@@ -5,6 +5,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
 from core.hardware import probe
+from core.local_backend import discover_backend
 from core.model_manager import installed_models, install_model, recommend_models, register_local_model
 from core.user_runtime import runtime_snapshot, save_config
 
@@ -22,6 +23,7 @@ def bootstrap():
     return {
         "runtime": runtime_snapshot(),
         "hardware": profile.to_dict(),
+        "backend": discover_backend(),
         "models": recommend_models(profile),
         "installed_models": installed_models(),
         "knowledge": {
