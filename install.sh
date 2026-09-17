@@ -124,12 +124,53 @@ fi
 
 "$VENV/bin/python" -m pip install --disable-pip-version-check -q -r "$ROOT/requirements.txt"
 
+install_user_service() {
+    command -v systemctl >/dev/null 2>&1 || return 1
+    systemctl --user show-environment >/dev/null 2>&1 || return 1
+
+    local service_dir="$HOME/.config/systemd/user"
+    local service_file="$service_dir/simorgh.service"
+    mkdir -p "$service_dir"
+
+    cat > "$service_file" <<EOF
+[Unit]
+Description=SIMORGH local core
+After=default.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=$ROOT
+ExecStart=/usr/bin/bash $ROOT/scripts/simorgh-run.sh
+Restart=always
+RestartSec=3
+UMask=0077
+NoNewPrivileges=true
+Environment=PYTHONUNBUFFERED=1
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=default.target
+EOF
+
+    systemctl --user daemon-reload
+    systemctl --user enable simorgh.service
+    systemctl --user restart simorgh.service
+
+    if command -v loginctl >/dev/null 2>&1; then
+        loginctl enable-linger "$USER" >/dev/null 2>&1 || true
+    fi
+}
+
 if [ -f "$PID_FILE" ]; then
     pid="$(cat "$PID_FILE" 2>/dev/null || true)"
     if [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null; then
-        printf 'سیمرغ از قبل در حال اجراست: http://127.0.0.1:%s/\n' "$PORT"
-        if command -v xdg-open >/dev/null 2>&1; then xdg-open "http://127.0.0.1:$PORT/" >/dev/null 2>&1 & fi
-        exit 0
+        if command -v systemctl >/dev/null 2>&1 && systemctl --user is-active --quiet simorgh.service 2>/dev/null; then
+            printf 'سیمرغ از قبل به‌صورت سرویس پایدار در حال اجراست: http://127.0.0.1:%s/\n' "$PORT"
+            if command -v xdg-open >/dev/null 2>&1; then xdg-open "http://127.0.0.1:$PORT/" >/dev/null 2>&1 & fi
+            exit 0
+        fi
     fi
     rm -f "$PID_FILE"
 fi
@@ -173,28 +214,36 @@ save_config({
 PY
 
 printf 'در حال آماده‌سازی سیمرغ...\n'
-(
-    cd "$ROOT"
-    nohup env \
-        SIMORGH_RUNTIME_DIR="$SIMORGH_RUNTIME_DIR" \
-        SIMORGH_MEMORY_DIR="$SIMORGH_MEMORY_DIR" \
-        SIMORGH_LOG_DIR="$SIMORGH_LOG_DIR" \
-        SIMORGH_APP_DB="$SIMORGH_APP_DB" \
-        SIMORGH_BOOKS_DB="$SIMORGH_BOOKS_DB" \
-        SIMORGH_LIBRARY_DB="$SIMORGH_LIBRARY_DB" \
-        SIMORGH_JOURNAL_DB="$SIMORGH_JOURNAL_DB" \
-        SIMORGH_ACTIVITY_DB="$SIMORGH_ACTIVITY_DB" \
-        SIMORGH_IMPORTS_DIR="$SIMORGH_IMPORTS_DIR" \
-        SIMORGH_TRANSCRIPTS_DIR="$SIMORGH_TRANSCRIPTS_DIR" \
-        SIMORGH_AUDIO_OUT_DIR="$SIMORGH_AUDIO_OUT_DIR" \
-        SIMORGH_PROPOSAL_DIR="$SIMORGH_PROPOSAL_DIR" \
-        SIMORGH_HOST=127.0.0.1 \
-        SIMORGH_PORT="$PORT" \
-        "$VENV/bin/python" main.py >>"$LOG_FILE" 2>&1 &
-    echo $! > "$PID_FILE"
-)
 
-for _ in $(seq 1 40); do
+SERVICE_MODE=0
+if install_user_service; then
+    SERVICE_MODE=1
+fi
+
+if [ "$SERVICE_MODE" -eq 0 ]; then
+    (
+        cd "$ROOT"
+        nohup env \
+            SIMORGH_RUNTIME_DIR="$SIMORGH_RUNTIME_DIR" \
+            SIMORGH_MEMORY_DIR="$SIMORGH_MEMORY_DIR" \
+            SIMORGH_LOG_DIR="$SIMORGH_LOG_DIR" \
+            SIMORGH_APP_DB="$SIMORGH_APP_DB" \
+            SIMORGH_BOOKS_DB="$SIMORGH_BOOKS_DB" \
+            SIMORGH_LIBRARY_DB="$SIMORGH_LIBRARY_DB" \
+            SIMORGH_JOURNAL_DB="$SIMORGH_JOURNAL_DB" \
+            SIMORGH_ACTIVITY_DB="$SIMORGH_ACTIVITY_DB" \
+            SIMORGH_IMPORTS_DIR="$SIMORGH_IMPORTS_DIR" \
+            SIMORGH_TRANSCRIPTS_DIR="$SIMORGH_TRANSCRIPTS_DIR" \
+            SIMORGH_AUDIO_OUT_DIR="$SIMORGH_AUDIO_OUT_DIR" \
+            SIMORGH_PROPOSAL_DIR="$SIMORGH_PROPOSAL_DIR" \
+            SIMORGH_HOST=127.0.0.1 \
+            SIMORGH_PORT="$PORT" \
+            "$VENV/bin/python" main.py >>"$LOG_FILE" 2>&1 &
+        echo $! > "$PID_FILE"
+    )
+fi
+
+for _ in $(seq 1 60); do
     if "$VENV/bin/python" - <<PY >/dev/null 2>&1
 import urllib.request
 urllib.request.urlopen("http://127.0.0.1:${PORT}/health", timeout=1).read()
@@ -211,9 +260,15 @@ urllib.request.urlopen("http://127.0.0.1:${PORT}/health", timeout=2).read()
 PY
 then
     printf 'سیمرغ بالا نیامد. لاگ: %s\n' "$LOG_FILE" >&2
-    tail -n 50 "$LOG_FILE" >&2 || true
+    if [ "$SERVICE_MODE" -eq 1 ] && command -v systemctl >/dev/null 2>&1; then
+        systemctl --user status simorgh.service --no-pager >&2 || true
+        journalctl --user -u simorgh.service -n 80 --no-pager >&2 || true
+    else
+        tail -n 50 "$LOG_FILE" >&2 || true
+    fi
     exit 1
 fi
+
 
 BIN_DIR="$HOME/.local/bin"
 APP_DIR="$HOME/.local/share/applications"
@@ -238,6 +293,13 @@ EOF
 printf '\n✅ سیمرغ آماده است\n'
 printf '🌐 http://127.0.0.1:%s/\n' "$PORT"
 printf '📁 داده و مدل‌ها: %s\n' "$RUNTIME_DIR"
+if [ "$SERVICE_MODE" -eq 1 ]; then
+    printf '♾️ سرویس پایدار: فعال (Restart=always)\n'
+    printf '🔁 ماندگاری بعد از خروج از حساب: فعال\n'
+else
+    printf 'ℹ️ سرویس systemd کاربر در دسترس نبود؛ حالت launcher فعال است.\n'
+fi
+
 printf '🧠 بدون مدل: پایگاه دانش محلی فعال است.\n'
 printf '🔐 حساب/API key/Telemetry اجباری نیست.\n'
 printf '🖥️ لانچر دسکتاپ: SIMORGH | سیمرغ\n'

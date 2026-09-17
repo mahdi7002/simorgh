@@ -12,6 +12,10 @@ fi
 
 RUNTIME_DIR="${SIMORGH_RUNTIME_DIR:-${XDG_DATA_HOME:-$HOME/.local/share}/simorgh}"
 PID_FILE="$RUNTIME_DIR/simorgh.pid"
+
+if command -v systemctl >/dev/null 2>&1 && systemctl --user list-unit-files simorgh.service >/dev/null 2>&1; then
+    systemctl --user stop simorgh.service 2>/dev/null || true
+fi
 BACKEND_PID_FILE="$RUNTIME_DIR/llama-server.pid"
 
 stopped=0
