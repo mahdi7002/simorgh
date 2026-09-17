@@ -19,6 +19,11 @@ fi
 BACKEND_PID_FILE="$RUNTIME_DIR/llama-server.pid"
 
 stopped=0
+if command -v systemctl >/dev/null 2>&1 && systemctl --user is-active --quiet simorgh.service 2>/dev/null; then
+    stopped=1
+    systemctl --user stop simorgh.service 2>/dev/null || true
+fi
+
 for pid_file in "$PID_FILE" "$BACKEND_PID_FILE"; do
     if [ -f "$pid_file" ]; then
         pid="$(cat "$pid_file" 2>/dev/null || true)"
