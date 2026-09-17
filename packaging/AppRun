@@ -83,11 +83,14 @@ PID_FILE="$RUNTIME_DIR/simorgh.pid"
 LOG_FILE="$RUNTIME_DIR/logs/launcher.log"
 
 is_running() {
-    local pid=''
+    local pid='' cmdline=''
     [ -f "$PID_FILE" ] || return 1
     pid="$(cat "$PID_FILE" 2>/dev/null || true)"
     [ -n "$pid" ] || return 1
-    kill -0 "$pid" 2>/dev/null
+    kill -0 "$pid" 2>/dev/null || return 1
+    [ -r "/proc/$pid/cmdline" ] || return 1
+    cmdline="$(tr '\0' ' ' <"/proc/$pid/cmdline" 2>/dev/null || true)"
+    [[ "$cmdline" == *"$PYTHON"* && "$cmdline" == *"main.py"* ]]
 }
 
 port_free() {
@@ -169,10 +172,31 @@ printf 'در حال راه‌اندازی سیمرغ...\n'
     echo $! > "$PID_FILE"
 )
 
+EXPECTED_PYTHON="$("$PYTHON" -c 'import sys; print(sys.version.split()[0])')"
+EXPECTED_APP_VERSION="${SIMORGH_VERSION:-0.1.0}"
+
 for _ in $(seq 1 60); do
-    if "$PYTHON" - <<PY >/dev/null 2>&1
+    if ! is_running; then
+        break
+    fi
+    if "$PYTHON" - "$PORT" "$EXPECTED_PYTHON" "$EXPECTED_APP_VERSION" <<'PY' >/dev/null 2>&1
+import json
+import sys
 import urllib.request
-urllib.request.urlopen('http://127.0.0.1:${PORT}/health', timeout=1).read()
+
+port, expected_python, expected_version = sys.argv[1:]
+base = f"http://127.0.0.1:{port}"
+with urllib.request.urlopen(f"{base}/health", timeout=1) as response:
+    health = json.load(response)
+if (
+    health.get("status") != "healthy"
+    or health.get("python_version") != expected_python
+    or health.get("version") != expected_version
+):
+    raise SystemExit(1)
+with urllib.request.urlopen(base + "/", timeout=1) as response:
+    if response.status != 200:
+        raise SystemExit(1)
 PY
     then
         URL="http://127.0.0.1:$PORT/"
@@ -183,7 +207,7 @@ PY
     sleep 0.25
 done
 
-printf 'خطا: سیمرغ در زمان مقرر بالا نیامد.\nلاگ: %s\n' "$LOG_FILE" >&2
+printf 'خطا: سیمرغ در زمان مقرر بالا نیامد.\nپورت: %s\nلاگ: %s\n' "$PORT" "$LOG_FILE" >&2
 tail -n 80 "$LOG_FILE" >&2 || true
 rm -f "$PID_FILE"
 exit 1
