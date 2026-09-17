@@ -5,10 +5,12 @@ import os
 import re
 import sqlite3
 from contextlib import closing
+from pathlib import Path
 from typing import Dict, List
 
 logger = logging.getLogger(__name__)
-DB_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "simorgh_full.db")
+DEFAULT_DB_PATH = Path(__file__).resolve().parents[1] / "data" / "simorgh_full.db"
+DB_PATH = Path(os.environ.get("SIMORGH_POETRY_DB", str(DEFAULT_DB_PATH))).expanduser().resolve()
 STOPWORDS = {"من", "تو", "او", "ما", "شما", "این", "که", "را", "به", "از", "با", "در", "و", "چیکار", "کنم"}
 
 
@@ -18,7 +20,7 @@ def _extract_keywords(text: str, max_words: int = 5) -> List[str]:
 
 
 def get_poetic_wisdom(query: str, limit: int = 2) -> List[Dict]:
-    if not os.path.exists(DB_PATH):
+    if not DB_PATH.is_file():
         return []
     keywords = _extract_keywords(query)
     if not keywords:

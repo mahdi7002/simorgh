@@ -1,0 +1,99 @@
+name: SIMORGH AppImage
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    tags:
+      - 'v*'
+
+permissions:
+  contents: read
+
+jobs:
+  build-x86_64:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 45
+    steps:
+      - name: Checkout with Git LFS
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          lfs: true
+
+      - name: Verify canonical database materialized
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f data/simorgh_full.db
+          ! head -c 43 data/simorgh_full.db | grep -q 'version https://git-lfs.github.com/spec/v1'
+          sqlite3 -readonly data/simorgh_full.db 'PRAGMA integrity_check;' | grep -qx ok
+
+      - name: Build self-contained AppImage
+        shell: bash
+        run: |
+          set -euo pipefail
+          chmod +x packaging/build-appimage.sh
+          packaging/build-appimage.sh
+
+      - name: Smoke-test AppImage metadata
+        shell: bash
+        run: |
+          set -euo pipefail
+          APPIMAGE=dist/SIMORGH-x86_64.AppImage
+          test -s "$APPIMAGE"
+          chmod +x "$APPIMAGE"
+          APPIMAGE_EXTRACT_AND_RUN=1 "$APPIMAGE" --appimage-version
+          APPIMAGE_EXTRACT_AND_RUN=1 "$APPIMAGE" --appimage-help >/dev/null
+
+      - name: Smoke-test the real bundled runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          APPIMAGE=dist/SIMORGH-x86_64.AppImage
+          HOME="$RUNNER_TEMP/simorgh-home"
+          export HOME
+          export XDG_DATA_HOME="$HOME/.local/share"
+          export XDG_CONFIG_HOME="$HOME/.config"
+          rm -rf "$HOME"
+          mkdir -p "$HOME"
+          APPIMAGE_EXTRACT_AND_RUN=1 "$APPIMAGE" >/tmp/simorgh-appimage.log 2>&1 &
+          LAUNCH_PID=$!
+          trap 'kill "$LAUNCH_PID" 2>/dev/null || true' EXIT
+          for _ in $(seq 1 60); do
+            if curl -fsS http://127.0.0.1:8000/health >/tmp/simorgh-health.json; then
+              break
+            fi
+            sleep 0.25
+          done
+          test -s /tmp/simorgh-health.json
+          grep -q 'healthy' /tmp/simorgh-health.json
+          curl -fsS http://127.0.0.1:8000/ | grep -q 'SIMORGH'
+          curl -fsS http://127.0.0.1:8000/api/bootstrap | grep -q 'database_first'
+          curl -fsS -X POST http://127.0.0.1:8000/chat -d 'query=سلام&agent=hakim' >/tmp/simorgh-chat.json
+          test -s /tmp/simorgh-chat.json
+          grep -q 'response' /tmp/simorgh-chat.json
+          if [ -f "$HOME/.local/share/simorgh/simorgh.pid" ]; then
+            kill "$(cat "$HOME/.local/share/simorgh/simorgh.pid")" 2>/dev/null || true
+          fi
+          wait "$LAUNCH_PID" 2>/dev/null || true
+
+      - name: Upload AppImage artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: SIMORGH-x86_64-AppImage
+          path: dist/SIMORGH-x86_64.AppImage
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Publish release
+        if: startsWith(github.ref, 'refs/tags/v') && vars.SIMORGH_PUBLIC_RELEASE_APPROVED == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh release create "$GITHUB_REF_NAME" dist/SIMORGH-x86_64.AppImage \
+            --title "SIMORGH $GITHUB_REF_NAME" \
+            --generate-notes
