@@ -1,8 +1,4 @@
-"""Local model catalog, recommendation, download and integrity verification.
-
-No model is downloaded automatically. A model becomes usable only after its
-file digest has been verified and a sidecar records its provenance.
-"""
+"""Local model catalog, recommendation, download and integrity verification."""
 from __future__ import annotations
 
 import hashlib
@@ -71,12 +67,12 @@ def _metadata_sha(model: dict[str, Any]) -> str | None:
         for sibling in payload.get("siblings", []):
             if sibling.get("rfilename") != filename:
                 continue
-            lfs_oid = ((sibling.get("lfs") or {}).get("oid") or "").lower()
-            if _SHA256_RE.fullmatch(lfs_oid):
-                return lfs_oid
-            xet_sha = str(((sibling.get("xet") or {}).get("sha256") or "")).lower()
-            if _SHA256_RE.fullmatch(xet_sha):
-                return xet_sha
+            for value in (
+                ((sibling.get("lfs") or {}).get("oid") or "").lower(),
+                str(((sibling.get("xet") or {}).get("sha256") or "")).lower(),
+            ):
+                if _SHA256_RE.fullmatch(value):
+                    return value
     except Exception as exc:
         logger.warning("model metadata lookup failed: %s", exc)
     return None
@@ -97,29 +93,40 @@ def _sidecar(path: Path) -> Path:
     return path.with_name(path.name + ".simorgh.json")
 
 
+def _write_metadata(path: Path, metadata: dict[str, Any]) -> dict[str, Any]:
+    _sidecar(path).write_text(json.dumps(metadata, ensure_ascii=False, indent=2), encoding="utf-8")
+    return metadata
+
+
 def register_local_model(
     path: str | os.PathLike[str],
     *,
     model_id: str = "imported-local-model",
     license_name: str = "UNKNOWN",
     source: str = "local file",
+    expected_sha256: str | None = None,
+    trusted_source: bool = False,
 ) -> dict[str, Any]:
     model_path = Path(path).expanduser().resolve()
     if not model_path.is_file():
         raise FileNotFoundError(model_path)
     digest = sha256_file(model_path)
+    expected = (expected_sha256 or "").lower().strip()
+    integrity_verified = bool(expected and _SHA256_RE.fullmatch(expected) and digest.lower() == expected)
     metadata = {
-        "schema_version": 1,
+        "schema_version": 2,
         "model_id": model_id,
         "path": str(model_path),
         "sha256": digest,
+        "expected_sha256": expected or None,
         "format": model_path.suffix.lstrip(".") or "unknown",
         "license": license_name,
         "source": source,
-        "verified": True,
+        "integrity_verified": integrity_verified if expected else False,
+        "trusted_provenance": bool(trusted_source and integrity_verified),
+        "verification": "trusted-digest-match" if trusted_source and integrity_verified else "self-hashed-local-file",
     }
-    _sidecar(model_path).write_text(json.dumps(metadata, ensure_ascii=False, indent=2), encoding="utf-8")
-    return metadata
+    return _write_metadata(model_path, metadata)
 
 
 def install_model(
@@ -142,27 +149,35 @@ def install_model(
     filename = str(model.get("filename", "")).strip()
     if not url or not filename:
         raise ValueError("model catalog entry has no download URL/filename")
-    expected = _metadata_sha(model)
-    if not expected:
+    expected = str(model.get("sha256", "")).strip().lower()
+    if not _SHA256_RE.fullmatch(expected):
+        expected = _metadata_sha(model) or ""
+    if not _SHA256_RE.fullmatch(expected):
         raise RuntimeError("model integrity hash is unavailable; refusing unverified download")
     ensure_user_dirs()
     directory = Path(target_dir).expanduser().resolve() if target_dir else RUNTIME_MODEL_DIR
     directory.mkdir(parents=True, exist_ok=True)
     final_path = directory / filename
-    if final_path.is_file() and sha256_file(final_path) == expected:
-        return register_local_model(
-            final_path,
-            model_id=model_id,
-            license_name=str(model.get("license", "UNKNOWN")),
-            source=url,
-        )
+    common = {
+        "model_id": model_id,
+        "license_name": str(model.get("license", "UNKNOWN")),
+        "source": url,
+        "expected_sha256": expected,
+        "trusted_source": True,
+    }
+    if final_path.is_file():
+        metadata = register_local_model(final_path, **common)
+        if metadata["trusted_provenance"]:
+            return metadata
+        final_path.unlink(missing_ok=True)
+        _sidecar(final_path).unlink(missing_ok=True)
 
     fd, tmp_name = tempfile.mkstemp(prefix=f".{filename}.", suffix=".part", dir=directory)
     os.close(fd)
     tmp_path = Path(tmp_name)
     try:
         request = urllib.request.Request(url, headers={"User-Agent": "SIMORGH/1.0"})
-        with urllib.request.urlopen(request, timeout=60) as response, tmp_path.open("wb") as output:
+        with urllib.request.urlopen(request, timeout=120) as response, tmp_path.open("wb") as output:
             while True:
                 chunk = response.read(1024 * 1024)
                 if not chunk:
@@ -172,17 +187,9 @@ def install_model(
         if actual.lower() != expected.lower():
             raise RuntimeError(f"sha256 mismatch: expected {expected}, got {actual}")
         tmp_path.replace(final_path)
-        return register_local_model(
-            final_path,
-            model_id=model_id,
-            license_name=str(model.get("license", "UNKNOWN")),
-            source=url,
-        )
+        return register_local_model(final_path, **common)
     finally:
-        try:
-            tmp_path.unlink(missing_ok=True)
-        except OSError:
-            pass
+        tmp_path.unlink(missing_ok=True)
 
 
 def installed_models(directory: str | os.PathLike[str] | None = None) -> list[dict[str, Any]]:
@@ -194,21 +201,20 @@ def installed_models(directory: str | os.PathLike[str] | None = None) -> list[di
         if not path.is_file() or path.suffix.lower() not in {".gguf", ".onnx", ".bin"}:
             continue
         sidecar = _sidecar(path)
-        item: dict[str, Any]
         try:
             item = json.loads(sidecar.read_text(encoding="utf-8")) if sidecar.is_file() else {}
         except (OSError, ValueError):
             item = {}
-        item.update({"path": str(path), "filename": path.name, "verified": bool(item.get("verified"))})
+        item.update(
+            {
+                "path": str(path),
+                "filename": path.name,
+                "integrity_verified": bool(item.get("integrity_verified")),
+                "trusted_provenance": bool(item.get("trusted_provenance")),
+            }
+        )
         results.append(item)
     return results
 
 
-__all__ = [
-    "installed_models",
-    "install_model",
-    "load_catalog",
-    "recommend_models",
-    "register_local_model",
-    "sha256_file",
-]
+__all__ = ["installed_models", "install_model", "load_catalog", "recommend_models", "register_local_model", "sha256_file"]
