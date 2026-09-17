@@ -3,6 +3,8 @@ name: SIMORGH AppImage
 on:
   workflow_dispatch:
   push:
+    branches:
+      - main
     tags:
       - 'v*'
 
@@ -44,6 +46,35 @@ jobs:
           chmod +x "$APPIMAGE"
           APPIMAGE_EXTRACT_AND_RUN=1 "$APPIMAGE" --appimage-version
           APPIMAGE_EXTRACT_AND_RUN=1 "$APPIMAGE" --appimage-help >/dev/null
+
+      - name: Smoke-test the real bundled runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          APPIMAGE=dist/SIMORGH-x86_64.AppImage
+          HOME="$RUNNER_TEMP/simorgh-home"
+          export HOME
+          export XDG_DATA_HOME="$HOME/.local/share"
+          export XDG_CONFIG_HOME="$HOME/.config"
+          rm -rf "$HOME"
+          mkdir -p "$HOME"
+          APPIMAGE_EXTRACT_AND_RUN=1 "$APPIMAGE"
+          for _ in $(seq 1 60); do
+            if curl -fsS http://127.0.0.1:8000/health >/tmp/simorgh-health.json; then
+              break
+            fi
+            sleep 0.25
+          done
+          test -s /tmp/simorgh-health.json
+          grep -q 'healthy' /tmp/simorgh-health.json
+          curl -fsS http://127.0.0.1:8000/ | grep -q 'SIMORGH'
+          curl -fsS http://127.0.0.1:8000/api/bootstrap | grep -q 'database_first'
+          curl -fsS -X POST http://127.0.0.1:8000/chat -d 'query=سلام&agent=hakim' >/tmp/simorgh-chat.json
+          test -s /tmp/simorgh-chat.json
+          grep -q 'response' /tmp/simorgh-chat.json
+          if [ -f "$HOME/.local/share/simorgh/simorgh.pid" ]; then
+            kill "$(cat "$HOME/.local/share/simorgh/simorgh.pid")" 2>/dev/null || true
+          fi
 
       - name: Upload AppImage artifact
         uses: actions/upload-artifact@v4
