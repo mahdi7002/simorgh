@@ -90,14 +90,6 @@ is_running() {
     kill -0 "$pid" 2>/dev/null
 }
 
-if is_running; then
-    URL="http://127.0.0.1:$PORT/"
-    command -v xdg-open >/dev/null 2>&1 && xdg-open "$URL" >/dev/null 2>&1 &
-    printf 'سیمرغ از قبل در حال اجراست: %s\n' "$URL"
-    exit 0
-fi
-rm -f "$PID_FILE"
-
 port_free() {
     "$PYTHON" - "$1" <<'PY'
 import socket, sys
@@ -126,7 +118,22 @@ else:
 PY
 }
 
-if ! [[ "${PORT:-}" =~ ^[0-9]+$ ]] || [ "${PORT:-0}" -lt 1024 ] || [ "${PORT:-0}" -gt 65535 ] || ! port_free "$PORT"; then
+if ! [[ "${PORT:-}" =~ ^[0-9]+$ ]]; then
+    PORT=""
+fi
+
+if is_running; then
+    if ! [[ "${PORT:-}" =~ ^[0-9]+$ ]]; then
+        PORT=8000
+    fi
+    URL="http://127.0.0.1:$PORT/"
+    command -v xdg-open >/dev/null 2>&1 && xdg-open "$URL" >/dev/null 2>&1 &
+    printf 'سیمرغ از قبل در حال اجراست: %s\n' "$URL"
+    exit 0
+fi
+rm -f "$PID_FILE"
+
+if [ -z "$PORT" ] || ! port_free "$PORT"; then
     PORT="$(pick_port)"
 fi
 
@@ -152,7 +159,6 @@ printf 'در حال راه‌اندازی سیمرغ...\n'
         SIMORGH_APP_DB="$SIMORGH_APP_DB" \
         SIMORGH_BOOKS_DB="$SIMORGH_BOOKS_DB" \
         SIMORGH_POETRY_DB="$SIMORGH_POETRY_DB" \
-        ${SIMORGH_QURAN_DB:+SIMORGH_QURAN_DB="$SIMORGH_QURAN_DB"} \
         SIMORGH_IMPORTS_DIR="$SIMORGH_IMPORTS_DIR" \
         SIMORGH_TRANSCRIPTS_DIR="$SIMORGH_TRANSCRIPTS_DIR" \
         SIMORGH_AUDIO_OUT_DIR="$SIMORGH_AUDIO_OUT_DIR" \
