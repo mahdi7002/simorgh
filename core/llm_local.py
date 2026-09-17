@@ -1,8 +1,9 @@
 import logging
 import os
 import re
-import requests
 from typing import Optional
+
+import requests
 
 logger = logging.getLogger(__name__)
 FAST_URL = os.environ.get("SIMORGH_LLM_FAST_URL", "http://127.0.0.1:8080/v1/chat/completions")
@@ -15,8 +16,24 @@ QUALITY_MODELS_URL = os.environ.get("SIMORGH_LLM_QUALITY_MODELS_URL", "http://12
 _PARAM_RE = re.compile(r"(\d+(?:\.\d+)?)\s*[bB]\b")
 
 
+def _fast_url() -> str:
+    return os.environ.get("SIMORGH_LLM_FAST_URL", FAST_URL)
+
+
+def _quality_url() -> str:
+    return os.environ.get("SIMORGH_LLM_QUALITY_URL", QUALITY_URL)
+
+
+def _fast_models_url() -> str:
+    return os.environ.get("SIMORGH_LLM_FAST_MODELS_URL", FAST_MODELS_URL)
+
+
+def _quality_models_url() -> str:
+    return os.environ.get("SIMORGH_LLM_QUALITY_MODELS_URL", QUALITY_MODELS_URL)
+
+
 def get_model_tier(needs_quality: bool = False) -> str:
-    url = QUALITY_MODELS_URL if needs_quality else FAST_MODELS_URL
+    url = _quality_models_url() if needs_quality else _fast_models_url()
     try:
         resp = requests.get(url, timeout=3)
         resp.raise_for_status()
@@ -36,7 +53,7 @@ def get_model_tier(needs_quality: bool = False) -> str:
 
 
 def generate(system_prompt: str, user_message: str, max_tokens: int = 350, needs_quality: bool = False) -> Optional[str]:
-    url = QUALITY_URL if needs_quality else FAST_URL
+    url = _quality_url() if needs_quality else _fast_url()
     timeout = QUALITY_TIMEOUT if needs_quality else FAST_TIMEOUT
     try:
         resp = requests.post(

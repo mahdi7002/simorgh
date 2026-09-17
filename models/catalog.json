@@ -1,0 +1,62 @@
+{
+  "schema_version": 1,
+  "policy": {
+    "download_default": false,
+    "integrity": "sha256",
+    "source_metadata": "official model repository metadata",
+    "custom_import": true
+  },
+  "models": [
+    {
+      "id": "qwen2.5-1.5b-instruct-q4-k-m",
+      "name": "Qwen2.5 1.5B Instruct Q4_K_M",
+      "family": "Qwen2.5",
+      "tier": "small",
+      "format": "GGUF",
+      "backend": "llama.cpp",
+      "filename": "qwen2.5-1.5b-instruct-q4_k_m.gguf",
+      "license": "Apache-2.0",
+      "min_ram_gb": 4,
+      "min_vram_gb": 0,
+      "min_disk_gb": 2,
+      "sha256": "6a1a2eb6d15622bf3c96857206351ba97e1af16c30d7a74ee38970e434e9407e",
+      "download_url": "https://huggingface.co/Qwen/Qwen2.5-1.5B-Instruct-GGUF/resolve/main/qwen2.5-1.5b-instruct-q4_k_m.gguf",
+      "metadata_url": "https://huggingface.co/api/models/Qwen/Qwen2.5-1.5B-Instruct-GGUF",
+      "notes": "Small local starting point. SHA-256 is pinned and metadata is retained for provenance."
+    },
+    {
+      "id": "qwen2.5-3b-instruct-q4-k-m",
+      "name": "Qwen2.5 3B Instruct Q4_K_M",
+      "family": "Qwen2.5",
+      "tier": "medium",
+      "format": "GGUF",
+      "backend": "llama.cpp",
+      "filename": "qwen2.5-3b-instruct-q4_k_m.gguf",
+      "license": "Qwen Research License",
+      "min_ram_gb": 8,
+      "min_vram_gb": 0,
+      "min_disk_gb": 3,
+      "sha256": "626b4a6678b86442240e33df819e00132d3ba7dddfe1cdc4fbb18e0a9615c62d",
+      "download_url": "https://huggingface.co/Qwen/Qwen2.5-3B-Instruct-GGUF/resolve/main/qwen2.5-3b-instruct-q4_k_m.gguf",
+      "metadata_url": "https://huggingface.co/api/models/Qwen/Qwen2.5-3B-Instruct-GGUF",
+      "notes": "Medium local option. Redistribution must respect the model license."
+    },
+    {
+      "id": "qwen2.5-7b-instruct-q2-k",
+      "name": "Qwen2.5 7B Instruct Q2_K",
+      "family": "Qwen2.5",
+      "tier": "large",
+      "format": "GGUF",
+      "backend": "llama.cpp",
+      "filename": "qwen2.5-7b-instruct-q2_k.gguf",
+      "license": "Apache-2.0",
+      "min_ram_gb": 12,
+      "min_vram_gb": 0,
+      "min_disk_gb": 4,
+      "sha256": "a0fc885ff014d73c02dcc4ad093f110c6dd4e0e308f84efe1accf078d364a87a",
+      "download_url": "https://huggingface.co/Qwen/Qwen2.5-7B-Instruct-GGUF/resolve/main/qwen2.5-7b-instruct-q2_k.gguf",
+      "metadata_url": "https://huggingface.co/api/models/Qwen/Qwen2.5-7B-Instruct-GGUF",
+      "notes": "Single-file larger option. It is intentionally gated at 12 GB RAM."
+    }
+  ]
+}

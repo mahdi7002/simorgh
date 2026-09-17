@@ -19,6 +19,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+          lfs: true
 
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
@@ -117,13 +118,31 @@ jobs:
           python - <<'PY'
           import sqlite3
           from pathlib import Path
-          dbs=list(Path('.').rglob('*.db'))
+
+          POINTER_HEADER = b'version https://git-lfs.github.com/spec/v1'
+          dbs=[]
+          for p in Path('.').rglob('*.db'):
+              try:
+                  head=p.read_bytes()[:len(POINTER_HEADER)]
+              except OSError as exc:
+                  print(f'DB {p} unreadable: {exc}')
+                  raise SystemExit(1)
+              if head == POINTER_HEADER:
+                  print(f'DB {p}: ERROR Git LFS pointer remained after checkout')
+                  raise SystemExit(1)
+              dbs.append(p)
+
           bad=0
           for p in dbs:
-              with sqlite3.connect(f'file:{p}?mode=ro', uri=True) as c:
-                  result=c.execute('PRAGMA integrity_check').fetchone()[0]
-                  print(f'DB {p} integrity={result} size={p.stat().st_size}')
-                  bad += result != 'ok'
+              try:
+                  with sqlite3.connect(f'file:{p}?mode=ro', uri=True) as c:
+                      result=c.execute('PRAGMA integrity_check').fetchone()[0]
+              except sqlite3.DatabaseError as exc:
+                  print(f'DB {p}: ERROR {exc}')
+                  bad += 1
+                  continue
+              print(f'DB {p} integrity={result} size={p.stat().st_size}')
+              bad += result != 'ok'
           raise SystemExit(1 if bad else 0)
           PY
 
@@ -145,5 +164,6 @@ jobs:
           assert c.get('/health').status_code == 200
           assert c.get('/dashboard/').status_code == 200
           assert c.get('/personas').status_code == 200
+          assert c.get('/api/bootstrap').status_code == 200
           print('API_SMOKE_PASS')
           PY
