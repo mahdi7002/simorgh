@@ -70,12 +70,45 @@ export SIMORGH_AUDIO_OUT_DIR="$RUNTIME_DIR/audio_out"
 export SIMORGH_PROPOSAL_DIR="$RUNTIME_DIR/data/reflection_proposals"
 if [ -f "$BUNDLE/data/grid/quran.db" ]; then
     export SIMORGH_QURAN_DB="$BUNDLE/data/grid/quran.db"
+else
+    unset SIMORGH_QURAN_DB || true
 fi
 
 mkdir -p "$RUNTIME_DIR"/{data,memory,logs,imports,transcripts,audio_out}
 if [ -f "$BUNDLE/data/simorgh.db" ] && [ ! -f "$RUNTIME_DIR/data/simorgh.db" ]; then
     cp "$BUNDLE/data/simorgh.db" "$RUNTIME_DIR/data/simorgh.db"
 fi
+
+PID_FILE="$RUNTIME_DIR/simorgh.pid"
+LOG_FILE="$RUNTIME_DIR/logs/launcher.log"
+
+is_running() {
+    local pid=''
+    [ -f "$PID_FILE" ] || return 1
+    pid="$(cat "$PID_FILE" 2>/dev/null || true)"
+    [ -n "$pid" ] || return 1
+    kill -0 "$pid" 2>/dev/null
+}
+
+if is_running; then
+    URL="http://127.0.0.1:$PORT/"
+    command -v xdg-open >/dev/null 2>&1 && xdg-open "$URL" >/dev/null 2>&1 &
+    printf 'سیمرغ از قبل در حال اجراست: %s\n' "$URL"
+    exit 0
+fi
+rm -f "$PID_FILE"
+
+port_free() {
+    "$PYTHON" - "$1" <<'PY'
+import socket, sys
+port = int(sys.argv[1])
+with socket.socket() as s:
+    try:
+        s.bind(('127.0.0.1', port))
+    except OSError:
+        raise SystemExit(1)
+PY
+}
 
 pick_port() {
     "$PYTHON" - <<'PY'
@@ -93,22 +126,8 @@ else:
 PY
 }
 
-if ! [[ "${PORT:-}" =~ ^[0-9]+$ ]] || [ "${PORT:-0}" -lt 1024 ] || [ "${PORT:-0}" -gt 65535 ]; then
+if ! [[ "${PORT:-}" =~ ^[0-9]+$ ]] || [ "${PORT:-0}" -lt 1024 ] || [ "${PORT:-0}" -gt 65535 ] || ! port_free "$PORT"; then
     PORT="$(pick_port)"
-fi
-
-PID_FILE="$RUNTIME_DIR/simorgh.pid"
-LOG_FILE="$RUNTIME_DIR/logs/launcher.log"
-
-if [ -f "$PID_FILE" ]; then
-    PID="$(cat "$PID_FILE" 2>/dev/null || true)"
-    if [ -n "$PID" ] && kill -0 "$PID" 2>/dev/null; then
-        URL="http://127.0.0.1:$PORT/"
-        command -v xdg-open >/dev/null 2>&1 && xdg-open "$URL" >/dev/null 2>&1 &
-        printf 'سیمرغ از قبل در حال اجراست: %s\n' "$URL"
-        exit 0
-    fi
-    rm -f "$PID_FILE"
 fi
 
 SIMORGH_CONFIG_DIR="$SIMORGH_CONFIG_DIR" SIMORGH_RUNTIME_DIR="$RUNTIME_DIR" SIMORGH_PORT="$PORT" "$PYTHON" - <<'PY'
@@ -133,7 +152,7 @@ printf 'در حال راه‌اندازی سیمرغ...\n'
         SIMORGH_APP_DB="$SIMORGH_APP_DB" \
         SIMORGH_BOOKS_DB="$SIMORGH_BOOKS_DB" \
         SIMORGH_POETRY_DB="$SIMORGH_POETRY_DB" \
-        SIMORGH_QURAN_DB="${SIMORGH_QURAN_DB:-}" \
+        ${SIMORGH_QURAN_DB:+SIMORGH_QURAN_DB="$SIMORGH_QURAN_DB"} \
         SIMORGH_IMPORTS_DIR="$SIMORGH_IMPORTS_DIR" \
         SIMORGH_TRANSCRIPTS_DIR="$SIMORGH_TRANSCRIPTS_DIR" \
         SIMORGH_AUDIO_OUT_DIR="$SIMORGH_AUDIO_OUT_DIR" \
