@@ -24,17 +24,15 @@ POLL_SECONDS = 15
 
 def init_db():
     os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
-    conn = sqlite3.connect(DB_PATH)
-    conn.execute("""
-        CREATE TABLE IF NOT EXISTS activity_log (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            timestamp TEXT NOT NULL,
-            app TEXT,
-            window_title TEXT
-        )
-    """)
-    conn.commit()
-    conn.close()
+    with sqlite3.connect(DB_PATH) as conn:
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS activity_log (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                timestamp TEXT NOT NULL,
+                app TEXT,
+                window_title TEXT
+            )
+        """)
 
 
 def get_active_window():
@@ -73,13 +71,11 @@ def main():
     while True:
         app, title = get_active_window()
         if app:
-            conn = sqlite3.connect(DB_PATH)
-            conn.execute(
-                "INSERT INTO activity_log (timestamp, app, window_title) VALUES (?, ?, ?)",
-                (datetime.now().isoformat(), app, title or ""),
-            )
-            conn.commit()
-            conn.close()
+            with sqlite3.connect(DB_PATH) as conn:
+                conn.execute(
+                    "INSERT INTO activity_log (timestamp, app, window_title) VALUES (?, ?, ?)",
+                    (datetime.now().isoformat(), app, title or ""),
+                )
         time.sleep(POLL_SECONDS)
 
 
