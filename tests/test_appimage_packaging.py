@@ -33,6 +33,7 @@ def test_appimage_builder_pins_external_build_inputs():
     assert 'PY_VERSION="3.13.15"' in script
     assert 'APPIMAGETOOL_SHA256="a6d71e2b6cd66f8e8d16c37ad164658985e0cf5fcaa950c90a482890cb9d13e0"' in script
     assert 'sha256sum -c -' in script
+    assert 'cp "$ROOT/packaging/simorgh.desktop" "$APPDIR/simorgh.desktop"' in script
 
 
 def test_appimage_workflow_checks_lfs_database():
