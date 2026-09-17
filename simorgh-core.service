@@ -1,11 +1,20 @@
 [Unit]
-Description=Simorgh Core API (MeshPower 2.0)
-After=network.target
+Description=SIMORGH local core (user service reference)
+After=default.target
+Wants=network-online.target
+
 [Service]
-User=mahdi
-WorkingDirectory=/home/mahdi/simorgh
-ExecStart=/usr/bin/python3 /home/mahdi/simorgh/main.py
+Type=simple
+WorkingDirectory=%h/simorgh
+ExecStart=/usr/bin/bash %h/simorgh/scripts/simorgh-run.sh
 Restart=always
-Environment="PATH=/usr/bin:/usr/local/bin"
+RestartSec=3
+RestartMode=normal
+UMask=0077
+NoNewPrivileges=true
+Environment=PYTHONUNBUFFERED=1
+StandardOutput=journal
+StandardError=journal
+
 [Install]
-WantedBy=multi-user.target
+WantedBy=default.target
