@@ -40,25 +40,30 @@ cp "$ROOT/packaging/simorgh.svg" "$APPDIR/usr/share/icons/hicolor/scalable/apps/
 cp "$ROOT/packaging/simorgh.svg" "$APPDIR/simorgh.svg"
 chmod +x "$APPDIR/AppRun"
 
-# The standalone CPython release is immutable and carries its own SHA-256 in the release API.
-PY_JSON="$(curl -fsSL --retry 3 --connect-timeout 10 "https://api.github.com/repos/astral-sh/python-build-standalone/releases/tags/${PY_RELEASE}")"
-export PY_JSON PY_VERSION
-read -r PY_URL PY_SHA <<EOF
-$(python3 - <<'PY'
-import json, os
-payload=json.loads(os.environ['PY_JSON'])
-version=os.environ['PY_VERSION']
+# The standalone CPython release is immutable and its release metadata is stored in a file,
+# not in an environment variable, so a large GitHub API response cannot overflow ARG_MAX.
+PY_JSON_FILE="$WORK/python-release.json"
+curl -fsSL --retry 3 --connect-timeout 10 "https://api.github.com/repos/astral-sh/python-build-standalone/releases/tags/${PY_RELEASE}" -o "$PY_JSON_FILE"
+read -r PY_URL PY_SHA < <(
+    python3 - "$PY_JSON_FILE" "$PY_VERSION" <<'PY'
+import json
+import sys
+
+payload=json.loads(open(sys.argv[1], encoding='utf-8').read())
+version=sys.argv[2]
 needle=f'cpython-{version}+'
 for asset in payload.get('assets', []):
     name=asset.get('name','')
     if name.startswith(needle) and name.endswith('-x86_64-unknown-linux-gnu-install_only.tar.gz'):
-        print(asset['browser_download_url'], asset['digest'].split(':',1)[-1])
+        digest=str(asset.get('digest',''))
+        if not digest.startswith('sha256:') or len(digest.split(':', 1)[1]) != 64:
+            raise SystemExit('CPython asset has no usable SHA-256')
+        print(asset['browser_download_url'], digest.split(':', 1)[1])
         break
 else:
     raise SystemExit('CPython standalone x86_64 asset not found')
 PY
 )
-EOF
 
 PY_ARCHIVE="$WORK/cpython.tar.gz"
 curl -fsSL --retry 3 --connect-timeout 10 "$PY_URL" -o "$PY_ARCHIVE"
@@ -68,7 +73,7 @@ tar -xzf "$PY_ARCHIVE" -C "$APPDIR/usr/lib/cpython" --strip-components=1
 BUNDLE_PY="$APPDIR/usr/lib/cpython/bin/python3"
 [ -x "$BUNDLE_PY" ]
 
-# Put Python wheels in a deterministic private target. This avoids relying on host Python at runtime.
+# Put Python wheels in a private bundle target. This avoids relying on host Python at runtime.
 SITE="$APPDIR/usr/share/simorgh/.python"
 mkdir -p "$SITE"
 "$BUNDLE_PY" -m pip --version >/dev/null 2>&1 || "$BUNDLE_PY" -m ensurepip --upgrade
@@ -81,17 +86,16 @@ import main
 print('SIMORGH_APPIMAGE_IMPORT_OK')
 PY
 
-# appimagetool is itself distributed as an AppImage. Pin the downloaded binary by SHA-256.
+# appimagetool is distributed as an AppImage; pin its downloaded bytes by SHA-256.
 APPIMAGETOOL="$WORK/appimagetool-x86_64.AppImage"
 curl -fsSL --retry 3 --connect-timeout 10 "$APPIMAGETOOL_URL" -o "$APPIMAGETOOL"
 printf '%s  %s\n' "$APPIMAGETOOL_SHA256" "$APPIMAGETOOL" | sha256sum -c -
 chmod +x "$APPIMAGETOOL"
 
 VERSION="${SIMORGH_VERSION:-$(git -C "$ROOT" describe --tags --always --dirty 2>/dev/null || echo 0.1.0)}"
-export VERSION
 sed -i "s/^X-AppImage-Version=.*/X-AppImage-Version=${VERSION}/" "$APPDIR/usr/share/applications/simorgh.desktop"
 
-# Build without FUSE requirements on the CI host.
+# Build without requiring FUSE on the CI host.
 APPIMAGE_EXTRACT_AND_RUN=1 "$APPIMAGETOOL" "$APPDIR" "$OUT"
 chmod +x "$OUT"
 
