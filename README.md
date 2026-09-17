@@ -99,9 +99,16 @@ chmod +x SIMORGH-x86_64.AppImage
 
 AppImage شامل Python، dependencyهای اصلی runtime، رابط وب و پایگاه دانش canonical است. داده‌های شخصی، حافظه، تنظیمات و مدل‌های دانلودشده بیرون از AppImage نگه داشته می‌شوند.
 
-launcher در سطح کاربر اجرا می‌شود، مسیر داده را در اولین اجرا تعیین می‌کند، runtime را روی loopback بالا می‌آورد و رابط سیمرغ را در مرورگر باز می‌کند.
+launcher در سطح کاربر اجرا می‌شود، مسیر داده را در اولین اجرا تعیین می‌کند، runtime را روی loopback بالا می‌آورد و رابط سیمرغ را در مرورگر باز می‌کند. وقتی systemd کاربر در دسترس باشد، همان نصب یک سرویس پایدار با `Restart=always` و auto-start ایجاد می‌کند؛ در صورت پشتیبانی systemd، linger نیز فعال می‌شود تا هسته پس از خروج از نشست متوقف نشود.
 
 مدل زبانی اجباری نیست. بدون مدل، پایگاه دانش محلی همچنان قابل استفاده است. دانلود مدل تنها پس از اقدام کاربر انجام می‌شود و پیش از ثبت، SHA-256 و اطلاعات provenance کنترل می‌شوند.
+
+وضعیت سرویس:
+
+```bash
+systemctl --user status simorgh.service
+journalctl --user -u simorgh.service -n 80 --no-pager
+```
 
 راهنمای کامل کاربر: [`docs/USER_INSTALL.md`](docs/USER_INSTALL.md)
 راهنمای AppImage: [`docs/APPIMAGE.md`](docs/APPIMAGE.md)
