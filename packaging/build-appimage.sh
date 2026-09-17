@@ -35,8 +35,6 @@ mkdir -p "$APPDIR/usr/share/simorgh/data"
 cp -a "$ROOT/data/." "$APPDIR/usr/share/simorgh/data/"
 rm -rf "$APPDIR/usr/share/simorgh/data/reflection_proposals" "$APPDIR/usr/share/simorgh/data/snapshots"
 cp "$ROOT/packaging/AppRun" "$APPDIR/AppRun"
-# appimagetool discovers the application manifest from the AppDir root.
-cp "$ROOT/packaging/simorgh.desktop" "$APPDIR/simorgh.desktop"
 cp "$ROOT/packaging/simorgh.desktop" "$APPDIR/usr/share/applications/simorgh.desktop"
 cp "$ROOT/packaging/simorgh.svg" "$APPDIR/usr/share/icons/hicolor/scalable/apps/simorgh.svg"
 cp "$ROOT/packaging/simorgh.svg" "$APPDIR/simorgh.svg"
@@ -95,7 +93,6 @@ printf '%s  %s\n' "$APPIMAGETOOL_SHA256" "$APPIMAGETOOL" | sha256sum -c -
 chmod +x "$APPIMAGETOOL"
 
 VERSION="${SIMORGH_VERSION:-$(git -C "$ROOT" describe --tags --always --dirty 2>/dev/null || echo 0.1.0)}"
-sed -i "s/^X-AppImage-Version=.*/X-AppImage-Version=${VERSION}/" "$APPDIR/simorgh.desktop"
 sed -i "s/^X-AppImage-Version=.*/X-AppImage-Version=${VERSION}/" "$APPDIR/usr/share/applications/simorgh.desktop"
 
 # Build without requiring FUSE on the CI host.
