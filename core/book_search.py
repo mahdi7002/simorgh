@@ -1,14 +1,11 @@
 # -*- coding: utf-8 -*-
-"""
-core/book_search.py
-جستجو در تکه‌های کتاب‌های PDF ایمپورت‌شده، برای استفاده در جواب‌های سیمرغ.
-"""
-
+"""Search imported book chunks in the local SQLite knowledge store."""
 import logging
 import os
 import re
 import sqlite3
-from typing import List, Dict
+from contextlib import closing
+from typing import Dict, List
 
 logger = logging.getLogger(__name__)
 DB_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "simorgh_full.db")
@@ -17,8 +14,7 @@ STOPWORDS = {"من", "تو", "او", "ما", "شما", "این", "که", "را",
 
 def _extract_keywords(text: str, max_words: int = 5) -> List[str]:
     words = re.findall(r"[آ-یءئA-Za-z]+", text)
-    words = [w for w in words if w not in STOPWORDS and len(w) > 2]
-    return words[:max_words]
+    return [w for w in words if w not in STOPWORDS and len(w) > 2][:max_words]
 
 
 def get_book_wisdom(query: str, limit: int = 2) -> List[Dict]:
@@ -28,28 +24,20 @@ def get_book_wisdom(query: str, limit: int = 2) -> List[Dict]:
     if not keywords:
         return []
     match_query = " OR ".join(keywords)
-
     try:
-        with sqlite3.connect(DB_PATH) as conn:
-            rows = conn.execute(
-                """
-                SELECT doc_name, category, chunk_text
-                FROM book_chunks_fts
-                WHERE book_chunks_fts MATCH ?
-                ORDER BY rank
-                LIMIT ?
-                """,
-                (match_query, limit),
-            ).fetchall()
-    except Exception as e:
-        logger.warning(f"جستجوی کتاب شکست خورد: {e}")
+        with closing(sqlite3.connect(DB_PATH)) as conn:
+            with conn:
+                rows = conn.execute(
+                    "SELECT doc_name, category, chunk_text FROM book_chunks_fts WHERE book_chunks_fts MATCH ? ORDER BY rank LIMIT ?",
+                    (match_query, limit),
+                ).fetchall()
+    except Exception as exc:
+        logger.warning("جستجوی کتاب شکست خورد: %s", exc)
         return []
-
-    return [{"doc_name": r[0], "category": r[1], "snippet": r[2][:300]} for r in rows]
+    return [{"doc_name": row[0], "category": row[1], "snippet": row[2][:300]} for row in rows]
 
 
 def format_for_prompt(chunks: List[Dict]) -> str:
     if not chunks:
         return ""
-    lines = [f'از کتاب «{c["doc_name"]}»: {c["snippet"]}' for c in chunks]
-    return "الهام از کتاب‌ها:\n" + "\n".join(lines)
+    return "الهام از کتاب‌ها:\n" + "\n".join(f'از کتاب «{c["doc_name"]}»: {c["snippet"]}' for c in chunks)
