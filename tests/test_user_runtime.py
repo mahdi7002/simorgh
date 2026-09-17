@@ -19,37 +19,39 @@ def test_hardware_classification_is_conservative():
 
 def test_hardware_profile_is_json_ready():
     profile = HardwareProfile(
-        architecture="x86_64",
-        os_name="Linux",
-        kernel="test",
-        cpu_model="test-cpu",
-        cpu_cores=4,
-        cpu_threads=8,
-        cpu_mhz=3200.0,
-        ram_gb=8.0,
-        disk_free_gb=20.0,
-        gpu=None,
-        gpu_vram_gb=None,
-        tier="medium",
+        architecture="x86_64", os_name="Linux", kernel="test", cpu_model="test-cpu",
+        cpu_cores=4, cpu_threads=8, cpu_mhz=3200.0, ram_gb=8.0, disk_free_gb=20.0,
+        gpu=None, gpu_vram_gb=None, tier="medium",
     )
     data = profile.to_dict()
     assert data["architecture"] == "x86_64"
     assert data["tier"] == "medium"
 
 
-def test_register_local_model_records_sha256(tmp_path: Path):
+def test_register_local_model_records_integrity_without_fake_trust(tmp_path: Path):
     model = tmp_path / "toy.gguf"
     payload = b"SIMORGH-TEST-MODEL"
     model.write_bytes(payload)
     expected = hashlib.sha256(payload).hexdigest()
-
     metadata = register_local_model(model, model_id="toy", source="test")
-
-    assert metadata["verified"] is True
+    assert metadata["integrity_verified"] is False
+    assert metadata["trusted_provenance"] is False
     assert metadata["sha256"] == expected
     assert sha256_file(model) == expected
-    sidecar = Path(str(model) + ".simorgh.json")
-    assert sidecar.is_file()
+    assert Path(str(model) + ".simorgh.json").is_file()
+
+
+def test_register_local_model_can_verify_known_digest(tmp_path: Path):
+    model = tmp_path / "toy.gguf"
+    model.write_bytes(b"SIMORGH-TRUSTED-TEST")
+    expected = sha256_file(model)
+    metadata = register_local_model(
+        model, model_id="toy", source="trusted-test",
+        expected_sha256=expected, trusted_source=True,
+    )
+    assert metadata["integrity_verified"] is True
+    assert metadata["trusted_provenance"] is True
+    assert metadata["verification"] == "trusted-digest-match"
 
 
 def test_model_registration_never_marks_missing_file_verified(tmp_path: Path):
@@ -74,16 +76,10 @@ def test_model_catalog_has_pinned_integrity_metadata():
 
 def test_model_install_refuses_incompatible_hardware(monkeypatch, tmp_path: Path):
     from core import model_manager
-
     fake_model = {
-        "id": "tiny-test",
-        "filename": "tiny.gguf",
-        "download_url": "https://example.invalid/tiny.gguf",
-        "sha256": "a" * 64,
-        "license": "test",
-        "min_ram_gb": 16,
-        "min_disk_gb": 1,
-        "min_vram_gb": 0,
+        "id": "tiny-test", "filename": "tiny.gguf",
+        "download_url": "https://example.invalid/tiny.gguf", "sha256": "a" * 64,
+        "license": "test", "min_ram_gb": 16, "min_disk_gb": 1, "min_vram_gb": 0,
     }
     profile = HardwareProfile(
         architecture="x86_64", os_name="Linux", kernel="test", cpu_model="test",
@@ -102,15 +98,11 @@ def test_model_install_refuses_incompatible_hardware(monkeypatch, tmp_path: Path
 
 def test_database_first_chat_fallback(monkeypatch):
     from core import chat
-
     monkeypatch.setattr(chat, "generate", lambda *args, **kwargs: None)
     from core import database_answer
     monkeypatch.setattr(database_answer, "get_quran_wisdom", lambda *args, **kwargs: [])
-    monkeypatch.setattr(database_answer, "get_poetic_wisdom", lambda *args, **kwargs: [
-        {"poet": "آزمون", "title": "تست", "snippet": "پاسخ محلی"}
-    ])
+    monkeypatch.setattr(database_answer, "get_poetic_wisdom", lambda *args, **kwargs: [{"poet": "آزمون", "title": "تست", "snippet": "پاسخ محلی"}])
     monkeypatch.setattr(database_answer, "get_book_wisdom", lambda *args, **kwargs: [])
-
     answer = chat.ask("آزمون")
     assert "پایگاه دانش محلی" in answer
     assert "پاسخ محلی" in answer
@@ -119,7 +111,6 @@ def test_database_first_chat_fallback(monkeypatch):
 def test_root_serves_user_app_and_bootstrap(monkeypatch):
     from core import bootstrap_api
     from main import app
-
     profile = HardwareProfile(
         architecture="x86_64", os_name="Linux", kernel="test", cpu_model="test",
         cpu_cores=2, cpu_threads=4, cpu_mhz=None, ram_gb=8, disk_free_gb=20,
@@ -130,11 +121,9 @@ def test_root_serves_user_app_and_bootstrap(monkeypatch):
     monkeypatch.setattr(bootstrap_api, "installed_models", lambda: [])
     monkeypatch.setattr(bootstrap_api, "discover_backend", lambda: {"ready": False})
     monkeypatch.setattr(bootstrap_api, "runtime_snapshot", lambda: {"configured": True})
-
     client = TestClient(app)
     root = client.get("/")
     bootstrap = client.get("/api/bootstrap")
-
     assert root.status_code == 200
     assert "SIMORGH" in root.text
     assert bootstrap.status_code == 200
