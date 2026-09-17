@@ -144,7 +144,6 @@ WorkingDirectory=$ROOT
 ExecStart=/usr/bin/bash $ROOT/scripts/simorgh-run.sh
 Restart=always
 RestartSec=3
-RestartMode=normal
 UMask=0077
 NoNewPrivileges=true
 Environment=PYTHONUNBUFFERED=1
@@ -156,7 +155,8 @@ WantedBy=default.target
 EOF
 
     systemctl --user daemon-reload
-    systemctl --user enable --now simorgh.service
+    systemctl --user enable simorgh.service
+    systemctl --user restart simorgh.service
 
     if command -v loginctl >/dev/null 2>&1; then
         loginctl enable-linger "$USER" >/dev/null 2>&1 || true
