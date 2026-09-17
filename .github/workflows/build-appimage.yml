@@ -1,0 +1,65 @@
+name: SIMORGH AppImage
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build-x86_64:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 45
+    steps:
+      - name: Checkout with Git LFS
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          lfs: true
+
+      - name: Verify canonical database materialized
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f data/simorgh_full.db
+          ! head -c 43 data/simorgh_full.db | grep -q 'version https://git-lfs.github.com/spec/v1'
+          sqlite3 -readonly data/simorgh_full.db 'PRAGMA integrity_check;' | grep -qx ok
+
+      - name: Build self-contained AppImage
+        shell: bash
+        run: |
+          set -euo pipefail
+          chmod +x packaging/build-appimage.sh
+          packaging/build-appimage.sh
+
+      - name: Smoke-test AppImage metadata
+        shell: bash
+        run: |
+          set -euo pipefail
+          APPIMAGE=dist/SIMORGH-x86_64.AppImage
+          test -s "$APPIMAGE"
+          chmod +x "$APPIMAGE"
+          APPIMAGE_EXTRACT_AND_RUN=1 "$APPIMAGE" --appimage-version
+          APPIMAGE_EXTRACT_AND_RUN=1 "$APPIMAGE" --appimage-help >/dev/null
+
+      - name: Upload AppImage artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: SIMORGH-x86_64-AppImage
+          path: dist/SIMORGH-x86_64.AppImage
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Create GitHub release for version tags
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh release create "$GITHUB_REF_NAME" dist/SIMORGH-x86_64.AppImage \
+            --title "SIMORGH $GITHUB_REF_NAME" \
+            --generate-notes
