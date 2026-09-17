@@ -16,6 +16,7 @@ from core.poetry_search import get_poetic_wisdom, format_for_prompt as format_po
 from core.quran_search import get_quran_wisdom, format_for_prompt as format_quran
 from core.book_search import get_book_wisdom, format_for_prompt as format_books
 from core.yazd_lore import format_for_prompt as format_yazd
+from core.database_answer import build_database_answer
 
 PERSONAS = {
     "hakim": {
@@ -135,7 +136,6 @@ PERSONAS = {
 
 QUALITY_PERSONAS = {"hakim", "hafez", "moalem", "motamal"}
 
-# قانون بنیادین: منبع اصیل (آیه/شعر) هرگز دست‌کاری یا بازنویسی نمی‌شود.
 FIDELITY_RULE = (
     "\n\nقانون جدی: اگر متنی از قرآن یا شعر فارسی در ادامه آمده، آن را دقیقاً "
     "همان‌طور که هست نقل کن یا کامل حذفش کن — هرگز کلمه‌ای از آن را عوض، خلاصه، "
@@ -152,8 +152,6 @@ STORYTELLING_RULE = (
     "و ارزش‌های انسانی."
 )
 
-# لایه‌ی رفتاری مشترک — اصول عمومی صداقت و دقتی که هر پرسونا باید رعایت کند،
-# مستقل از شخصیتش. این جایگزین شخصیت‌شان نمی‌شود، فقط چارچوب صداقت می‌دهد.
 BEHAVIORAL_CONTRACT = (
     "\n\nاصول ثابت (مستقل از شخصیتت):\n"
     "۱. اگر چیزی را نمی‌دانی یا مطمئن نیستی، صریح بگو «نمی‌دانم» یا «مطمئن نیستم» "
@@ -175,11 +173,6 @@ BEHAVIORAL_CONTRACT = (
 
 
 def suggest_handoff(question: str, current_agent: str) -> str | None:
-    """
-    بررسی سبک (بدون مدل زبانی) که آیا سؤال به پرسونای دیگری می‌خورد.
-    خروجی: persona_id پیشنهادی یا None. این تابع پایه‌ی لایه‌ی دیسپچر
-    آینده است (Issue #2) — الان فقط یک راهنمای متنی به پاسخ اضافه می‌کند.
-    """
     persona = PERSONAS.get(current_agent, {})
     for keyword, target in persona.get("handoff_if", {}).items():
         if keyword in question and target != current_agent:
@@ -209,12 +202,19 @@ def ask(
     )
 
     extra_parts = []
+    quran: list = []
+    poetry: list = []
+    books: list = []
 
     if use_builtin_tools:
-        quran = format_quran(get_quran_wisdom(question, limit=1))
-        poetry = format_poetry(get_poetic_wisdom(question))
-        books = format_books(get_book_wisdom(question, limit=2))
-        extra_parts.extend([quran, poetry, books])
+        quran = get_quran_wisdom(question, limit=1)
+        poetry = get_poetic_wisdom(question)
+        books = get_book_wisdom(question, limit=2)
+        extra_parts.extend([
+            format_quran(quran),
+            format_poetry(poetry),
+            format_books(books),
+        ])
 
     if tool_context:
         extra_parts.append(tool_context)
@@ -230,7 +230,8 @@ def ask(
     response = generate(system_prompt, message, max_tokens=350, needs_quality=needs_quality)
 
     if not response:
-        return "الان نمی‌تونم فکر کنم (مدل در دسترس نیست). دوباره امتحان کن."
+        database_response, _sources = build_database_answer(question)
+        return database_response
 
     handoff = suggest_handoff(question, agent)
     if handoff and handoff in PERSONAS:
