@@ -9,7 +9,6 @@ WorkingDirectory=%h/simorgh
 ExecStart=/usr/bin/bash %h/simorgh/scripts/simorgh-run.sh
 Restart=always
 RestartSec=3
-RestartMode=normal
 UMask=0077
 NoNewPrivileges=true
 Environment=PYTHONUNBUFFERED=1
