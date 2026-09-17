@@ -61,17 +61,34 @@ jobs:
           APPIMAGE_EXTRACT_AND_RUN=1 "$APPIMAGE" >/tmp/simorgh-appimage.log 2>&1 &
           LAUNCH_PID=$!
           trap 'kill "$LAUNCH_PID" 2>/dev/null || true' EXIT
+          CONFIG="$HOME/.config/simorgh/runtime.json"
+          EXPECTED_PYTHON="$(sed -n 's/^PY_VERSION="\\([^"]*\\)"$/\\1/p' packaging/build-appimage.sh)"
+          PORT=""
           for _ in $(seq 1 60); do
-            if curl -fsS http://127.0.0.1:8000/health >/tmp/simorgh-health.json; then
+            if [ -f "$CONFIG" ]; then
+              PORT="$(python3 - "$CONFIG" <<'PY' 2>/dev/null || true
+import json, sys
+try:
+    data = json.load(open(sys.argv[1], encoding="utf-8"))
+    value = data.get("port")
+    print(value if isinstance(value, int) else "")
+except (OSError, ValueError):
+    pass
+PY
+)"
+            fi
+            if [ -n "$PORT" ] && curl -fsS "http://127.0.0.1:$PORT/health" >/tmp/simorgh-health.json; then
               break
             fi
             sleep 0.25
           done
+          test -n "$PORT"
           test -s /tmp/simorgh-health.json
-          grep -q 'healthy' /tmp/simorgh-health.json
-          curl -fsS http://127.0.0.1:8000/ | grep -q 'SIMORGH'
-          curl -fsS http://127.0.0.1:8000/api/bootstrap | grep -q 'database_first'
-          curl -fsS -X POST http://127.0.0.1:8000/chat -d 'query=سلام&agent=hakim' >/tmp/simorgh-chat.json
+          grep -q '"status":"healthy"' /tmp/simorgh-health.json
+          grep -q "\"python_version\":\"$EXPECTED_PYTHON\"" /tmp/simorgh-health.json
+          curl -fsS "http://127.0.0.1:$PORT/" | grep -q 'SIMORGH'
+          curl -fsS "http://127.0.0.1:$PORT/api/bootstrap" | grep -q 'database_first'
+          curl -fsS -X POST "http://127.0.0.1:$PORT/chat" -d 'query=سلام&agent=hakim' >/tmp/simorgh-chat.json
           test -s /tmp/simorgh-chat.json
           grep -q 'response' /tmp/simorgh-chat.json
           if [ -f "$HOME/.local/share/simorgh/simorgh.pid" ]; then
