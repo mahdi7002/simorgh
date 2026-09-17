@@ -22,7 +22,7 @@ def test_appimage_manifest_is_desktop_launchable():
     desktop = (ROOT / "packaging" / "simorgh.desktop").read_text(encoding="utf-8")
     assert "Type=Application" in desktop
     assert "Name=SIMORGH | سیمرغ" in desktop
-    assert "Exec=simorgh" in desktop
+    assert "Exec=AppRun" in desktop
     assert "Terminal=false" in desktop
     assert "Icon=simorgh" in desktop
 
