@@ -70,14 +70,32 @@ Otherwise it is documented as **EXPERIMENTAL**, **PLANNED**, or **DISABLED**.
 | Hosted session isolation | IMPLEMENTED | runtime hardening tests |
 | AI interaction disclosure metadata | IMPLEMENTED | runtime hardening tests |
 | Bounded voice input | IMPLEMENTED | runtime hardening tests |
+| Database-first no-model fallback | IMPLEMENTED | user runtime regression tests |
+| Hardware-aware local model catalog | IMPLEMENTED | user runtime regression tests |
+| SHA-256 model verification | IMPLEMENTED | user runtime regression tests |
+| Local llama.cpp backend lifecycle | IMPLEMENTED | runtime path + user runtime tests |
 | Automatic knowledge mutation | DISABLED | Human gate required |
 | Governed external tool adapters | EXPERIMENTAL | See Issue #7 |
 | Full external tool-calling | EXPERIMENTAL | Persona-specific tools remain isolated |
 | Semantic/LLM dispatcher | PLANNED | Lightweight rules used by default |
 | Multi-agent execution fabric | PLANNED | Native contracts documented in `docs/AGENT_FABRIC.md` |
-| Public release package | PLANNED | Release gate not yet satisfied |
+| Public release package | PLANNED | AppImage/native packaging remains release work |
 
-## Local quick start
+## User-first installation
+
+برای کاربر عادی، مسیر اصلی این است:
+
+```bash
+./install.sh
+```
+
+این launcher در سطح کاربر کار می‌کند، مسیر داده و مدل را در اولین اجرای تعاملی می‌گیرد، محیط runtime جدا می‌سازد، dependencyهای runtime را نصب می‌کند، سرویس را روی loopback بالا می‌آورد و رابط سیمرغ را در مرورگر باز می‌کند.
+
+مدل زبانی اجباری نیست. بدون مدل، پایگاه دانش محلی همچنان قابل استفاده است. دانلود مدل تنها پس از اقدام کاربر انجام می‌شود و پیش از ثبت، SHA-256 و اطلاعات provenance کنترل می‌شوند.
+
+راهنمای کامل کاربر: [`docs/USER_INSTALL.md`](docs/USER_INSTALL.md)
+
+## Developer quick start
 
 ```bash
 git clone https://github.com/mahdi7002/simorgh.git
@@ -100,9 +118,9 @@ curl -s http://127.0.0.1:8000/personas
 curl -s -X POST http://127.0.0.1:8000/chat -d "query=سلام&agent=hakim"
 ```
 
-Without a local model server, SIMORGH should report that the model is unavailable rather than pretending that a model response exists.
+Without a local model server, SIMORGH falls back to deterministic local knowledge retrieval where a matching source exists. It must never pretend that a model response exists when no model is available.
 
-With a local `llama-server`, the local provider can be used for persona responses. Exact model configuration is intentionally runtime-dependent.
+With a local `llama-server`, the local provider can be used for persona responses. The user runtime can install and start a verified CPU llama.cpp backend on supported hosts.
 
 ## Hosted trust boundary
 
@@ -121,7 +139,7 @@ python3 demo/simorgh_minimal.py --test
 python3 demo/simorgh_minimal.py "عدالت چیست؟"
 ```
 
-For the detailed first-run path, see [`QUICKSTART.md`](QUICKSTART.md).
+For the detailed first-run path, see [`QUICKSTART.md`](QUICKSTART.md) and [`docs/USER_INSTALL.md`](docs/USER_INSTALL.md).
 
 ## Agent fabric
 

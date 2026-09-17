@@ -60,7 +60,6 @@ MAX_REQUEST_BYTES = int(os.getenv("SIMORGH_MAX_REQUEST_BYTES", str(10 * 1024 * 1
 if MAX_REQUEST_BYTES < 1:
     raise RuntimeError("SIMORGH_MAX_REQUEST_BYTES must be a positive integer")
 
-# Fail closed: an unconfigured external bind must never expose the API.
 LOOPBACK_HOSTS = {"127.0.0.1", "localhost", "::1"}
 EXTERNAL_BIND = HOST not in LOOPBACK_HOSTS
 if EXTERNAL_BIND and not SIMORGH_KEY:
@@ -89,9 +88,11 @@ app.add_middleware(RequestBodyLimitMiddleware, max_body_size=MAX_REQUEST_BYTES)
 from core.voice_docs import router as voice_docs_router
 from core.dashboard_api import router as dashboard_api_router
 from core.voice_endpoint import router as voice_endpoint_router
+from core.bootstrap_api import router as bootstrap_api_router
 app.include_router(voice_docs_router)
 app.include_router(dashboard_api_router)
 app.include_router(voice_endpoint_router)
+app.include_router(bootstrap_api_router)
 
 if EXTERNAL_BIND:
     @app.middleware("http")
@@ -142,6 +143,14 @@ memory = MemoryEngine()
 why_engine = WhyEngine()
 agent_manager = AgentManager()
 orchestrator = Orchestrator()
+
+
+@app.get("/")
+async def root_app():
+    app_html = Path(__file__).resolve().parent / "app" / "index.html"
+    if not app_html.is_file():
+        raise HTTPException(404, "SIMORGH web app not found")
+    return FileResponse(app_html)
 
 
 @app.post("/ask")
@@ -238,7 +247,7 @@ async def dashboard():
 @app.get("/status")
 async def status():
     services = []
-    for name, port in [("simorgh-core", 8000), ("simorgh-persona", 8001), ("llama-server", 8080)]:
+    for name, port in [("simorgh-core", PORT), ("simorgh-persona", 8001), ("llama-server", 8080)]:
         try:
             r = subprocess.run(["systemctl", "is-active", name], capture_output=True, text=True, timeout=2)
             up = r.stdout.strip() == "active"
