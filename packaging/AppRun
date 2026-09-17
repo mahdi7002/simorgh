@@ -1,0 +1,164 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+APPDIR="$(CDPATH= cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+BUNDLE="$APPDIR/usr/share/simorgh"
+PYTHON="$APPDIR/usr/lib/cpython/bin/python3"
+SITE="$BUNDLE/.python"
+
+if [ ! -x "$PYTHON" ]; then
+    printf 'خطا: Python همراه بسته پیدا نشد.\n' >&2
+    exit 1
+fi
+
+export PYTHONPATH="$SITE${PYTHONPATH:+:$PYTHONPATH}"
+export XDG_DATA_HOME="${XDG_DATA_HOME:-$HOME/.local/share}"
+export XDG_CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"
+export SIMORGH_CONFIG_DIR="${SIMORGH_CONFIG_DIR:-$XDG_CONFIG_HOME/simorgh}"
+mkdir -p "$SIMORGH_CONFIG_DIR"
+CONFIG_FILE="$SIMORGH_CONFIG_DIR/runtime.json"
+
+read_config() {
+    "$PYTHON" - "$CONFIG_FILE" <<'PY'
+import json, sys
+from pathlib import Path
+p = Path(sys.argv[1])
+try:
+    data = json.loads(p.read_text(encoding='utf-8'))
+except (OSError, ValueError):
+    data = {}
+print(data.get('runtime_dir', ''))
+print(data.get('port', ''))
+print('1' if data.get('configured') else '0')
+PY
+}
+
+mapfile -t CONFIG < <(read_config)
+RUNTIME_DIR="${CONFIG[0]:-$XDG_DATA_HOME/simorgh}"
+PORT="${CONFIG[1]:-}"
+CONFIGURED="${CONFIG[2]:-0}"
+
+choose_runtime_dir() {
+    local selected=''
+    if command -v zenity >/dev/null 2>&1; then
+        selected="$(zenity --file-selection --directory --title='محل داده و مدل‌های سیمرغ' 2>/dev/null || true)"
+    elif command -v kdialog >/dev/null 2>&1; then
+        selected="$(kdialog --getexistingdirectory "$HOME" 'محل داده و مدل‌های سیمرغ' 2>/dev/null || true)"
+    fi
+    if [ -n "$selected" ]; then
+        printf '%s\n' "$selected"
+    else
+        printf '%s\n' "$RUNTIME_DIR"
+    fi
+}
+
+if [ "$CONFIGURED" != "1" ]; then
+    RUNTIME_DIR="$(choose_runtime_dir)"
+fi
+RUNTIME_DIR="$(mkdir -p "$RUNTIME_DIR" && cd "$RUNTIME_DIR" && pwd)"
+
+# Read-only knowledge stays inside the AppImage. Mutable user state remains outside it.
+export SIMORGH_RUNTIME_DIR="$RUNTIME_DIR"
+export SIMORGH_MEMORY_DIR="$RUNTIME_DIR/memory"
+export SIMORGH_LOG_DIR="$RUNTIME_DIR/logs"
+export SIMORGH_APP_DB="$RUNTIME_DIR/data/simorgh.db"
+export SIMORGH_BOOKS_DB="$BUNDLE/data/simorgh_full.db"
+export SIMORGH_POETRY_DB="$BUNDLE/data/simorgh_full.db"
+export SIMORGH_IMPORTS_DIR="$RUNTIME_DIR/imports"
+export SIMORGH_TRANSCRIPTS_DIR="$RUNTIME_DIR/transcripts"
+export SIMORGH_AUDIO_OUT_DIR="$RUNTIME_DIR/audio_out"
+export SIMORGH_PROPOSAL_DIR="$RUNTIME_DIR/data/reflection_proposals"
+if [ -f "$BUNDLE/data/grid/quran.db" ]; then
+    export SIMORGH_QURAN_DB="$BUNDLE/data/grid/quran.db"
+fi
+
+mkdir -p "$RUNTIME_DIR"/{data,memory,logs,imports,transcripts,audio_out}
+if [ -f "$BUNDLE/data/simorgh.db" ] && [ ! -f "$RUNTIME_DIR/data/simorgh.db" ]; then
+    cp "$BUNDLE/data/simorgh.db" "$RUNTIME_DIR/data/simorgh.db"
+fi
+
+pick_port() {
+    "$PYTHON" - <<'PY'
+import socket
+for candidate in range(8000, 8031):
+    with socket.socket() as s:
+        try:
+            s.bind(('127.0.0.1', candidate))
+        except OSError:
+            continue
+        print(candidate)
+        break
+else:
+    raise SystemExit('No free local port in 8000-8030')
+PY
+}
+
+if ! [[ "${PORT:-}" =~ ^[0-9]+$ ]] || [ "${PORT:-0}" -lt 1024 ] || [ "${PORT:-0}" -gt 65535 ]; then
+    PORT="$(pick_port)"
+fi
+
+PID_FILE="$RUNTIME_DIR/simorgh.pid"
+LOG_FILE="$RUNTIME_DIR/logs/launcher.log"
+
+if [ -f "$PID_FILE" ]; then
+    PID="$(cat "$PID_FILE" 2>/dev/null || true)"
+    if [ -n "$PID" ] && kill -0 "$PID" 2>/dev/null; then
+        URL="http://127.0.0.1:$PORT/"
+        command -v xdg-open >/dev/null 2>&1 && xdg-open "$URL" >/dev/null 2>&1 &
+        printf 'سیمرغ از قبل در حال اجراست: %s\n' "$URL"
+        exit 0
+    fi
+    rm -f "$PID_FILE"
+fi
+
+SIMORGH_CONFIG_DIR="$SIMORGH_CONFIG_DIR" SIMORGH_RUNTIME_DIR="$RUNTIME_DIR" SIMORGH_PORT="$PORT" "$PYTHON" - <<'PY'
+import os
+from core.user_runtime import save_config
+save_config({
+    'configured': True,
+    'runtime_dir': os.environ['SIMORGH_RUNTIME_DIR'],
+    'port': int(os.environ['SIMORGH_PORT']),
+    'privacy_mode': 'local-only',
+    'distribution': 'AppImage',
+})
+PY
+
+printf 'در حال راه‌اندازی سیمرغ...\n'
+(
+    cd "$BUNDLE"
+    nohup env \
+        SIMORGH_RUNTIME_DIR="$SIMORGH_RUNTIME_DIR" \
+        SIMORGH_MEMORY_DIR="$SIMORGH_MEMORY_DIR" \
+        SIMORGH_LOG_DIR="$SIMORGH_LOG_DIR" \
+        SIMORGH_APP_DB="$SIMORGH_APP_DB" \
+        SIMORGH_BOOKS_DB="$SIMORGH_BOOKS_DB" \
+        SIMORGH_POETRY_DB="$SIMORGH_POETRY_DB" \
+        SIMORGH_QURAN_DB="${SIMORGH_QURAN_DB:-}" \
+        SIMORGH_IMPORTS_DIR="$SIMORGH_IMPORTS_DIR" \
+        SIMORGH_TRANSCRIPTS_DIR="$SIMORGH_TRANSCRIPTS_DIR" \
+        SIMORGH_AUDIO_OUT_DIR="$SIMORGH_AUDIO_OUT_DIR" \
+        SIMORGH_PROPOSAL_DIR="$SIMORGH_PROPOSAL_DIR" \
+        SIMORGH_HOST=127.0.0.1 \
+        SIMORGH_PORT="$PORT" \
+        "$PYTHON" main.py >>"$LOG_FILE" 2>&1 &
+    echo $! > "$PID_FILE"
+)
+
+for _ in $(seq 1 60); do
+    if "$PYTHON" - <<PY >/dev/null 2>&1
+import urllib.request
+urllib.request.urlopen('http://127.0.0.1:${PORT}/health', timeout=1).read()
+PY
+    then
+        URL="http://127.0.0.1:$PORT/"
+        printf '✅ سیمرغ آماده است\n🌐 %s\n' "$URL"
+        command -v xdg-open >/dev/null 2>&1 && xdg-open "$URL" >/dev/null 2>&1 &
+        exit 0
+    fi
+    sleep 0.25
+done
+
+printf 'خطا: سیمرغ در زمان مقرر بالا نیامد.\nلاگ: %s\n' "$LOG_FILE" >&2
+tail -n 80 "$LOG_FILE" >&2 || true
+rm -f "$PID_FILE"
+exit 1
