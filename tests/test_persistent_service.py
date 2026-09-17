@@ -23,6 +23,7 @@ def test_installer_enables_persistent_user_service():
     assert "Restart=always" in installer
     assert "loginctl enable-linger" in installer
     assert "scripts/simorgh-run.sh" in installer
+    assert "systemctl --user is-active --quiet simorgh.service" in installer
 
 
 def test_stop_script_stops_persistent_user_service():
