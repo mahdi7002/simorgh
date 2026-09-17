@@ -124,17 +124,6 @@ fi
 
 "$VENV/bin/python" -m pip install --disable-pip-version-check -q -r "$ROOT/requirements.txt"
 
-SIMORGH_RUNTIME_DIR="$RUNTIME_DIR" SIMORGH_PORT="$PORT" "$VENV/bin/python" - <<'PY'
-from core.user_runtime import save_config
-import os
-save_config({
-    "configured": True,
-    "runtime_dir": os.environ["SIMORGH_RUNTIME_DIR"],
-    "port": int(os.environ["SIMORGH_PORT"]),
-    "privacy_mode": "local-only",
-})
-PY
-
 if [ -f "$PID_FILE" ]; then
     pid="$(cat "$PID_FILE" 2>/dev/null || true)"
     if [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null; then
@@ -167,8 +156,21 @@ else:
 PY
 )"
     sed -i "s/^SIMORGH_PORT=.*/SIMORGH_PORT=$PORT/" "$ENV_FILE"
+    # shellcheck disable=SC1090
     source "$ENV_FILE"
 fi
+
+# Persist the final port and first-run state after all collision handling.
+SIMORGH_RUNTIME_DIR="$RUNTIME_DIR" SIMORGH_PORT="$PORT" "$VENV/bin/python" - <<'PY'
+from core.user_runtime import save_config
+import os
+save_config({
+    "configured": True,
+    "runtime_dir": os.environ["SIMORGH_RUNTIME_DIR"],
+    "port": int(os.environ["SIMORGH_PORT"]),
+    "privacy_mode": "local-only",
+})
+PY
 
 printf 'در حال آماده‌سازی سیمرغ...\n'
 (
