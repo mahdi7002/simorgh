@@ -5,7 +5,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
 from core.hardware import probe
-from core.local_backend import discover_backend
+from core.local_backend import discover_backend, start_backend
 from core.model_manager import installed_models, install_model, recommend_models, register_local_model
 from core.user_runtime import runtime_snapshot, save_config
 
@@ -49,7 +49,10 @@ def configure(payload: RuntimeConfigRequest):
 @router.post("/models/{model_id}/install")
 def install(model_id: str):
     try:
-        return {"ok": True, "model": install_model(model_id)}
+        profile = probe()
+        model = install_model(model_id, profile=profile)
+        backend = start_backend(model["path"])
+        return {"ok": True, "model": model, "backend": backend}
     except KeyError as exc:
         raise HTTPException(404, str(exc)) from exc
     except (ValueError, RuntimeError, OSError) as exc:
@@ -59,8 +62,10 @@ def install(model_id: str):
 @router.post("/models/import")
 def import_model(path: str):
     try:
-        return {"ok": True, "model": register_local_model(path)}
-    except (FileNotFoundError, OSError) as exc:
+        model = register_local_model(path)
+        backend = start_backend(model["path"])
+        return {"ok": True, "model": model, "backend": backend}
+    except (FileNotFoundError, OSError, RuntimeError) as exc:
         raise HTTPException(400, str(exc)) from exc
 
 
