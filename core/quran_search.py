@@ -12,7 +12,6 @@ from typing import List, Dict
 logger = logging.getLogger(__name__)
 DB_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "grid", "quran.db")
 
-# کلمات عمومی/فعل‌های رایج که در اکثر آیات ظاهر می‌شوند و باعث نویز می‌شوند
 STOPWORDS = {
     "من", "تو", "او", "ما", "شما", "این", "که", "را", "به", "از", "با",
     "در", "و", "چیکار", "کنم", "بگو", "است", "شد", "کرد", "هست", "بود",
@@ -33,24 +32,22 @@ def get_quran_wisdom(query: str, limit: int = 3) -> List[Dict]:
 
     keywords = _extract_keywords(query)
     if not keywords:
-        return []  # اگر فقط کلمات عمومی بود، اصلاً وارد قرآن نشو
+        return []
 
-    # AND به‌جای OR: دقت بالاتر، حتی اگر نتیجه کمتر شود
     match_query = " AND ".join(keywords)
 
     try:
-        conn = sqlite3.connect(DB_PATH)
-        rows = conn.execute(
-            """
-            SELECT category, content
-            FROM knowledge_fts
-            WHERE knowledge_fts MATCH ? AND category = 'معنوی'
-            ORDER BY rank
-            LIMIT ?
-            """,
-            (match_query, limit),
-        ).fetchall()
-        conn.close()
+        with sqlite3.connect(DB_PATH) as conn:
+            rows = conn.execute(
+                """
+                SELECT category, content
+                FROM knowledge_fts
+                WHERE knowledge_fts MATCH ? AND category = 'معنوی'
+                ORDER BY rank
+                LIMIT ?
+                """,
+                (match_query, limit),
+            ).fetchall()
     except Exception as e:
         logger.warning(f"جستجوی قرآن شکست خورد یا نتیجه‌ای نداشت: {e}")
         return []
