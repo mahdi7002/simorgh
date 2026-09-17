@@ -45,6 +45,21 @@ def load_config() -> dict[str, Any]:
         return {}
 
 
+def _apply_runtime_environment(config: dict[str, Any] | None = None) -> None:
+    """Make persisted local backend endpoints available before llm_local imports."""
+    config = config or load_config()
+    mappings = {
+        "llm_fast_url": "SIMORGH_LLM_FAST_URL",
+        "llm_fast_models_url": "SIMORGH_LLM_FAST_MODELS_URL",
+        "llm_quality_url": "SIMORGH_LLM_QUALITY_URL",
+        "llm_quality_models_url": "SIMORGH_LLM_QUALITY_MODELS_URL",
+    }
+    for key, env_name in mappings.items():
+        value = config.get(key)
+        if isinstance(value, str) and value:
+            os.environ.setdefault(env_name, value)
+
+
 def save_config(data: dict[str, Any]) -> dict[str, Any]:
     ensure_user_dirs()
     current = load_config()
@@ -52,6 +67,7 @@ def save_config(data: dict[str, Any]) -> dict[str, Any]:
     tmp = CONFIG_FILE.with_suffix(".tmp")
     tmp.write_text(json.dumps(current, ensure_ascii=False, indent=2), encoding="utf-8")
     tmp.replace(CONFIG_FILE)
+    _apply_runtime_environment(current)
     return current
 
 
@@ -68,6 +84,8 @@ def runtime_snapshot() -> dict[str, Any]:
         "config": config,
     }
 
+
+_apply_runtime_environment()
 
 __all__ = [
     "CONFIG_FILE",
