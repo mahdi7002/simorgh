@@ -12,9 +12,7 @@ import sqlite3
 from typing import List, Dict
 
 logger = logging.getLogger(__name__)
-
 DB_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "simorgh_full.db")
-
 STOPWORDS = {"من", "تو", "او", "ما", "شما", "این", "که", "را", "به", "از", "با", "در", "و", "چیکار", "کنم"}
 
 
@@ -37,27 +35,26 @@ def get_poetic_wisdom(query: str, limit: int = 2) -> List[Dict]:
 
     rows = []
     try:
-        conn = sqlite3.connect(DB_PATH)
-        try:
-            rows = conn.execute(
-                """
-                SELECT poet, title, text
-                FROM poems_fts
-                WHERE poems_fts MATCH ?
-                ORDER BY rank
-                LIMIT ?
-                """,
-                (match_query, limit),
-            ).fetchall()
-        except Exception as e:
-            logger.warning(f"FTS شعر شکست خورد، fallback LIKE: {e}")
-            like_clause = " OR ".join(["text LIKE ?" for _ in keywords])
-            params = [f"%{k}%" for k in keywords] + [limit]
-            rows = conn.execute(
-                f"SELECT poet, title, text FROM poems WHERE {like_clause} LIMIT ?",
-                params,
-            ).fetchall()
-        conn.close()
+        with sqlite3.connect(DB_PATH) as conn:
+            try:
+                rows = conn.execute(
+                    """
+                    SELECT poet, title, text
+                    FROM poems_fts
+                    WHERE poems_fts MATCH ?
+                    ORDER BY rank
+                    LIMIT ?
+                    """,
+                    (match_query, limit),
+                ).fetchall()
+            except Exception as e:
+                logger.warning(f"FTS شعر شکست خورد، fallback LIKE: {e}")
+                like_clause = " OR ".join(["text LIKE ?" for _ in keywords])
+                params = [f"%{k}%" for k in keywords] + [limit]
+                rows = conn.execute(
+                    f"SELECT poet, title, text FROM poems WHERE {like_clause} LIMIT ?",
+                    params,
+                ).fetchall()
     except Exception as e:
         logger.warning(f"جستجوی شعر شکست خورد: {e}")
         return []
