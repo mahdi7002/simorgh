@@ -74,26 +74,37 @@ Otherwise it is documented as **EXPERIMENTAL**, **PLANNED**, or **DISABLED**.
 | Hardware-aware local model catalog | IMPLEMENTED | user runtime regression tests |
 | SHA-256 model verification | IMPLEMENTED | user runtime regression tests |
 | Local llama.cpp backend lifecycle | IMPLEMENTED | runtime path + user runtime tests |
+| Self-contained x86_64 AppImage packaging | IMPLEMENTED | AppImage build workflow + packaging tests |
 | Automatic knowledge mutation | DISABLED | Human gate required |
 | Governed external tool adapters | EXPERIMENTAL | See Issue #7 |
 | Full external tool-calling | EXPERIMENTAL | Persona-specific tools remain isolated |
 | Semantic/LLM dispatcher | PLANNED | Lightweight rules used by default |
 | Multi-agent execution fabric | PLANNED | Native contracts documented in `docs/AGENT_FABRIC.md` |
-| Public release package | PLANNED | AppImage/native packaging remains release work |
+| Native packages for other platforms/architectures | PLANNED | AppImage is currently x86_64 Linux |
 
 ## User-first installation
 
-برای کاربر عادی، مسیر اصلی این است:
+برای کاربر عادی، مسیر اصلی روی Linux این است:
 
 ```bash
 ./install.sh
 ```
 
-این launcher در سطح کاربر کار می‌کند، مسیر داده و مدل را در اولین اجرای تعاملی می‌گیرد، محیط runtime جدا می‌سازد، dependencyهای runtime را نصب می‌کند، سرویس را روی loopback بالا می‌آورد و رابط سیمرغ را در مرورگر باز می‌کند.
+برای کاربری که فقط یک فایل اجرایی می‌خواهد، بستهٔ self-contained آمادهٔ AppImage نیز در دسترس است:
+
+```bash
+chmod +x SIMORGH-x86_64.AppImage
+./SIMORGH-x86_64.AppImage
+```
+
+AppImage شامل Python، dependencyهای اصلی runtime، رابط وب و پایگاه دانش canonical است. داده‌های شخصی، حافظه، تنظیمات و مدل‌های دانلودشده بیرون از AppImage نگه داشته می‌شوند.
+
+launcher در سطح کاربر اجرا می‌شود، مسیر داده را در اولین اجرا تعیین می‌کند، runtime را روی loopback بالا می‌آورد و رابط سیمرغ را در مرورگر باز می‌کند.
 
 مدل زبانی اجباری نیست. بدون مدل، پایگاه دانش محلی همچنان قابل استفاده است. دانلود مدل تنها پس از اقدام کاربر انجام می‌شود و پیش از ثبت، SHA-256 و اطلاعات provenance کنترل می‌شوند.
 
 راهنمای کامل کاربر: [`docs/USER_INSTALL.md`](docs/USER_INSTALL.md)
+راهنمای AppImage: [`docs/APPIMAGE.md`](docs/APPIMAGE.md)
 
 ## Developer quick start
 
@@ -139,7 +150,7 @@ python3 demo/simorgh_minimal.py --test
 python3 demo/simorgh_minimal.py "عدالت چیست؟"
 ```
 
-For the detailed first-run path, see [`QUICKSTART.md`](QUICKSTART.md) and [`docs/USER_INSTALL.md`](docs/USER_INSTALL.md).
+For the detailed first-run path, see [`QUICKSTART.md`](QUICKSTART.md), [`docs/USER_INSTALL.md`](docs/USER_INSTALL.md), and [`docs/APPIMAGE.md`](docs/APPIMAGE.md).
 
 ## Agent fabric
 
