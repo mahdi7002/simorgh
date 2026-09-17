@@ -166,7 +166,7 @@ EOF
 if command -v systemctl >/dev/null 2>&1 && systemctl --user is-active --quiet simorgh.service 2>/dev/null; then
     if "$VENV/bin/python" - <<PY >/dev/null 2>&1
 import urllib.request
-urllib.request.urlopen("http://127.0.0.1:\${PORT}/health", timeout=2).read()
+urllib.request.urlopen("http://127.0.0.1:${PORT}/health", timeout=2).read()
 PY
     then
         printf 'سیمرغ از قبل به‌صورت سرویس پایدار در حال اجراست: http://127.0.0.1:%s/\n' "$PORT"
