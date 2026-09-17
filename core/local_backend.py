@@ -15,7 +15,7 @@ import urllib.request
 from pathlib import Path
 from typing import Any
 
-from core.user_runtime import RUNTIME_LOG_DIR, DEFAULT_RUNTIME_DIR, ensure_user_dirs
+from core.user_runtime import DEFAULT_RUNTIME_DIR, RUNTIME_LOG_DIR, ensure_user_dirs, save_config
 
 BACKEND_PID_FILE = DEFAULT_RUNTIME_DIR / "llama-server.pid"
 BACKEND_META_FILE = DEFAULT_RUNTIME_DIR / "llama-server.json"
@@ -210,6 +210,7 @@ def start_backend(model_path: str | os.PathLike[str], *, preferred_port: int = 8
             log.close()
             os.environ["SIMORGH_LLM_FAST_URL"] = fast_url
             os.environ["SIMORGH_LLM_FAST_MODELS_URL"] = models_url
+            save_config({"llm_fast_url": fast_url, "llm_fast_models_url": models_url, "backend_pid": process.pid, "backend_model": str(model)})
             return discover_backend()
         time.sleep(0.25)
     log.close()
@@ -221,7 +222,6 @@ def discover_backend() -> dict[str, Any]:
     models_url = os.environ.get("SIMORGH_LLM_FAST_MODELS_URL", "http://127.0.0.1:8080/v1/models")
     binary = _find_binary()
     pid = _managed_pid()
-    endpoint_up = _url_ok(models_url)
     meta: dict[str, Any] = {}
     try:
         meta = json.loads(BACKEND_META_FILE.read_text(encoding="utf-8"))
@@ -231,11 +231,11 @@ def discover_backend() -> dict[str, Any]:
         "provider": "openai-compatible",
         "endpoint": fast_url,
         "models_endpoint": models_url,
-        "endpoint_up": endpoint_up,
+        "endpoint_up": _url_ok(models_url),
         "llama_server_binary": binary,
         "managed_pid": pid,
         "managed_model": meta.get("model"),
-        "ready": endpoint_up,
+        "ready": _url_ok(models_url),
         "note": "مدل و backend دو مؤلفهٔ جدا هستند؛ سیمورغ فقط backend محلیِ مدیریت‌شدهٔ خودش را در اختیار می‌گیرد.",
     }
 
