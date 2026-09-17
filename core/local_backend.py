@@ -10,6 +10,7 @@ import socket
 import subprocess
 import tarfile
 import tempfile
+import time
 import urllib.request
 from pathlib import Path
 from typing import Any
@@ -81,14 +82,10 @@ def _asset_for_host(assets: list[dict[str, Any]]) -> dict[str, Any]:
         if token in str(asset.get("name", ""))
         and str(asset.get("name", "")).endswith(".tar.gz")
         and "bin-" in str(asset.get("name", ""))
-        and "cuda" not in str(asset.get("name", "")).lower()
-        and "vulkan" not in str(asset.get("name", "")).lower()
-        and "rocm" not in str(asset.get("name", "")).lower()
-        and "openvino" not in str(asset.get("name", "")).lower()
-        and "sycl" not in str(asset.get("name", "")).lower()
+        and all(part not in str(asset.get("name", "")).lower() for part in ("cuda", "vulkan", "rocm", "openvino", "sycl", "hip"))
     ]
     if not matches:
-        raise RuntimeError(f"no signed/hashed CPU llama.cpp binary available for {token}")
+        raise RuntimeError(f"no verified CPU llama.cpp binary available for {token}")
     return matches[0]
 
 
@@ -115,7 +112,7 @@ def ensure_llama_server() -> dict[str, Any]:
     archive = Path(archive_name)
     try:
         request = urllib.request.Request(url, headers={"User-Agent": "SIMORGH/1.0"})
-        with urllib.request.urlopen(request, timeout=60) as response, archive.open("wb") as output:
+        with urllib.request.urlopen(request, timeout=120) as response, archive.open("wb") as output:
             while True:
                 chunk = response.read(1024 * 1024)
                 if not chunk:
@@ -126,22 +123,19 @@ def ensure_llama_server() -> dict[str, Any]:
             raise RuntimeError(f"llama.cpp backend SHA-256 mismatch: expected {expected}, got {digest_actual}")
 
         with tarfile.open(archive, "r:gz") as tar:
-            members = tar.getmembers()
-            for member in members:
+            root = backend_dir.resolve()
+            for member in tar.getmembers():
                 target = (backend_dir / member.name).resolve()
-                if backend_dir.resolve() not in target.parents and target != backend_dir.resolve():
+                if root not in target.parents and target != root:
                     raise RuntimeError("unsafe llama.cpp archive path")
             tar.extractall(backend_dir)
 
-        found = None
-        for path in backend_dir.rglob("llama-server"):
-            if path.is_file():
-                found = path
-                break
+        found = next((p for p in backend_dir.rglob("llama-server") if p.is_file()), None)
         if found is None:
             raise RuntimeError("verified llama.cpp archive did not contain llama-server")
         final = backend_dir / "llama-server"
         if found != final:
+            final.unlink(missing_ok=True)
             found.replace(final)
         final.chmod(final.stat().st_mode | 0o111)
         return {"binary": str(final), "downloaded": True, "verified": True, "sha256": expected, "asset": asset.get("name")}
@@ -155,13 +149,13 @@ def _managed_pid() -> int | None:
         os.kill(pid, 0)
         return pid
     except (OSError, ValueError):
+        BACKEND_PID_FILE.unlink(missing_ok=True)
         return None
 
 
 def stop_managed_backend() -> bool:
     pid = _managed_pid()
     if pid is None:
-        BACKEND_PID_FILE.unlink(missing_ok=True)
         return False
     try:
         os.kill(pid, signal.SIGTERM)
@@ -171,7 +165,7 @@ def stop_managed_backend() -> bool:
     return True
 
 
-def start_backend(model_path: str | os.PathLike[str], *, port: int = 8080) -> dict[str, Any]:
+def start_backend(model_path: str | os.PathLike[str], *, preferred_port: int = 8080) -> dict[str, Any]:
     model = Path(model_path).expanduser().resolve()
     if not model.is_file():
         raise FileNotFoundError(model)
@@ -180,16 +174,23 @@ def start_backend(model_path: str | os.PathLike[str], *, port: int = 8080) -> di
     if existing["endpoint_up"]:
         existing["note"] = "local OpenAI-compatible backend already running; SIMORGH did not replace an existing service"
         return existing
+
     ensure_user_dirs()
-    selected_port = port if port > 0 else _free_port()
-    if selected_port != 8080 and not os.environ.get("SIMORGH_LLM_FAST_URL"):
-        selected_port = _free_port()
+    port = preferred_port
+    try:
+        with socket.socket() as sock:
+            sock.bind(("127.0.0.1", port))
+    except OSError:
+        port = _free_port()
+
     env = os.environ.copy()
-    env["SIMORGH_LLM_FAST_URL"] = f"http://127.0.0.1:{selected_port}/v1/chat/completions"
-    env["SIMORGH_LLM_FAST_MODELS_URL"] = f"http://127.0.0.1:{selected_port}/v1/models"
+    fast_url = f"http://127.0.0.1:{port}/v1/chat/completions"
+    models_url = f"http://127.0.0.1:{port}/v1/models"
+    env["SIMORGH_LLM_FAST_URL"] = fast_url
+    env["SIMORGH_LLM_FAST_MODELS_URL"] = models_url
     log = BACKEND_LOG_FILE.open("ab")
     process = subprocess.Popen(
-        [binary_info["binary"], "--model", str(model), "--host", "127.0.0.1", "--port", str(selected_port), "--ctx-size", "4096"],
+        [binary_info["binary"], "--model", str(model), "--host", "127.0.0.1", "--port", str(port), "--ctx-size", "4096"],
         stdin=subprocess.DEVNULL,
         stdout=log,
         stderr=subprocess.STDOUT,
@@ -198,19 +199,18 @@ def start_backend(model_path: str | os.PathLike[str], *, port: int = 8080) -> di
     )
     BACKEND_PID_FILE.write_text(str(process.pid), encoding="utf-8")
     BACKEND_META_FILE.write_text(
-        json.dumps({"pid": process.pid, "model": str(model), "port": selected_port}, ensure_ascii=False, indent=2),
+        json.dumps({"pid": process.pid, "model": str(model), "port": port}, ensure_ascii=False, indent=2),
         encoding="utf-8",
     )
-    for _ in range(80):
+    for _ in range(120):
         if process.poll() is not None:
             log.close()
             raise RuntimeError(f"llama-server exited with code {process.returncode}; see {BACKEND_LOG_FILE}")
-        if _url_ok(f"http://127.0.0.1:{selected_port}/v1/models", timeout=1):
+        if _url_ok(models_url, timeout=1):
             log.close()
-            os.environ["SIMORGH_LLM_FAST_URL"] = f"http://127.0.0.1:{selected_port}/v1/chat/completions"
-            os.environ["SIMORGH_LLM_FAST_MODELS_URL"] = f"http://127.0.0.1:{selected_port}/v1/models"
+            os.environ["SIMORGH_LLM_FAST_URL"] = fast_url
+            os.environ["SIMORGH_LLM_FAST_MODELS_URL"] = models_url
             return discover_backend()
-        import time
         time.sleep(0.25)
     log.close()
     raise RuntimeError(f"llama-server did not become ready; see {BACKEND_LOG_FILE}")
@@ -222,6 +222,11 @@ def discover_backend() -> dict[str, Any]:
     binary = _find_binary()
     pid = _managed_pid()
     endpoint_up = _url_ok(models_url)
+    meta: dict[str, Any] = {}
+    try:
+        meta = json.loads(BACKEND_META_FILE.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        pass
     return {
         "provider": "openai-compatible",
         "endpoint": fast_url,
@@ -229,6 +234,7 @@ def discover_backend() -> dict[str, Any]:
         "endpoint_up": endpoint_up,
         "llama_server_binary": binary,
         "managed_pid": pid,
+        "managed_model": meta.get("model"),
         "ready": endpoint_up,
         "note": "مدل و backend دو مؤلفهٔ جدا هستند؛ سیمورغ فقط backend محلیِ مدیریت‌شدهٔ خودش را در اختیار می‌گیرد.",
     }
