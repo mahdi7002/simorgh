@@ -38,9 +38,8 @@ def _usable_for(profile: HardwareProfile, model: dict[str, Any]) -> bool:
         profile.ram_gb >= float(model.get("min_ram_gb", 0))
         and profile.disk_free_gb >= float(model.get("min_disk_gb", 0))
         and (
-            profile.gpu_vram_gb is None
-            or profile.gpu_vram_gb >= float(model.get("min_vram_gb", 0))
-            or float(model.get("min_vram_gb", 0)) <= 0
+            float(model.get("min_vram_gb", 0)) <= 0
+            or (profile.gpu_vram_gb is not None and profile.gpu_vram_gb >= float(model.get("min_vram_gb", 0)))
         )
     )
 
@@ -66,14 +65,18 @@ def _metadata_sha(model: dict[str, Any]) -> str | None:
     if not url or not filename:
         return None
     try:
-        with urllib.request.urlopen(str(url), timeout=10) as response:
+        request = urllib.request.Request(str(url), headers={"User-Agent": "SIMORGH/1.0"})
+        with urllib.request.urlopen(request, timeout=15) as response:
             payload = json.loads(response.read().decode("utf-8"))
         for sibling in payload.get("siblings", []):
             if sibling.get("rfilename") != filename:
                 continue
-            oid = ((sibling.get("lfs") or {}).get("oid") or "").lower()
-            if _SHA256_RE.fullmatch(oid):
-                return oid
+            lfs_oid = ((sibling.get("lfs") or {}).get("oid") or "").lower()
+            if _SHA256_RE.fullmatch(lfs_oid):
+                return lfs_oid
+            xet_sha = str(((sibling.get("xet") or {}).get("sha256") or "")).lower()
+            if _SHA256_RE.fullmatch(xet_sha):
+                return xet_sha
     except Exception as exc:
         logger.warning("model metadata lookup failed: %s", exc)
     return None
@@ -94,7 +97,13 @@ def _sidecar(path: Path) -> Path:
     return path.with_name(path.name + ".simorgh.json")
 
 
-def register_local_model(path: str | os.PathLike[str], *, model_id: str = "imported-local-model", license_name: str = "UNKNOWN", source: str = "local file") -> dict[str, Any]:
+def register_local_model(
+    path: str | os.PathLike[str],
+    *,
+    model_id: str = "imported-local-model",
+    license_name: str = "UNKNOWN",
+    source: str = "local file",
+) -> dict[str, Any]:
     model_path = Path(path).expanduser().resolve()
     if not model_path.is_file():
         raise FileNotFoundError(model_path)
@@ -113,11 +122,22 @@ def register_local_model(path: str | os.PathLike[str], *, model_id: str = "impor
     return metadata
 
 
-def install_model(model_id: str, target_dir: str | os.PathLike[str] | None = None) -> dict[str, Any]:
+def install_model(
+    model_id: str,
+    target_dir: str | os.PathLike[str] | None = None,
+    *,
+    profile: HardwareProfile | None = None,
+) -> dict[str, Any]:
     catalog = {m["id"]: m for m in load_catalog()}
     model = catalog.get(model_id)
     if not model:
         raise KeyError(f"unknown model: {model_id}")
+    profile = profile or probe()
+    if not _usable_for(profile, model):
+        raise RuntimeError(
+            f"model is not compatible with detected resources: tier={profile.tier}, "
+            f"ram={profile.ram_gb}GB, free_disk={profile.disk_free_gb}GB"
+        )
     url = str(model.get("download_url", "")).strip()
     filename = str(model.get("filename", "")).strip()
     if not url or not filename:
@@ -142,7 +162,7 @@ def install_model(model_id: str, target_dir: str | os.PathLike[str] | None = Non
     tmp_path = Path(tmp_name)
     try:
         request = urllib.request.Request(url, headers={"User-Agent": "SIMORGH/1.0"})
-        with urllib.request.urlopen(request, timeout=30) as response, tmp_path.open("wb") as output:
+        with urllib.request.urlopen(request, timeout=60) as response, tmp_path.open("wb") as output:
             while True:
                 chunk = response.read(1024 * 1024)
                 if not chunk:
