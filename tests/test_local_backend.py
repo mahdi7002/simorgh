@@ -119,7 +119,8 @@ def test_start_backend_does_not_reuse_unmanaged_backend(monkeypatch, tmp_path):
     }
     states = iter([existing, ready])
     monkeypatch.setattr(local_backend, "discover_backend", lambda: next(states))
-    monkeypatch.setattr(local_backend, "save_config", lambda _: None)
+    saved = {}
+    monkeypatch.setattr(local_backend, "save_config", lambda config: saved.update(config) or config)
     monkeypatch.setattr(local_backend, "_url_ok", lambda *_args, **_kwargs: True)
     monkeypatch.setattr(local_backend.time, "sleep", lambda *_args, **_kwargs: None)
 
@@ -160,6 +161,10 @@ def test_start_backend_does_not_reuse_unmanaged_backend(monkeypatch, tmp_path):
     assert started["args"][1:3] == ["--model", str(model)]
     assert started["args"][started["args"].index("--port") + 1] == "8081"
     assert pid_file.read_text(encoding="utf-8") == "12345"
+    assert saved["llm_fast_url"] == "http://127.0.0.1:8081/v1/chat/completions"
+    assert saved["llm_fast_models_url"] == "http://127.0.0.1:8081/v1/models"
+    assert saved["llm_quality_url"] == saved["llm_fast_url"]
+    assert saved["llm_quality_models_url"] == saved["llm_fast_models_url"]
     metadata = json.loads(meta_file.read_text(encoding="utf-8"))
     assert metadata["model"] == str(model)
 
