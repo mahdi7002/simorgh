@@ -476,6 +476,18 @@ def start_backend(model_path: str | os.PathLike[str], *, preferred_port: int = 8
             log.close()
             raise RuntimeError(f"llama-server exited with code {process.returncode}; see {BACKEND_LOG_FILE}")
         if _url_ok(models_url, timeout=1):
+            payload = _models_payload(models_url, timeout=2)
+            loaded_models = _model_ids(payload)
+            if not any(_model_id_matches(model_id, model) for model_id in loaded_models):
+                try:
+                    process.terminate()
+                except OSError:
+                    pass
+                _cleanup_managed_state()
+                log.close()
+                raise RuntimeError(
+                    f"llama-server reported unexpected model(s): {loaded_models!r}; expected {model}"
+                )
             log.close()
             os.environ["SIMORGH_LLM_FAST_URL"] = fast_url
             os.environ["SIMORGH_LLM_FAST_MODELS_URL"] = models_url
@@ -490,7 +502,8 @@ def start_backend(model_path: str | os.PathLike[str], *, preferred_port: int = 8
                     "backend_pid": process.pid,
                     "backend_model": str(model),
                     "backend_binary": binary_info["binary"],
-                    "backend_binary_sha256": binary_info.get("sha256"),
+                    "backend_binary_sha256": binary_info.get("binary_sha256") or binary_info.get("sha256"),
+                    "backend_binary_provenance_verified": bool(binary_info.get("provenance_verified")),
                     "backend_release": binary_info.get("release_tag"),
                     "backend_release_prerelease": binary_info.get("release_prerelease"),
                 }
