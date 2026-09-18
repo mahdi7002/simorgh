@@ -122,6 +122,11 @@ def test_start_backend_does_not_reuse_unmanaged_backend(monkeypatch, tmp_path):
     saved = {}
     monkeypatch.setattr(local_backend, "save_config", lambda config: saved.update(config) or config)
     monkeypatch.setattr(local_backend, "_url_ok", lambda *_args, **_kwargs: True)
+    monkeypatch.setattr(
+        local_backend,
+        "_models_payload",
+        lambda *_args, **_kwargs: {"data": [{"id": model.name}]},
+    )
     monkeypatch.setattr(local_backend.time, "sleep", lambda *_args, **_kwargs: None)
 
     class FakeSocket:
