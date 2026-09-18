@@ -32,10 +32,10 @@ def test_generate_uses_quality_timeout(monkeypatch):
 
     monkeypatch.setattr(llm_local.requests, "post", fake_post)
     monkeypatch.setenv("SIMORGH_LLM_QUALITY_URL", "http://127.0.0.1:8081/v1/chat/completions")
-    monkeypatch.setenv("SIMORGH_QUALITY_TIMEOUT", "30")
+    monkeypatch.setattr(llm_local, "QUALITY_TIMEOUT", 60.0)
 
     result = llm_local.generate("system", "user", needs_quality=True)
 
     assert result == "پاسخ"
     assert captured["url"] == "http://127.0.0.1:8081/v1/chat/completions"
-    assert captured["timeout"] == 30.0
+    assert captured["timeout"] == 60.0
