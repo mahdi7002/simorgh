@@ -97,6 +97,7 @@ def test_start_backend_does_not_reuse_unmanaged_backend(monkeypatch, tmp_path):
     monkeypatch.setattr(local_backend, "BACKEND_PID_FILE", pid_file)
     monkeypatch.setattr(local_backend, "BACKEND_META_FILE", meta_file)
     monkeypatch.setattr(local_backend, "BACKEND_LOG_FILE", log_file)
+    monkeypatch.setattr(local_backend.os, "environ", dict(local_backend.os.environ))
     monkeypatch.setattr(local_backend, "ensure_user_dirs", lambda: None)
     monkeypatch.setattr(
         local_backend,
