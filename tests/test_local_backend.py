@@ -147,6 +147,9 @@ def test_start_backend_does_not_reuse_unmanaged_backend(monkeypatch, tmp_path):
         def poll(self):
             return None
 
+        def terminate(self):
+            return None
+
     def fake_popen(args, **kwargs):
         started["args"] = args
         started["kwargs"] = kwargs
