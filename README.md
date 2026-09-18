@@ -148,7 +148,7 @@ The default service bind is loopback-only. A non-loopback bind without an explic
 
 External sessions must provide an opaque `X-SIMORGH-SESSION` value. SIMORGH hashes this identifier before storing it with memory so different hosted sessions do not collapse into the same default conversation bucket.
 
-Generation endpoints return explicit AI-disclosure metadata and a machine-readable `X-SIMORGH-AI-GENERATED: true` response header. A deployment UI must render a clear human-visible AI disclosure where required.
+Generation endpoints return explicit AI-disclosure metadata and a machine-readable `X-SIMORGH-AI-GENERATED: true/false` response header that matches whether a local language model generated the text. A deployment UI must render a clear human-visible AI disclosure where required.
 
 For internet-facing operation, TLS, rate limiting, allowed-host/origin policy, incident response, operational logging controls, and provider contracts remain deployment responsibilities.
 
