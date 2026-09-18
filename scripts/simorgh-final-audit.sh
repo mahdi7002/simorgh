@@ -17,7 +17,16 @@ printf '%s\n' '--- Git ---'
 HEAD="$(git rev-parse HEAD 2>/dev/null || true)"
 REMOTE="$(git rev-parse origin/main 2>/dev/null || true)"
 if [ -n "$HEAD" ]; then ok "HEAD=$HEAD"; else fail "not a git repository"; fi
-if [ -n "$REMOTE" ]; then printf 'INFO  origin/main=%s\n' "$REMOTE"; else warn "origin/main unavailable"; fi
+if [ -n "$REMOTE" ]; then
+    printf 'INFO  origin/main=%s\n' "$REMOTE"
+    if [ -n "$HEAD" ] && [ "$HEAD" != "$REMOTE" ]; then
+        fail "local HEAD differs from origin/main"
+    else
+        ok "local HEAD matches origin/main"
+    fi
+else
+    warn "origin/main unavailable"
+fi
 if [ -n "$(git status --porcelain)" ]; then
     warn "working tree is not clean:"
     git status --short
@@ -136,6 +145,12 @@ if command -v systemctl >/dev/null 2>&1 && systemctl --user show-environment >/d
     else
         fail "MainPID unavailable"
     fi
+    if command -v loginctl >/dev/null 2>&1; then
+        LINGER="$(loginctl show-user "$USER" -p Linger --value 2>/dev/null || true)"
+        [ "$LINGER" = "yes" ] && ok "Linger=yes" || fail "Linger is not enabled"
+    else
+        warn "loginctl unavailable; Linger check skipped"
+    fi
 else
     warn "systemd user manager unavailable; persistent service checks skipped"
 fi
@@ -173,6 +188,36 @@ knowledge = data.get("knowledge", {})
 raise SystemExit(0 if knowledge.get("database_first") and knowledge.get("requires_model") is False else 1)
 PY
     ok "bootstrap reports Database-First without model requirement"
+
+    CHAT_HEADERS="$(mktemp)"
+    CHAT_BODY="$(mktemp)"
+    trap 'rm -f "$CHAT_HEADERS" "$CHAT_BODY"' EXIT
+    curl -fsS -D "$CHAT_HEADERS" -o "$CHAT_BODY"       -X POST "http://127.0.0.1:$PORT/chat"       -H 'X-SIMORGH-SESSION: final-audit'       --data 'query=سلام&agent=hakim'
+    "$PY" - "$CHAT_HEADERS" "$CHAT_BODY" <<'PY'
+import json, sys
+from pathlib import Path
+
+headers = {}
+for line in Path(sys.argv[1]).read_text(encoding="utf-8").splitlines():
+    if ":" in line:
+        k, v = line.split(":", 1)
+        headers[k.strip().lower()] = v.strip().lower()
+body = json.loads(Path(sys.argv[2]).read_text(encoding="utf-8"))
+flag = body.get("ai_generated")
+header = headers.get("x-simorgh-ai-generated")
+if not isinstance(flag, bool):
+    raise SystemExit("ai_generated must be boolean")
+if header != str(flag).lower():
+    raise SystemExit("X-SIMORGH-AI-GENERATED does not match ai_generated")
+if not body.get("disclosure"):
+    raise SystemExit("disclosure field missing")
+if flag and not body.get("ai_disclosure"):
+    raise SystemExit("ai_disclosure missing for AI response")
+if not flag and not body.get("knowledge_disclosure"):
+    raise SystemExit("knowledge_disclosure missing for Database-First response")
+print(f"ai_generated={flag} header={header}")
+PY
+    ok "chat disclosure metadata and header agree"
 else
     warn "HTTP checks skipped because port is unknown"
 fi
