@@ -14,7 +14,8 @@ class NazerAgent:
         response = generate(ROLE_PROMPTS["nazer"], query)
         if response:
             return response
-        return f"تحلیل {query} توسط عامل Nazer"
+        logger.warning("NazerAgent model unavailable")
+        return None
 
     def suggest(self, *args, **kwargs):
         return self.analyze(*args, **kwargs)

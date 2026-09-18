@@ -47,7 +47,7 @@ async function installModel(id,btn){
 }
 async function sendChat(){
  const button=document.getElementById('send'), q=document.getElementById('query').value.trim(); if(!q)return; button.disabled=true; document.getElementById('query').value=''; const log=document.getElementById('chatlog'); log.insertAdjacentHTML('beforeend',`<div class="msg user">${esc(q)}</div>`);
- try{const f=new FormData(); f.append('query',q); f.append('agent','hakim'); const r=await fetch('/chat',{method:'POST',body:f}); const data=await r.json(); if(!r.ok)throw new Error(data.detail||'خطا'); log.insertAdjacentHTML('beforeend',`<div class="msg assistant">${esc(data.response)}\n\n[AI disclosure] ${esc(data.ai_disclosure||'')}</div>`)}catch(e){log.insertAdjacentHTML('beforeend',`<div class="msg assistant warn">${esc(e.message)}</div>`)} finally{button.disabled=false; log.scrollTop=log.scrollHeight;}
+ try{const f=new FormData(); f.append('query',q); f.append('agent','hakim'); const r=await fetch('/chat',{method:'POST',body:f}); const data=await r.json(); if(!r.ok)throw new Error(data.detail||'خطا'); const label=data.ai_generated?'AI disclosure':'Knowledge disclosure'; log.insertAdjacentHTML('beforeend',`<div class="msg assistant">${esc(data.response)}\n\n[${label}] ${esc(data.disclosure||'')}</div>`)}catch(e){log.insertAdjacentHTML('beforeend',`<div class="msg assistant warn">${esc(e.message)}</div>`)} finally{button.disabled=false; log.scrollTop=log.scrollHeight;}
 }
 document.getElementById('refresh').addEventListener('click',refreshAll);
 document.getElementById('send').addEventListener('click',sendChat);

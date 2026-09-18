@@ -238,3 +238,112 @@ def test_global_request_body_limit_is_configured():
         getattr(m, "cls", None).__name__ == "RequestBodyLimitMiddleware"
         for m in main.app.user_middleware
     )
+
+
+def test_ask_endpoint_reports_database_first_without_fake_ai_disclosure(monkeypatch):
+    from fastapi.testclient import TestClient
+    import main
+
+    monkeypatch.setattr(
+        main.agent_manager,
+        "consult",
+        lambda *args, return_metadata=False, **kwargs: (
+            ("پاسخ مستقیم از پایگاه دانش", False) if return_metadata else "پاسخ مستقیم از پایگاه دانش"
+        ),
+    )
+    monkeypatch.setattr(main.memory, "store_conversation", lambda *args, **kwargs: None)
+
+    client = TestClient(main.app)
+    response = client.post(
+        "/ask",
+        data={"query": "عدالت چیست؟"},
+        headers={"x-simorgh-session": "test-session"},
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["ai_generated"] is False
+    assert body["ai_disclosure"] is None
+    assert body["knowledge_disclosure"] == main.KNOWLEDGE_DISCLOSURE
+    assert body["disclosure"] == main.KNOWLEDGE_DISCLOSURE
+    assert response.headers["x-simorgh-ai-generated"] == "false"
+
+
+def test_orchestrate_endpoint_reports_aggregate_provenance(monkeypatch):
+    from fastapi.testclient import TestClient
+    import main
+
+    result = {
+        "query": "سلام",
+        "selected_agents": ["hakim"],
+        "outputs": {"hakim": "پاسخ مستقیم از پایگاه دانش"},
+        "ai_generated": {"hakim": False},
+        "tool_results": {},
+        "review": {"approved": True, "warnings": [], "checks": []},
+    }
+    monkeypatch.setattr(main.orchestrator, "run", lambda query, max_agents=2: result)
+    monkeypatch.setattr(main.memory, "store_conversation", lambda *args, **kwargs: None)
+
+    client = TestClient(main.app)
+    response = client.post(
+        "/orchestrate",
+        data={"query": "سلام"},
+        headers={"x-simorgh-session": "test-session"},
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["ai_generated"] is False
+    assert body["disclosure"] == main.KNOWLEDGE_DISCLOSURE
+    assert body["ai_disclosure"] is None
+    assert body["knowledge_disclosure"] == main.KNOWLEDGE_DISCLOSURE
+    assert response.headers["x-simorgh-ai-generated"] == "false"
+
+
+def test_agents_do_not_emit_synthetic_model_fallbacks(monkeypatch):
+    from agents.hakim import HakimAgent
+    from agents.nazer import NazerAgent
+    from agents.rahbar import RahbarAgent
+    import agents.hakim as hakim
+    import agents.nazer as nazer
+    import agents.rahbar as rahbar
+
+    monkeypatch.setattr(hakim, "generate", lambda *args, **kwargs: None)
+    monkeypatch.setattr(nazer, "generate", lambda *args, **kwargs: None)
+    monkeypatch.setattr(rahbar, "generate", lambda *args, **kwargs: None)
+
+    assert HakimAgent().analyze("آزمون") is None
+    assert NazerAgent().analyze("آزمون") is None
+    assert RahbarAgent().suggest("آزمون") is None
+
+
+def test_voice_endpoint_propagates_text_generation_provenance(monkeypatch, tmp_path):
+    from fastapi.testclient import TestClient
+    import main
+    import core.voice_endpoint as voice_endpoint
+
+    output = tmp_path / "out.wav"
+    output.write_bytes(b"RIFF-test")
+
+    monkeypatch.setattr(voice_endpoint, "transcribe", lambda path: "سلام")
+    monkeypatch.setattr(
+        voice_endpoint,
+        "ask",
+        lambda query, agent="hakim", return_metadata=False: (
+            ("پاسخ محلی", False) if return_metadata else "پاسخ محلی"
+        ),
+    )
+    monkeypatch.setattr(voice_endpoint, "synthesize", lambda text: str(output))
+
+    client = TestClient(main.app)
+    response = client.post(
+        "/voice",
+        content=b"0" * 1000,
+        headers={
+            "content-type": "application/octet-stream",
+            "x-simorgh-session": "test-session",
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.headers["x-simorgh-ai-generated"] == "false"

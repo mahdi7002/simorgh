@@ -7,11 +7,13 @@ class Blackboard:
     query: str
     selected_agents: list[str] = field(default_factory=list)
     outputs: dict[str, str] = field(default_factory=dict)
+    ai_generated: dict[str, bool] = field(default_factory=dict)
     tool_results: dict[str, Any] = field(default_factory=dict)
     review: dict[str, Any] = field(default_factory=dict)
 
-    def record_output(self, agent: str, output: str) -> None:
+    def record_output(self, agent: str, output: str, *, ai_generated: bool = False) -> None:
         self.outputs[agent] = output
+        self.ai_generated[agent] = bool(ai_generated)
 
     def record_tool_result(self, name: str, result: Any) -> None:
         self.tool_results[name] = result
@@ -21,6 +23,7 @@ class Blackboard:
             "query": self.query,
             "selected_agents": list(self.selected_agents),
             "outputs": dict(self.outputs),
+            "ai_generated": dict(self.ai_generated),
             "tool_results": dict(self.tool_results),
             "review": dict(self.review),
         }
