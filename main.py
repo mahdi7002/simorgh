@@ -246,12 +246,12 @@ async def orchestrate(request: Request, query: str = Form(...)):
             bool(value) for value in result.get("ai_generated", {}).values()
         )
         payload = {
+            **result,
             "response": response,
             "ai_generated": ai_generated,
             "disclosure": AI_DISCLOSURE if ai_generated else KNOWLEDGE_DISCLOSURE,
             "ai_disclosure": AI_DISCLOSURE if ai_generated else None,
             "knowledge_disclosure": KNOWLEDGE_DISCLOSURE if not ai_generated else None,
-            **result,
         }
         return JSONResponse(
             content=payload,
