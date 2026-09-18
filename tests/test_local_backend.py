@@ -162,3 +162,28 @@ def test_start_backend_does_not_reuse_unmanaged_backend(monkeypatch, tmp_path):
     assert pid_file.read_text(encoding="utf-8") == "12345"
     metadata = json.loads(meta_file.read_text(encoding="utf-8"))
     assert metadata["model"] == str(model)
+
+def test_find_binary_ignores_broken_direct_runtime_binary_and_uses_bundle(monkeypatch, tmp_path):
+    direct = tmp_path / "bin" / "llama-server"
+    nested = tmp_path / "bin" / "llama-bundle" / "llama-server"
+    direct.parent.mkdir(parents=True)
+    nested.parent.mkdir(parents=True)
+    direct.write_bytes(b"broken")
+    nested.write_bytes(b"working")
+    direct.chmod(0o755)
+    nested.chmod(0o755)
+
+    monkeypatch.setattr(local_backend, "DEFAULT_RUNTIME_DIR", tmp_path)
+    monkeypatch.setattr(
+        local_backend.shutil,
+        "which",
+        lambda _name: None,
+    )
+    monkeypatch.setattr(
+        local_backend,
+        "_binary_usable",
+        lambda path: path == str(nested),
+    )
+
+    assert local_backend._find_binary() == str(nested)
+
