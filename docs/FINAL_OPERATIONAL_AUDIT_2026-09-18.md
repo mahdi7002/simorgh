@@ -216,6 +216,44 @@ service فعلی PID خود را از systemd می‌گیرد و runner جدید
 
 این اصلاح در PR #28 ادغام شد.
 
+### 4.8. false negative در crash-recovery audit
+
+در اجرای واقعی ممیزی نهایی، systemd پردازش جدید را به‌درستی ساخت:
+
+```text
+OLD_PID=41958
+NEW_PID=42393
+```
+
+اما audit بلافاصله پس از مشاهدهٔ PID جدید یک درخواست `curl` به `/health` فرستاد. در همان فاصلهٔ کوتاه، uvicorn هنوز در حال آماده‌شدن بود و درخواست با:
+
+```text
+curl: (7) Failed to connect to 127.0.0.1 port 8000
+```
+
+برگشت.
+
+بنابراین نتیجهٔ نخست audit:
+
+```text
+service auto-restarted = PASS
+health recovered = FAIL
+```
+
+بود، در حالی که چند لحظه بعد بررسی مستقل:
+
+```json
+{"status":"healthy","version":"0.1.0","python_version":"3.13.15"}
+```
+
+را برگرداند.
+
+این یک **race condition در خود ابزار ممیزی** بود، نه failure سرویس.
+
+راه‌حل در PR #34 اعمال شد: audit پس از مشاهدهٔ PID جدید، برای `/health` به‌صورت polling تا ۱۰ ثانیه صبر می‌کند. سپس PR در `main` ادغام شد.
+
+این تجربه نیز در طراحی پذیرش ثبت شد: **PID جدید، readiness نیست؛ readiness باید با endpoint واقعی سنجیده شود.**
+
 ### 4.7. smoke test اشتباه روی سرویس قدیمی
 
 Smoke test قبلی فقط «پورت 8000» را می‌دید و هویت پردازش را کنترل نمی‌کرد.
