@@ -1,0 +1,343 @@
+from __future__ import annotations
+
+import json
+from pathlib import Path
+
+from core import local_backend
+
+
+def _fake_uname(machine: str):
+    class Uname:
+        pass
+
+    value = Uname()
+    value.machine = machine
+    return value
+
+
+def test_select_release_asset_prefers_stable_release_with_matching_cpu_asset(monkeypatch):
+    monkeypatch.setattr(local_backend.os, "uname", lambda: _fake_uname("x86_64"))
+    releases = [
+        {
+            "tag_name": "b-new",
+            "prerelease": True,
+            "assets": [
+                {
+                    "name": "llama-b-new-bin-ubuntu-x64.tar.gz",
+                    "digest": "sha256:" + "1" * 64,
+                    "browser_download_url": "https://example.invalid/new.tar.gz",
+                }
+            ],
+        },
+        {
+            "tag_name": "v-stable",
+            "prerelease": False,
+            "assets": [
+                {
+                    "name": "llama-v-stable-bin-ubuntu-x64.tar.gz",
+                    "digest": "sha256:" + "2" * 64,
+                    "browser_download_url": "https://example.invalid/stable.tar.gz",
+                }
+            ],
+        },
+    ]
+
+    selected = local_backend._select_release_asset(releases)
+
+    assert selected["release_tag"] == "v-stable"
+    assert selected["release_prerelease"] is False
+    assert selected["name"].endswith("ubuntu-x64.tar.gz")
+
+
+def test_select_release_asset_falls_back_when_stable_release_has_no_binary(monkeypatch):
+    monkeypatch.setattr(local_backend.os, "uname", lambda: _fake_uname("x86_64"))
+    releases = [
+        {
+            "tag_name": "v0.4.1",
+            "prerelease": False,
+            "assets": [
+                {
+                    "name": "nightly-tag.txt",
+                    "digest": "sha256:" + "3" * 64,
+                    "browser_download_url": "https://example.invalid/nightly-tag.txt",
+                }
+            ],
+        },
+        {
+            "tag_name": "b-nightly",
+            "prerelease": True,
+            "assets": [
+                {
+                    "name": "llama-b-nightly-bin-ubuntu-x64.tar.gz",
+                    "digest": "sha256:" + "4" * 64,
+                    "browser_download_url": "https://example.invalid/nightly.tar.gz",
+                }
+            ],
+        },
+    ]
+
+    selected = local_backend._select_release_asset(releases)
+
+    assert selected["release_tag"] == "b-nightly"
+    assert selected["release_prerelease"] is True
+
+
+def test_start_backend_does_not_reuse_unmanaged_backend(monkeypatch, tmp_path):
+    model = tmp_path / "qwen.gguf"
+    model.write_bytes(b"model")
+
+    binary = tmp_path / "llama-server"
+    binary.write_bytes(b"binary")
+    binary.chmod(0o755)
+
+    pid_file = tmp_path / "llama-server.pid"
+    meta_file = tmp_path / "llama-server.json"
+    log_file = tmp_path / "llama-server.log"
+
+    monkeypatch.setattr(local_backend, "BACKEND_PID_FILE", pid_file)
+    monkeypatch.setattr(local_backend, "BACKEND_META_FILE", meta_file)
+    monkeypatch.setattr(local_backend, "BACKEND_LOG_FILE", log_file)
+    monkeypatch.setattr(local_backend.os, "environ", dict(local_backend.os.environ))
+    monkeypatch.setattr(local_backend, "ensure_user_dirs", lambda: None)
+    monkeypatch.setattr(
+        local_backend,
+        "ensure_llama_server",
+        lambda: {"binary": str(binary), "downloaded": False, "verified": True},
+    )
+
+    existing = {
+        "endpoint_up": True,
+        "managed_pid": None,
+        "managed_model": None,
+        "loaded_models": ["gemma-3-4b-it-qat-Q4_0.gguf"],
+    }
+    ready = {
+        "endpoint_up": True,
+        "managed_pid": 12345,
+        "managed_model": str(model),
+        "loaded_models": [model.name],
+    }
+    states = iter([existing, ready])
+    monkeypatch.setattr(local_backend, "discover_backend", lambda: next(states))
+    saved = {}
+    monkeypatch.setattr(local_backend, "save_config", lambda config: saved.update(config) or config)
+    monkeypatch.setattr(local_backend, "_url_ok", lambda *_args, **_kwargs: True)
+    monkeypatch.setattr(
+        local_backend,
+        "_models_payload",
+        lambda *_args, **_kwargs: {"data": [{"id": model.name}]},
+    )
+    monkeypatch.setattr(local_backend.time, "sleep", lambda *_args, **_kwargs: None)
+
+    class FakeSocket:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc, tb):
+            return False
+
+        def bind(self, address):
+            if address[1] == 8080:
+                raise OSError("occupied")
+            return None
+
+    monkeypatch.setattr(local_backend.socket, "socket", lambda: FakeSocket())
+
+    started = {}
+
+    class FakeProcess:
+        pid = 12345
+        returncode = None
+
+        def poll(self):
+            return None
+
+        def terminate(self):
+            return None
+
+    def fake_popen(args, **kwargs):
+        started["args"] = args
+        started["kwargs"] = kwargs
+        return FakeProcess()
+
+    monkeypatch.setattr(local_backend.subprocess, "Popen", fake_popen)
+
+    result = local_backend.start_backend(model, preferred_port=8080)
+
+    assert result["managed_model"] == str(model)
+    assert started["args"][0] == str(binary)
+    assert started["args"][1:3] == ["--model", str(model)]
+    assert started["args"][started["args"].index("--port") + 1] == "8081"
+    assert pid_file.read_text(encoding="utf-8") == "12345"
+    assert saved["llm_fast_url"] == "http://127.0.0.1:8081/v1/chat/completions"
+    assert saved["llm_fast_models_url"] == "http://127.0.0.1:8081/v1/models"
+    assert saved["llm_quality_url"] == saved["llm_fast_url"]
+    assert saved["llm_quality_models_url"] == saved["llm_fast_models_url"]
+    metadata = json.loads(meta_file.read_text(encoding="utf-8"))
+    assert metadata["model"] == str(model)
+
+def test_find_binary_ignores_broken_direct_runtime_binary_and_uses_bundle(monkeypatch, tmp_path):
+    direct = tmp_path / "bin" / "llama-server"
+    nested = tmp_path / "bin" / "llama-bundle" / "llama-server"
+    direct.parent.mkdir(parents=True)
+    nested.parent.mkdir(parents=True)
+    direct.write_bytes(b"broken")
+    nested.write_bytes(b"working")
+    direct.chmod(0o755)
+    nested.chmod(0o755)
+
+    monkeypatch.setattr(local_backend, "DEFAULT_RUNTIME_DIR", tmp_path)
+    monkeypatch.setattr(
+        local_backend.shutil,
+        "which",
+        lambda _name: None,
+    )
+    monkeypatch.setattr(
+        local_backend,
+        "_binary_usable",
+        lambda path: path == str(nested),
+    )
+
+    assert local_backend._find_binary() == str(nested)
+
+
+
+def test_start_backend_reuse_persists_quality_routing(monkeypatch, tmp_path):
+    model = tmp_path / "qwen.gguf"
+    model.write_bytes(b"model")
+
+    binary = tmp_path / "llama-server"
+    binary.write_bytes(b"binary")
+    binary.chmod(0o755)
+
+    saved = {}
+
+    monkeypatch.setattr(local_backend, "ensure_llama_server", lambda: {
+        "binary": str(binary),
+        "downloaded": False,
+        "verified": True,
+    })
+    monkeypatch.setattr(local_backend, "discover_backend", lambda: {
+        "endpoint_up": True,
+        "managed_pid": 12345,
+        "managed_model": str(model),
+        "managed_port": 8082,
+        "loaded_models": [str(model)],
+    })
+    monkeypatch.setattr(local_backend, "save_config", lambda config: saved.update(config) or config)
+
+    result = local_backend.start_backend(model, preferred_port=8080)
+
+    assert result["managed_port"] == 8082
+    assert saved["llm_fast_url"] == "http://127.0.0.1:8082/v1/chat/completions"
+    assert saved["llm_fast_models_url"] == "http://127.0.0.1:8082/v1/models"
+    assert saved["llm_quality_url"] == saved["llm_fast_url"]
+    assert saved["llm_quality_models_url"] == saved["llm_fast_models_url"]
+
+
+def test_managed_pid_rejects_pid_reuse(monkeypatch, tmp_path):
+    pid_file = tmp_path / "llama-server.pid"
+    meta_file = tmp_path / "llama-server.json"
+    pid_file.write_text("12345", encoding="utf-8")
+    meta_file.write_text(
+        json.dumps({
+            "pid": 12345,
+            "model": str(tmp_path / "qwen.gguf"),
+            "port": 8081,
+            "binary": str(tmp_path / "llama-server"),
+        }),
+        encoding="utf-8",
+    )
+
+    monkeypatch.setattr(local_backend, "BACKEND_PID_FILE", pid_file)
+    monkeypatch.setattr(local_backend, "BACKEND_META_FILE", meta_file)
+    monkeypatch.setattr(local_backend.os, "kill", lambda *_args: None)
+    monkeypatch.setattr(
+        local_backend,
+        "_process_cmdline",
+        lambda _pid: ["/usr/bin/python", "unrelated.py"],
+    )
+
+    assert local_backend._managed_pid() is None
+    assert not pid_file.exists()
+    assert not meta_file.exists()
+
+
+def test_start_backend_rejects_unexpected_loaded_model(monkeypatch, tmp_path):
+    model = tmp_path / "qwen.gguf"
+    model.write_bytes(b"model")
+
+    binary = tmp_path / "llama-server"
+    binary.write_bytes(b"binary")
+    binary.chmod(0o755)
+
+    pid_file = tmp_path / "llama-server.pid"
+    meta_file = tmp_path / "llama-server.json"
+    log_file = tmp_path / "llama-server.log"
+
+    monkeypatch.setattr(local_backend, "BACKEND_PID_FILE", pid_file)
+    monkeypatch.setattr(local_backend, "BACKEND_META_FILE", meta_file)
+    monkeypatch.setattr(local_backend, "BACKEND_LOG_FILE", log_file)
+    monkeypatch.setattr(local_backend.os, "environ", dict(local_backend.os.environ))
+    monkeypatch.setattr(local_backend, "ensure_user_dirs", lambda: None)
+    monkeypatch.setattr(
+        local_backend,
+        "ensure_llama_server",
+        lambda: {"binary": str(binary), "downloaded": False, "verified": True},
+    )
+    monkeypatch.setattr(
+        local_backend,
+        "discover_backend",
+        lambda: {
+            "endpoint_up": False,
+            "managed_pid": None,
+            "managed_model": None,
+            "loaded_models": [],
+        },
+    )
+    monkeypatch.setattr(local_backend, "_url_ok", lambda *_args, **_kwargs: True)
+    monkeypatch.setattr(
+        local_backend,
+        "_models_payload",
+        lambda *_args, **_kwargs: {"data": [{"id": "wrong-model.gguf"}]},
+    )
+    monkeypatch.setattr(local_backend.time, "sleep", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr(local_backend, "save_config", lambda *_args, **_kwargs: None)
+
+    class FakeSocket:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc, tb):
+            return False
+
+        def bind(self, _address):
+            return None
+
+    monkeypatch.setattr(local_backend.socket, "socket", lambda: FakeSocket())
+
+    class FakeProcess:
+        pid = 12345
+        returncode = None
+
+        def poll(self):
+            return None
+
+        def terminate(self):
+            self.terminated = True
+
+    process = FakeProcess()
+    monkeypatch.setattr(local_backend.subprocess, "Popen", lambda *_args, **_kwargs: process)
+
+    try:
+        local_backend.start_backend(model, preferred_port=8082)
+    except RuntimeError as exc:
+        assert "unexpected model" in str(exc)
+    else:
+        raise AssertionError("backend must reject mismatched loaded model")
+    finally:
+        log_file.unlink(missing_ok=True)
+
+    assert process.terminated is True
+    assert not pid_file.exists()
+    assert not meta_file.exists()
