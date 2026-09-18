@@ -14,7 +14,8 @@ class RahbarAgent:
         response = generate(ROLE_PROMPTS["rahbar"], query)
         if response:
             return response
-        return f"پیشنهاد برای {query} توسط عامل Rahbar"
+        logger.warning("RahbarAgent model unavailable")
+        return None
 
     def analyze(self, *args, **kwargs):
         return self.suggest(*args, **kwargs)
