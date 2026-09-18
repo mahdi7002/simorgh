@@ -201,6 +201,8 @@ def ensure_llama_server() -> dict[str, Any]:
     fd, archive_name = tempfile.mkstemp(prefix="llama-server-", suffix=".tar.gz", dir=backend_dir)
     os.close(fd)
     archive = Path(archive_name)
+    extract_dir = Path(tempfile.mkdtemp(prefix="llama-bundle-", dir=backend_dir))
+    keep_extract = False
     try:
         request = urllib.request.Request(url, headers={"User-Agent": "SIMORGH/1.0"})
         with urllib.request.urlopen(request, timeout=120) as response, archive.open("wb") as output:
@@ -214,17 +216,18 @@ def ensure_llama_server() -> dict[str, Any]:
             raise RuntimeError(f"llama.cpp backend SHA-256 mismatch: expected {expected}, got {digest_actual}")
 
         with tarfile.open(archive, "r:gz") as tar:
-            root = backend_dir.resolve()
+            root = extract_dir.resolve()
             for member in tar.getmembers():
-                target = (backend_dir / member.name).resolve()
+                target = (extract_dir / member.name).resolve()
                 if root not in target.parents and target != root:
                     raise RuntimeError("unsafe llama.cpp archive path")
-            tar.extractall(backend_dir)
+            tar.extractall(extract_dir)
 
-        found = next((p for p in backend_dir.rglob("llama-server") if p.is_file()), None)
+        found = next((p for p in extract_dir.rglob("llama-server") if p.is_file()), None)
         if found is None:
             raise RuntimeError("verified llama.cpp archive did not contain llama-server")
         found.chmod(found.stat().st_mode | 0o111)
+        keep_extract = True
         return {
             "binary": str(found),
             "downloaded": True,
@@ -236,6 +239,8 @@ def ensure_llama_server() -> dict[str, Any]:
         }
     finally:
         archive.unlink(missing_ok=True)
+        if not keep_extract:
+            shutil.rmtree(extract_dir, ignore_errors=True)
 
 
 def _managed_pid() -> int | None:
