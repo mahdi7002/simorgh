@@ -22,7 +22,7 @@
 
 در شروع پذیرش اولیه، `HEAD = a782ceb7f126f37344c093047648d362e0a79820` و `origin/main` نیز همان commit بود.
 
-پس از اصلاح provenance/disclosure و سخت‌سازی audit، `main` تا commit نهایی `f1a76fffd1c2d2d9fc71babcded62b8faf699bc8` پیش رفت.
+پس از اصلاح provenance/disclosure و سخت‌سازی audit، `main` به `ebf4b5c3ceb9f1c86a67b34ff8e292bfc71fdc0a` رسید؛ سپس اصلاح یکپارچهٔ provenance برای همهٔ endpointهای تولید پاسخ در PR #37 ادغام شد و `main` اکنون روی `602271792e73f4bec512e70bc23310ff9a7e867c` است.
 
 در ممیزی واقعی پس از به‌روزرسانی نهایی:
 
@@ -390,6 +390,21 @@ X-SIMORGH-AI-GENERATED: false
 
 و regression test جداگانه برای هر دو حالت اضافه شد.
 
+### گسترش provenance به همهٔ سطوح پاسخ
+
+در بازبینی بعدی یک نقص باقی‌مانده در خارج از `/chat` پیدا شد: `/ask`، `/orchestrate` و `/voice` هنوز می‌توانستند پاسخ بدون مدل را با نشانهٔ عمومی AI همراه کنند. علاوه بر آن، سه agent قدیمی در نبود مدل متن ساختگیِ شبیه خروجی مدل تولید می‌کردند.
+
+در PR #37 اصلاح شد:
+
+- fallbackهای مصنوعی Hakim/Nazer/Rahbar حذف و به `None` تبدیل شدند تا نبود مدل جعل نشود.
+- `AgentManager` در نبود مدل به fallback قطعی Database-First برمی‌گردد و metadata تولید را حفظ می‌کند.
+- `Orchestrator` provenance هر agent را نگه می‌دارد و `main.py` مقدار aggregate `ai_generated` را برمی‌گرداند.
+- `/ask` و `/orchestrate` همان قرارداد disclosure مدل/دانش را مانند `/chat` ارائه می‌کنند.
+- `/voice` پرچم generation متن را به header منتقل می‌کند.
+- UI به‌جای نمایش ثابت `[AI disclosure]`، label متناسب با provenance را نشان می‌دهد.
+
+این تغییرات در کد و تست regression ثبت شده‌اند، اما **[NOT VERIFIED]** است که چهار تست جدید روی ماشین Linux مورد آزمایش پس از merge اجرا شده باشند؛ آخرین اجرای واقعی گزارش‌شده قبل از PR #37 همان `84 passed` بود.
+
 ## 10. مدل‌های محلی
 
 روی ماشین مورد آزمایش، پروفایل سخت‌افزار به‌صورت UI گزارش شد:
@@ -445,10 +460,14 @@ PRهای مربوط به مسیر user-first و سرویس پایدار ادغا
 - #29: persistent user service
 - #30: service idempotency
 - #31: final installer health-flow fix
+- #34: crash-recovery audit readiness polling
+- #35: documentation of the crash-recovery audit race
+- #36: synchronization of the final audit with the latest main evidence
+- #37: unified provenance across all response endpoints
 
 commit نهایی فعلی `main`:
 
-`f1a76fffd1c2d2d9fc71babcded62b8faf699bc8`
+`602271792e73f4bec512e70bc23310ff9a7e867c`
 
 در زمان این گزارش، GitHub connector برای این commit workflow run ثبت‌شده‌ای برنگرداند و status check مستقیمی نیز گزارش نشد. بنابراین این سند **[NOT VERIFIED]** بودن CI برای همین commit را صریحاً نگه می‌دارد و از «CI سبز» نتیجه‌گیری نمی‌کند.
 
@@ -470,7 +489,8 @@ commit نهایی فعلی `main`:
 | crash recovery | PASS | PID 39131 -> 40377 |
 | health after crash | PASS | healthy |
 | Database-First without model | PASS | UI/runtime evidence |
-| AI/knowledge disclosure distinction | FIXED IN THIS AUDIT | code + regression test |
+| AI/knowledge disclosure distinction in `/chat` | PASS | code + regression test + real local audit |
+| provenance consistency in `/ask`, `/orchestrate`, `/voice` | [NOT VERIFIED] | PR #37 merged; post-merge local execution pending |
 | logout end-to-end | [NOT VERIFIED] | هنوز عمداً انجام نشده |
 | reboot end-to-end | [NOT VERIFIED] | هنوز عمداً انجام نشده |
 | Qwen 1.5B full install/generation | [NOT VERIFIED] | آزمون مستقل ثبت نشده |
