@@ -8,8 +8,8 @@ import requests
 logger = logging.getLogger(__name__)
 FAST_URL = os.environ.get("SIMORGH_LLM_FAST_URL", "http://127.0.0.1:8080/v1/chat/completions")
 QUALITY_URL = os.environ.get("SIMORGH_LLM_QUALITY_URL", "http://127.0.0.1:8081/v1/chat/completions")
-FAST_TIMEOUT = float(os.getenv("SIMORGH_FAST_TIMEOUT", "8"))
-QUALITY_TIMEOUT = float(os.getenv("SIMORGH_QUALITY_TIMEOUT", "2"))
+FAST_TIMEOUT = float(os.getenv("SIMORGH_FAST_TIMEOUT", "30"))
+QUALITY_TIMEOUT = float(os.getenv("SIMORGH_QUALITY_TIMEOUT", "30"))
 FAST_MODELS_URL = os.environ.get("SIMORGH_LLM_FAST_MODELS_URL", "http://127.0.0.1:8080/v1/models")
 QUALITY_MODELS_URL = os.environ.get("SIMORGH_LLM_QUALITY_MODELS_URL", "http://127.0.0.1:8081/v1/models")
 
