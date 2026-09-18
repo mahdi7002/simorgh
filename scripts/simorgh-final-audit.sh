@@ -238,7 +238,19 @@ if [ "${1:-}" = "--crash-test" ]; then
         done
         if [ "$NEW_PID" != "" ] && [ "$NEW_PID" != "0" ] && [ "$NEW_PID" != "$OLD_PID" ]; then
             ok "service auto-restarted: $OLD_PID -> $NEW_PID"
-            curl -fsS "http://127.0.0.1:$PORT/health" >/dev/null                 && ok "health recovered after crash"                 || fail "health did not recover after crash"
+            RECOVERED=0
+            for _ in $(seq 1 40); do
+                if curl -fsS "http://127.0.0.1:$PORT/health" >/dev/null 2>&1; then
+                    RECOVERED=1
+                    break
+                fi
+                sleep 0.25
+            done
+            if [ "$RECOVERED" -eq 1 ]; then
+                ok "health recovered after crash"
+            else
+                fail "health did not recover after crash"
+            fi
         else
             fail "service did not obtain a new MainPID after crash"
         fi
