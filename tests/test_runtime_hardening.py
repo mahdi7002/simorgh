@@ -181,7 +181,7 @@ def test_chat_response_disclosure_and_security_headers(monkeypatch):
     from fastapi.testclient import TestClient
     import main
 
-    monkeypatch.setattr(main, "chat_ask", lambda query, agent="hakim": "پاسخ آزمایشی")
+    monkeypatch.setattr(main, "chat_ask", lambda query, agent="hakim", return_metadata=False: ("پاسخ آزمایشی", True))
     monkeypatch.setattr(main.memory, "store_conversation", lambda *args, **kwargs: None)
 
     client = TestClient(main.app)
@@ -193,11 +193,41 @@ def test_chat_response_disclosure_and_security_headers(monkeypatch):
 
     assert response.status_code == 200
     body = response.json()
+    assert body["ai_generated"] is True
     assert body["ai_disclosure"] == main.AI_DISCLOSURE
+    assert body["knowledge_disclosure"] is None
+    assert body["disclosure"] == main.AI_DISCLOSURE
     assert response.headers["x-simorgh-ai-generated"] == "true"
     assert response.headers["x-content-type-options"] == "nosniff"
     assert response.headers["x-frame-options"] == "DENY"
     assert response.headers["referrer-policy"] == "no-referrer"
+
+
+def test_chat_database_first_disclosure_is_not_ai_generated(monkeypatch):
+    from fastapi.testclient import TestClient
+    import main
+
+    monkeypatch.setattr(
+        main,
+        "chat_ask",
+        lambda query, agent="hakim", return_metadata=False: ("پاسخ مستقیم از پایگاه دانش", False),
+    )
+    monkeypatch.setattr(main.memory, "store_conversation", lambda *args, **kwargs: None)
+
+    client = TestClient(main.app)
+    response = client.post(
+        "/chat",
+        data={"query": "یک پرسش محلی", "agent": "hakim"},
+        headers={"x-simorgh-session": "test-session"},
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["ai_generated"] is False
+    assert body["ai_disclosure"] is None
+    assert body["knowledge_disclosure"] == main.KNOWLEDGE_DISCLOSURE
+    assert body["disclosure"] == main.KNOWLEDGE_DISCLOSURE
+    assert response.headers["x-simorgh-ai-generated"] == "false"
 
 
 def test_global_request_body_limit_is_configured():

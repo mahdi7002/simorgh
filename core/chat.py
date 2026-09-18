@@ -186,7 +186,8 @@ def ask(
     *,
     tool_context: str = "",
     use_builtin_tools: bool = True,
-) -> str:
+    return_metadata: bool = False,
+) -> str | tuple[str, bool]:
     if not question or not question.strip():
         return "بله؟ چیزی بپرس."
 
@@ -231,6 +232,8 @@ def ask(
 
     if not response:
         database_response, _sources = build_database_answer(question)
+        if return_metadata:
+            return database_response, False
         return database_response
 
     handoff = suggest_handoff(question, agent)
@@ -242,4 +245,6 @@ def ask(
     if tier == "large" and len(response) > 600:
         response += "\n\n📄 اگه بخوای، می‌تونم این رو به‌صورت یک فایل هم برات ذخیره کنم — فقط بگو."
 
+    if return_metadata:
+        return response, True
     return response

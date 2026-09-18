@@ -112,6 +112,8 @@ journalctl --user -u simorgh.service -n 80 --no-pager
 
 راهنمای کامل کاربر: [`docs/USER_INSTALL.md`](docs/USER_INSTALL.md)
 راهنمای AppImage: [`docs/APPIMAGE.md`](docs/APPIMAGE.md)
+گزارش ممیزی عملیاتی نهایی و شواهد اجرایی: [`docs/FINAL_OPERATIONAL_AUDIT_2026-09-18.md`](docs/FINAL_OPERATIONAL_AUDIT_2026-09-18.md)
+ممیزی تکرارپذیر: `./scripts/simorgh-final-audit.sh`
 
 ## Developer quick start
 
