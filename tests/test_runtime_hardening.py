@@ -23,6 +23,7 @@ def test_fast_llm_uses_fast_timeout(monkeypatch):
         return FakeResponse()
 
     monkeypatch.setattr(llm.requests, "post", fake_post)
+    monkeypatch.setenv("SIMORGH_LLM_FAST_URL", llm.FAST_URL)
     monkeypatch.setattr(llm, "FAST_TIMEOUT", 8.0)
     monkeypatch.setattr(llm, "QUALITY_TIMEOUT", 2.0)
 
@@ -49,6 +50,7 @@ def test_quality_llm_uses_quality_timeout(monkeypatch):
         return FakeResponse()
 
     monkeypatch.setattr(llm.requests, "post", fake_post)
+    monkeypatch.setenv("SIMORGH_LLM_QUALITY_URL", llm.QUALITY_URL)
     monkeypatch.setattr(llm, "FAST_TIMEOUT", 8.0)
     monkeypatch.setattr(llm, "QUALITY_TIMEOUT", 2.0)
 
