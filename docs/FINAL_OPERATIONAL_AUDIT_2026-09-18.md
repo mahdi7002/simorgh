@@ -20,15 +20,13 @@
 
 ## 2. نسخهٔ مبنا
 
-در شروع این پذیرش:
+در شروع پذیرش اولیه، `HEAD = a782ceb7f126f37344c093047648d362e0a79820` و `origin/main` نیز همان commit بود.
 
-`HEAD = a782ceb7f126f37344c093047648d362e0a79820`
+پس از اصلاح provenance/disclosure و سخت‌سازی audit، `main` تا commit نهایی `f1a76fffd1c2d2d9fc71babcded62b8faf699bc8` پیش رفت.
 
-و `origin/main` نیز همان commit بود.
+در ممیزی واقعی پس از به‌روزرسانی نهایی:
 
-در همان checkout محلی:
-
-`83 passed in 25.53s`
+`84 passed`
 
 و این بررسی‌های syntax موفق بودند:
 
@@ -448,9 +446,9 @@ PRهای مربوط به مسیر user-first و سرویس پایدار ادغا
 - #30: service idempotency
 - #31: final installer health-flow fix
 
-commit مبنا:
+commit نهایی فعلی `main`:
 
-`a782ceb7f126f37344c093047648d362e0a79820`
+`f1a76fffd1c2d2d9fc71babcded62b8faf699bc8`
 
 در زمان این گزارش، GitHub connector برای این commit workflow run ثبت‌شده‌ای برنگرداند و status check مستقیمی نیز گزارش نشد. بنابراین این سند **[NOT VERIFIED]** بودن CI برای همین commit را صریحاً نگه می‌دارد و از «CI سبز» نتیجه‌گیری نمی‌کند.
 
@@ -459,7 +457,7 @@ commit مبنا:
 | مورد | وضعیت | شاهد |
 |---|---|---|
 | Git local = origin/main | PASS | commit یکسان |
-| 83 تست Python | PASS | اجرای واقعی محلی |
+| 84 تست Python | PASS | اجرای واقعی محلی پس از اصلاح نهایی |
 | shell syntax | PASS | سه اسکریپت |
 | old service disabled | PASS | inactive/disabled |
 | new user service enabled | PASS | systemd user |
