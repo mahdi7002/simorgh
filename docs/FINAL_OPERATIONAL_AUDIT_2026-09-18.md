@@ -50,7 +50,7 @@ simorgh.service
 scripts/simorgh-run.sh
     |
     v
-/home/mahdi/simorgh/.venv/bin/python main.py
+~/simorgh/.venv/bin/python main.py
     |
     v
 127.0.0.1:8000
@@ -60,16 +60,16 @@ scripts/simorgh-run.sh
 
 ```text
 Config:
-  /home/mahdi/.config/simorgh/
+  ~/.config/simorgh/
 
 Runtime/Data:
-  /home/mahdi/.local/share/simorgh/
+  ~/.local/share/simorgh/
 
 Memory:
-  /home/mahdi/.local/share/simorgh/memory
+  ~/.local/share/simorgh/memory
 
 Models:
-  /home/mahdi/.local/share/simorgh/models
+  ~/.local/share/simorgh/models
 ```
 
 در پذیرش واقعی این وضعیت مشاهده شد:
@@ -83,7 +83,7 @@ Linger=yes
 و process واقعی:
 
 ```text
-/home/mahdi/simorgh/.venv/bin/python main.py
+~/simorgh/.venv/bin/python main.py
 ```
 
 Health واقعی نیز برگرداند:
@@ -109,7 +109,7 @@ bash: cd: /tmp/tmp.ASBJOMSUN1/simorgh: No such file or directory
 
 ```bash
 export HOME=/home/mahdi
-cd /home/mahdi/simorgh
+cd ~/simorgh
 ```
 
 ### 4.2. برخورد سرویس قدیمی با smoke test
@@ -123,7 +123,7 @@ simorgh-core.service
 در سطح system systemd فعال بود و از runtime دیگری اجرا می‌شد:
 
 ```text
-/home/mahdi/SimorghCore/venv/bin/python3
+~/SimorghCore/venv/bin/python3
 ```
 
 این سرویس باعث شد یک smoke test قبلی به پورت 8000 وصل شود ولی در واقع پاسخ نسخهٔ قدیمی را بگیرد. نشانه‌های قطعی:
@@ -172,8 +172,8 @@ unset XDG_CONFIG_HOME
 unset XDG_DATA_HOME
 unset SIMORGH_RUNTIME_DIR
 unset SIMORGH_PORT
-rm -rf /home/mahdi/.config/simorgh
-rm -rf /home/mahdi/.local/share/simorgh
+rm -rf ~/.config/simorgh
+rm -rf ~/.local/share/simorgh
 ```
 
 و نصب مجدد با محیط تمیز انجام شد.
@@ -181,7 +181,7 @@ rm -rf /home/mahdi/.local/share/simorgh
 وضعیت نهایی مشاهده‌شده:
 
 ```text
-runtime_dir = /home/mahdi/.local/share/simorgh
+runtime_dir = ~/.local/share/simorgh
 port = 8000
 privacy_mode = local-only
 ```
@@ -193,7 +193,7 @@ privacy_mode = local-only
 برای جلوگیری از اختلاط launcher قدیمی با service جدید حذف شد:
 
 ```bash
-rm -f /home/mahdi/simorgh/simorgh.pid
+rm -f ~/simorgh/simorgh.pid
 ```
 
 service فعلی PID خود را از systemd می‌گیرد و runner جدید فایل PID را در runtime کاربر نگه می‌دارد.
@@ -483,8 +483,8 @@ commit نهایی فعلی `main`:
 | new user service active | PASS | systemd user |
 | repo-local Python | PASS | process واقعی |
 | Python 3.13.15 | PASS | /health |
-| persistent runtime path | PASS | /home/mahdi/.local/share/simorgh |
-| runtime config path | PASS | /home/mahdi/.config/simorgh |
+| persistent runtime path | PASS | ~/.local/share/simorgh |
+| runtime config path | PASS | ~/.config/simorgh |
 | Linger enabled | PASS | Linger=yes |
 | crash recovery | PASS | PID 39131 -> 40377 |
 | health after crash | PASS | healthy |
