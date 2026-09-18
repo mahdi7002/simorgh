@@ -4,6 +4,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import re
 import shutil
 import signal
 import socket
@@ -22,6 +23,66 @@ BACKEND_META_FILE = DEFAULT_RUNTIME_DIR / "llama-server.json"
 BACKEND_LOG_FILE = RUNTIME_LOG_DIR / "llama-server.log"
 GITHUB_RELEASES = "https://api.github.com/repos/ggml-org/llama.cpp/releases"
 
+def _sha256_file(path: Path, chunk_size: int = 1024 * 1024) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(chunk_size), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+def _infer_release_tag(path: Path) -> str | None:
+    for parent in (path.parent, *path.parents):
+        match = re.fullmatch(r"llama-(b\d+|v\d+(?:\.\d+){1,3})", parent.name)
+        if match:
+            return match.group(1)
+    return None
+
+def _binary_provenance(path: str) -> dict[str, Any]:
+    binary = Path(path).resolve()
+    result: dict[str, Any] = {
+        "binary_sha256": _sha256_file(binary),
+        "release_tag": _infer_release_tag(binary),
+        "release_prerelease": False,
+        "provenance_verified": False,
+    }
+    for parent in (binary.parent, *binary.parents):
+        metadata_path = parent / "simorgh-backend.json"
+        try:
+            metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            continue
+        if metadata.get("binary_sha256") == result["binary_sha256"]:
+            result["release_tag"] = metadata.get("release_tag") or result["release_tag"]
+            result["release_prerelease"] = bool(metadata.get("release_prerelease"))
+            result["provenance_verified"] = bool(metadata.get("provenance_verified"))
+            result["asset"] = metadata.get("asset")
+            result["archive_sha256"] = metadata.get("archive_sha256")
+        break
+    if isinstance(result.get("release_tag"), str) and result["release_tag"].startswith("b"):
+        result["release_prerelease"] = True
+    return result
+
+def _process_cmdline(pid: int) -> list[str] | None:
+    try:
+        raw = Path(f"/proc/{pid}/cmdline").read_bytes()
+    except OSError:
+        return None
+    return [part.decode("utf-8", "replace") for part in raw.split(b"\0") if part]
+
+def _cleanup_managed_state() -> None:
+    BACKEND_PID_FILE.unlink(missing_ok=True)
+    BACKEND_META_FILE.unlink(missing_ok=True)
+
+def _model_id_matches(model_id: str, model: Path) -> bool:
+    if not isinstance(model_id, str) or not model_id:
+        return False
+    try:
+        candidate = Path(model_id).expanduser()
+        if candidate.is_absolute() and candidate.resolve() == model:
+            return True
+    except OSError:
+        pass
+    return Path(model_id).name == model.name
 
 def _url_ok(url: str, timeout: float = 1.5) -> bool:
     try:
@@ -185,7 +246,7 @@ def ensure_llama_server() -> dict[str, Any]:
     ensure_user_dirs()
     binary = _find_binary()
     if binary:
-        return {"binary": binary, "downloaded": False, "verified": True}
+        return {"binary": binary, "downloaded": False, "verified": True, **_binary_provenance(binary)}
 
     asset = _select_release_asset(_release_list())
     digest = str(asset.get("digest", ""))
@@ -227,12 +288,31 @@ def ensure_llama_server() -> dict[str, Any]:
         if found is None:
             raise RuntimeError("verified llama.cpp archive did not contain llama-server")
         found.chmod(found.stat().st_mode | 0o111)
+        binary_sha256 = _sha256_file(found)
+        release_tag = asset.get("release_tag")
+        release_prerelease = bool(asset.get("release_prerelease"))
+        (extract_dir / "simorgh-backend.json").write_text(
+            json.dumps(
+                {
+                    "binary_sha256": binary_sha256,
+                    "release_tag": release_tag,
+                    "release_prerelease": release_prerelease,
+                    "asset": asset.get("name"),
+                    "archive_sha256": expected,
+                    "provenance_verified": True,
+                },
+                ensure_ascii=False,
+                indent=2,
+            ),
+            encoding="utf-8",
+        )
         keep_extract = True
         return {
             "binary": str(found),
             "downloaded": True,
             "verified": True,
             "sha256": expected,
+            "binary_sha256": binary_sha256,
             "asset": asset.get("name"),
             "release_tag": asset.get("release_tag"),
             "release_prerelease": asset.get("release_prerelease"),
