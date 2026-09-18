@@ -225,3 +225,111 @@ def test_start_backend_reuse_persists_quality_routing(monkeypatch, tmp_path):
     assert saved["llm_fast_models_url"] == "http://127.0.0.1:8082/v1/models"
     assert saved["llm_quality_url"] == saved["llm_fast_url"]
     assert saved["llm_quality_models_url"] == saved["llm_fast_models_url"]
+
+
+def test_managed_pid_rejects_pid_reuse(monkeypatch, tmp_path):
+    pid_file = tmp_path / "llama-server.pid"
+    meta_file = tmp_path / "llama-server.json"
+    pid_file.write_text("12345", encoding="utf-8")
+    meta_file.write_text(
+        json.dumps({
+            "pid": 12345,
+            "model": str(tmp_path / "qwen.gguf"),
+            "port": 8081,
+            "binary": str(tmp_path / "llama-server"),
+        }),
+        encoding="utf-8",
+    )
+
+    monkeypatch.setattr(local_backend, "BACKEND_PID_FILE", pid_file)
+    monkeypatch.setattr(local_backend, "BACKEND_META_FILE", meta_file)
+    monkeypatch.setattr(local_backend.os, "kill", lambda *_args: None)
+    monkeypatch.setattr(
+        local_backend,
+        "_process_cmdline",
+        lambda _pid: ["/usr/bin/python", "unrelated.py"],
+    )
+
+    assert local_backend._managed_pid() is None
+    assert not pid_file.exists()
+    assert not meta_file.exists()
+
+
+def test_start_backend_rejects_unexpected_loaded_model(monkeypatch, tmp_path):
+    model = tmp_path / "qwen.gguf"
+    model.write_bytes(b"model")
+
+    binary = tmp_path / "llama-server"
+    binary.write_bytes(b"binary")
+    binary.chmod(0o755)
+
+    pid_file = tmp_path / "llama-server.pid"
+    meta_file = tmp_path / "llama-server.json"
+    log_file = tmp_path / "llama-server.log"
+
+    monkeypatch.setattr(local_backend, "BACKEND_PID_FILE", pid_file)
+    monkeypatch.setattr(local_backend, "BACKEND_META_FILE", meta_file)
+    monkeypatch.setattr(local_backend, "BACKEND_LOG_FILE", log_file)
+    monkeypatch.setattr(local_backend.os, "environ", dict(local_backend.os.environ))
+    monkeypatch.setattr(local_backend, "ensure_user_dirs", lambda: None)
+    monkeypatch.setattr(
+        local_backend,
+        "ensure_llama_server",
+        lambda: {"binary": str(binary), "downloaded": False, "verified": True},
+    )
+    monkeypatch.setattr(
+        local_backend,
+        "discover_backend",
+        lambda: {
+            "endpoint_up": False,
+            "managed_pid": None,
+            "managed_model": None,
+            "loaded_models": [],
+        },
+    )
+    monkeypatch.setattr(local_backend, "_url_ok", lambda *_args, **_kwargs: True)
+    monkeypatch.setattr(
+        local_backend,
+        "_models_payload",
+        lambda *_args, **_kwargs: {"data": [{"id": "wrong-model.gguf"}]},
+    )
+    monkeypatch.setattr(local_backend.time, "sleep", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr(local_backend, "save_config", lambda *_args, **_kwargs: None)
+
+    class FakeSocket:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc, tb):
+            return False
+
+        def bind(self, _address):
+            return None
+
+    monkeypatch.setattr(local_backend.socket, "socket", lambda: FakeSocket())
+
+    class FakeProcess:
+        pid = 12345
+        returncode = None
+
+        def poll(self):
+            return None
+
+        def terminate(self):
+            self.terminated = True
+
+    process = FakeProcess()
+    monkeypatch.setattr(local_backend.subprocess, "Popen", lambda *_args, **_kwargs: process)
+
+    try:
+        local_backend.start_backend(model, preferred_port=8082)
+    except RuntimeError as exc:
+        assert "unexpected model" in str(exc)
+    else:
+        raise AssertionError("backend must reject mismatched loaded model")
+    finally:
+        log_file.unlink(missing_ok=True)
+
+    assert process.terminated is True
+    assert not pid_file.exists()
+    assert not meta_file.exists()
