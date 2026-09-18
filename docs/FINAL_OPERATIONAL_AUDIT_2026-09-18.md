@@ -414,65 +414,43 @@ GPU = GeForce GT 730
 tier = small
 ```
 
-مدل انتخابی:
-
-```text
-Qwen2.5 1.5B Instruct Q4_K_M
-file = qwen2.5-1.5b-instruct-q4_k_m.gguf
-license = Apache-2.0
-```
-
-SHA-256 واقعی فایل مدل با مقدار pinned برابر است:
+کاتالوگ مدل محلی شامل Qwen2.5 1.5B Instruct Q4_K_M است و برای آن SHA-256 pinned ثبت شده است:
 
 ```text
 6a1a2eb6d15622bf3c96857206351ba97e1af16c30d7a74ee38970e434e9407e
 ```
 
-نصب end-to-end روی همین ماشین واقعاً انجام شد:
+در پذیرش‌های قبلی، نصب و اجرای backend مدیریت‌شدهٔ llama.cpp برای این مدل گزارش شده بود. اما در اجرای release فعلی که در همین دور ثبت شد، سرویس روی پورت 8000 پاسخ زیر را برگرداند:
 
 ```text
-managed backend = http://127.0.0.1:8081
-llama.cpp release = b11026
-managed PID = 56971
-loaded model = ~/.local/share/simorgh/models/qwen2.5-1.5b-instruct-q4_k_m.gguf
+python_version = 3.10.12
+backend endpoint_up = false
+managed_pid = null
+loaded_models = []
+ready = false
 ```
 
-همزمان backend قدیمی و غیرمدیریت‌شده روی:
+همچنین `/chat` در همین اجرای release با:
 
 ```text
-127.0.0.1:8080
+ai_generated = false
 ```
 
-باقی ماند و SIMORGH آن را به‌جای backend خودش استفاده نکرد.
+پاسخ Database-First داد.
 
-آزمون مستقیم `/v1/chat/completions` روی backend مدیریت‌شده پاسخ واقعی تولید کرد. در یکی از آزمون‌ها 35 توکن در حدود 3.14 ثانیه تولید شد.
+بنابراین شواهد فعلی release-run نشان می‌دهد سرویس مورد پاسخ‌گو روی پورت 8000 همان runtime مورد انتظار Python 3.13.15 نبوده، یا با یک process قدیمی/متفاوت تداخل داشته است. این موضوع باید قبل از Release نهایی رفع و دوباره مشاهده شود.
 
-آزمون مسیر کامل:
+نتیجهٔ فعلی:
 
 ```text
-POST /chat
-agent = hakim
-HTTP 200
-ai_generated = true
-X-SIMORGH-AI-GENERATED: true
+Local tests on main       = PASS
+CI for PR #41             = PASS
+Release-run service ID    = NOT PASS
+Qwen generation in run    = NOT VERIFIED
+Semantic answer quality   = NOT VERIFIED
 ```
 
-زمان یک آزمون واقعی `/chat` حدود 5.9 ثانیه بود.
-
-### محدودیت کیفیت مدل
-
-این شواهد فقط اجرای واقعی مدل و مسیر provenance را ثابت می‌کنند، نه صحت معنایی پاسخ.
-
-در آزمون‌های واقعی، Qwen2.5 1.5B به پرسش سادهٔ «سیمرغ چیست؟» پاسخ نادرست تولید کرد. بنابراین:
-
-```text
-Backend works           = PASS
-Real model generation   = PASS
-AI provenance           = PASS
-Semantic answer quality = NOT PASS
-```
-
-این محدودیت به‌عنوان ضعف مدل کوچک/تنظیمات prompt ثبت می‌شود و نباید با وضعیت زیرساخت اشتباه گرفته شود.
+این گزارش عمداً بین «کد آزمایش‌شده»، «سرویس واقعاً پاسخ‌گو» و «کیفیت خروجی مدل» تفاوت می‌گذارد.
 
 ## 11. مرز شبکه و حریم خصوصی
 
@@ -568,21 +546,27 @@ chmod +x scripts/simorgh-final-audit.sh
 
 ## 15. جمع‌بندی پذیرش
 
-در تاریخ 2026-09-18، مسیر اصلی اجرای محلی SIMORGH روی ماشین Linux مورد آزمایش به یک وضعیت عملیاتی قابل تکرار رسید:
+در تاریخ 2026-09-18، مسیر کد و CI مربوط به PR #41 به وضعیت سبز رسید و 97 تست محلی نیز PASS شدند. PR #41 با merge commit:
 
-- checkout محلی با head شاخهٔ PR #41 دقیقاً هم‌تراز GitHub شد؛
-- 97 تست محلی PASS شد؛
-- PR #41 پس از سبز شدن چهار workflow اصلی با squash merge وارد `main` شد؛
-- Qwen2.5 1.5B با SHA-256 pinned واقعاً نصب و اجرا شد؛
-- backend مدیریت‌شدهٔ SIMORGH روی `127.0.0.1:8081` راه افتاد؛
-- backend غیرمدیریت‌شدهٔ موجود روی `127.0.0.1:8080` دست‌نخورده باقی ماند؛
-- مسیر کامل `/chat` واقعاً از مدل استفاده کرد و provenance صحیح را اعلام کرد؛
-- تنظیمات fast/quality backend در runtime کاربر persist شدند؛
-- process و model identity در lifecycle backend سخت‌گیرانه‌تر بررسی می‌شوند.
+`486a255b1980095e211e863b4b1219788cd8c389`
 
-محدودیت باقی‌ماندهٔ مهم این است که مدل Qwen2.5 1.5B روی همین پرسش‌های پایه هنوز پاسخ معنایی قابل‌اعتمادی تولید نمی‌کند. بنابراین release این نسخه باید **پایداری زیرساخت، provenance و قابلیت اجرای مدل** را ادعا کند، نه دقت عمومی مدل را.
+وارد `main` شد.
 
-همچنین logout/reboot فیزیکی end-to-end و اجرای post-merge مستقلِ همهٔ endpointهای provenance هنوز به‌طور مستقیم مشاهده و ثبت نشده‌اند.
+با این حال، اجرای release روی ماشین مورد آزمایش یک تناقض عملیاتی را آشکار کرد: پس از `systemctl --user restart simorgh.service`، endpoint مورد دسترسی روی پورت 8000 هنوز `python_version=3.10.12` گزارش کرد؛ در همان زمان backend مدیریت‌شدهٔ Qwen روی 8081 در دسترس نبود و مسیر `/chat` به Database-First برگشت.
+
+بنابراین این سند در وضعیت فعلی **Release Readiness را تأیید نمی‌کند**. قبل از انتشار معتبر باید هویت process سرویس 8000، Python runtime، وضعیت backend 8081 و یک generation واقعی از Qwen در همان اجرای نهایی دوباره اثبات شوند.
+
+همچنین tag `v0.1.0` در اجرای ثبت‌شده قبل از merge شدن audit نهایی ساخته و push شد؛ بنابراین باید آن tag/release اصلاح یا کنار گذاشته شود و tag نهایی فقط روی commitی ساخته شود که audit اصلاح‌شده و CI سبز را در خود دارد.
+
+تفکیک پذیرش:
+
+```text
+97 tests                  = PASS
+PR #41 CI                 = PASS
+Release service identity  = BLOCKED
+Qwen generation in run    = NOT VERIFIED
+Public/legal clearance    = NOT VERIFIED
+```
 
 این تفکیک عمدی است:
 
@@ -590,4 +574,5 @@ chmod +x scripts/simorgh-final-audit.sh
 Installed       ≠ Accurate
 Generated       ≠ Verified
 Healthy         ≠ Correct
+Port open       ≠ Correct process
 ```
