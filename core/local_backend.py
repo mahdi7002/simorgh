@@ -31,6 +31,32 @@ def _url_ok(url: str, timeout: float = 1.5) -> bool:
         return False
 
 
+def _models_payload(url: str, timeout: float = 1.5) -> dict[str, Any] | None:
+    try:
+        request = urllib.request.Request(url, headers={"Accept": "application/json", "User-Agent": "SIMORGH/1.0"})
+        with urllib.request.urlopen(request, timeout=timeout) as response:
+            payload = json.loads(response.read().decode("utf-8"))
+        return payload if isinstance(payload, dict) else None
+    except Exception:
+        return None
+
+
+def _model_ids(payload: dict[str, Any] | None) -> list[str]:
+    if not payload:
+        return []
+    entries = payload.get("data") or payload.get("models") or []
+    if not isinstance(entries, list):
+        return []
+    ids: list[str] = []
+    for entry in entries:
+        if not isinstance(entry, dict):
+            continue
+        value = entry.get("id") or entry.get("model") or entry.get("name")
+        if isinstance(value, str) and value:
+            ids.append(value)
+    return ids
+
+
 def _find_binary() -> str | None:
     candidates = [
         shutil.which("llama-server"),
@@ -51,23 +77,19 @@ def _free_port(start: int = 8080, end: int = 8090) -> int:
     raise RuntimeError("no free local backend port in 8080-8090")
 
 
-def _release_assets() -> list[dict[str, Any]]:
+def _release_list() -> list[dict[str, Any]]:
     request = urllib.request.Request(
         GITHUB_RELEASES,
         headers={"Accept": "application/vnd.github+json", "User-Agent": "SIMORGH/1.0"},
     )
     with urllib.request.urlopen(request, timeout=15) as response:
-        releases = json.loads(response.read().decode("utf-8"))
-    for release in releases:
-        if release.get("draft") or release.get("prerelease"):
-            continue
-        assets = release.get("assets") or []
-        if assets:
-            return assets
-    return []
+        payload = json.loads(response.read().decode("utf-8"))
+    if not isinstance(payload, list):
+        raise RuntimeError("llama.cpp releases API returned an unexpected payload")
+    return [item for item in payload if isinstance(item, dict)]
 
 
-def _asset_for_host(assets: list[dict[str, Any]]) -> dict[str, Any]:
+def _asset_for_host(assets: list[dict[str, Any]]) -> dict[str, Any] | None:
     machine = os.uname().machine.lower() if hasattr(os, "uname") else ""
     if machine in {"x86_64", "amd64"}:
         token = "ubuntu-x64"
@@ -78,15 +100,47 @@ def _asset_for_host(assets: list[dict[str, Any]]) -> dict[str, Any]:
     else:
         raise RuntimeError(f"unsupported llama.cpp host architecture: {machine or 'unknown'}")
     matches = [
-        asset for asset in assets
+        asset
+        for asset in assets
         if token in str(asset.get("name", ""))
         and str(asset.get("name", "")).endswith(".tar.gz")
         and "bin-" in str(asset.get("name", ""))
-        and all(part not in str(asset.get("name", "")).lower() for part in ("cuda", "vulkan", "rocm", "openvino", "sycl", "hip"))
+        and all(
+            part not in str(asset.get("name", "")).lower()
+            for part in ("cuda", "vulkan", "rocm", "openvino", "sycl", "hip")
+        )
     ]
-    if not matches:
-        raise RuntimeError(f"no verified CPU llama.cpp binary available for {token}")
-    return matches[0]
+    return matches[0] if matches else None
+
+
+def _select_release_asset(releases: list[dict[str, Any]]) -> dict[str, Any]:
+    """Select the newest official CPU asset, preferring stable releases.
+
+    Some stable releases can exist without binary assets and instead point at a
+    nightly build. In that case, use the newest release with a matching CPU
+    asset and preserve its prerelease status in the returned provenance.
+    """
+    prerelease_candidate: dict[str, Any] | None = None
+    for release in releases:
+        if release.get("draft"):
+            continue
+        asset = _asset_for_host(release.get("assets") or [])
+        if asset is None:
+            continue
+        candidate = {
+            **asset,
+            "release_tag": release.get("tag_name"),
+            "release_name": release.get("name"),
+            "release_prerelease": bool(release.get("prerelease")),
+        }
+        if not candidate["release_prerelease"]:
+            return candidate
+        if prerelease_candidate is None:
+            prerelease_candidate = candidate
+    if prerelease_candidate is not None:
+        return prerelease_candidate
+    machine = os.uname().machine.lower() if hasattr(os, "uname") else "unknown"
+    raise RuntimeError(f"no verified CPU llama.cpp binary available for ubuntu host architecture {machine}")
 
 
 def ensure_llama_server() -> dict[str, Any]:
@@ -96,7 +150,7 @@ def ensure_llama_server() -> dict[str, Any]:
     if binary:
         return {"binary": binary, "downloaded": False, "verified": True}
 
-    asset = _asset_for_host(_release_assets())
+    asset = _select_release_asset(_release_list())
     digest = str(asset.get("digest", ""))
     if not digest.startswith("sha256:") or len(digest.split(":", 1)[1]) != 64:
         raise RuntimeError("llama.cpp release asset has no usable SHA-256; refusing unverified backend")
@@ -138,7 +192,15 @@ def ensure_llama_server() -> dict[str, Any]:
             final.unlink(missing_ok=True)
             found.replace(final)
         final.chmod(final.stat().st_mode | 0o111)
-        return {"binary": str(final), "downloaded": True, "verified": True, "sha256": expected, "asset": asset.get("name")}
+        return {
+            "binary": str(final),
+            "downloaded": True,
+            "verified": True,
+            "sha256": expected,
+            "asset": asset.get("name"),
+            "release_tag": asset.get("release_tag"),
+            "release_prerelease": asset.get("release_prerelease"),
+        }
     finally:
         archive.unlink(missing_ok=True)
 
@@ -165,6 +227,17 @@ def stop_managed_backend() -> bool:
     return True
 
 
+def _managed_model_matches(existing: dict[str, Any], model: Path) -> bool:
+    managed_pid = existing.get("managed_pid")
+    managed_model = existing.get("managed_model")
+    if not managed_pid or not isinstance(managed_model, str) or not managed_model:
+        return False
+    try:
+        return Path(managed_model).expanduser().resolve() == model
+    except OSError:
+        return False
+
+
 def start_backend(model_path: str | os.PathLike[str], *, preferred_port: int = 8080) -> dict[str, Any]:
     model = Path(model_path).expanduser().resolve()
     if not model.is_file():
@@ -172,8 +245,14 @@ def start_backend(model_path: str | os.PathLike[str], *, preferred_port: int = 8
     binary_info = ensure_llama_server()
     existing = discover_backend()
     if existing["endpoint_up"]:
-        existing["note"] = "local OpenAI-compatible backend already running; SIMORGH did not replace an existing service"
-        return existing
+        if _managed_model_matches(existing, model):
+            existing["note"] = "SIMORGH-managed local backend already serves the requested model"
+            return existing
+        if existing.get("managed_pid") is not None:
+            stop_managed_backend()
+        # An unmanaged backend is deliberately left untouched. SIMORGH starts
+        # its own managed backend on a free loopback port instead of silently
+        # treating another process/model as the requested model.
 
     ensure_user_dirs()
     port = preferred_port
@@ -190,7 +269,17 @@ def start_backend(model_path: str | os.PathLike[str], *, preferred_port: int = 8
     env["SIMORGH_LLM_FAST_MODELS_URL"] = models_url
     log = BACKEND_LOG_FILE.open("ab")
     process = subprocess.Popen(
-        [binary_info["binary"], "--model", str(model), "--host", "127.0.0.1", "--port", str(port), "--ctx-size", "4096"],
+        [
+            binary_info["binary"],
+            "--model",
+            str(model),
+            "--host",
+            "127.0.0.1",
+            "--port",
+            str(port),
+            "--ctx-size",
+            "4096",
+        ],
         stdin=subprocess.DEVNULL,
         stdout=log,
         stderr=subprocess.STDOUT,
@@ -210,7 +299,18 @@ def start_backend(model_path: str | os.PathLike[str], *, preferred_port: int = 8
             log.close()
             os.environ["SIMORGH_LLM_FAST_URL"] = fast_url
             os.environ["SIMORGH_LLM_FAST_MODELS_URL"] = models_url
-            save_config({"llm_fast_url": fast_url, "llm_fast_models_url": models_url, "backend_pid": process.pid, "backend_model": str(model)})
+            save_config(
+                {
+                    "llm_fast_url": fast_url,
+                    "llm_fast_models_url": models_url,
+                    "backend_pid": process.pid,
+                    "backend_model": str(model),
+                    "backend_binary": binary_info["binary"],
+                    "backend_binary_sha256": binary_info.get("sha256"),
+                    "backend_release": binary_info.get("release_tag"),
+                    "backend_release_prerelease": binary_info.get("release_prerelease"),
+                }
+            )
             return discover_backend()
         time.sleep(0.25)
     log.close()
@@ -227,15 +327,19 @@ def discover_backend() -> dict[str, Any]:
         meta = json.loads(BACKEND_META_FILE.read_text(encoding="utf-8"))
     except (OSError, ValueError):
         pass
+    payload = _models_payload(models_url)
+    model_ids = _model_ids(payload)
+    endpoint_up = payload is not None
     return {
         "provider": "openai-compatible",
         "endpoint": fast_url,
         "models_endpoint": models_url,
-        "endpoint_up": _url_ok(models_url),
+        "endpoint_up": endpoint_up,
         "llama_server_binary": binary,
         "managed_pid": pid,
         "managed_model": meta.get("model"),
-        "ready": _url_ok(models_url),
+        "loaded_models": model_ids,
+        "ready": endpoint_up,
         "note": "مدل و backend دو مؤلفهٔ جدا هستند؛ سیمورغ فقط backend محلیِ مدیریت‌شدهٔ خودش را در اختیار می‌گیرد.",
     }
 
