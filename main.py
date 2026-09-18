@@ -68,7 +68,8 @@ if EXTERNAL_BIND and not SIMORGH_KEY:
         "Use 127.0.0.1/localhost for local-only mode or configure authentication."
     )
 
-AI_DISCLOSURE = "این پاسخ توسط یک سامانه هوش مصنوعی تولید شده است؛ پیش از تصمیم‌گیری، آن را بررسی کنید."
+AI_DISCLOSURE = "این پاسخ با استفاده از مدل زبانی محلی تولید شده است؛ پیش از تصمیم‌گیری، آن را بررسی کنید."
+KNOWLEDGE_DISCLOSURE = "این پاسخ مستقیماً از پایگاه دانش محلی سیمرغ بازیابی شده است و در تولید آن از مدل زبانی استفاده نشده است."
 MAX_SESSION_HEADER = 128
 
 
@@ -184,9 +185,20 @@ async def ask(request: Request, query: str = Form(...)):
 @app.post("/chat")
 async def chat(request: Request, query: str = Form(...), agent: str = Form("hakim")):
     try:
-        response = chat_ask(query, agent=agent)
-        memory.store_conversation(_session_id(request), query, response, {"agent": agent})
-        return {"response": response, "agent": agent, "ai_disclosure": AI_DISCLOSURE}
+        response, ai_generated = chat_ask(query, agent=agent, return_metadata=True)
+        memory.store_conversation(_session_id(request), query, response, {"agent": agent, "ai_generated": ai_generated})
+        payload = {
+            "response": response,
+            "agent": agent,
+            "ai_generated": ai_generated,
+            "disclosure": AI_DISCLOSURE if ai_generated else KNOWLEDGE_DISCLOSURE,
+            "ai_disclosure": AI_DISCLOSURE if ai_generated else None,
+            "knowledge_disclosure": KNOWLEDGE_DISCLOSURE if not ai_generated else None,
+        }
+        return JSONResponse(
+            content=payload,
+            headers={"X-SIMORGH-AI-GENERATED": str(ai_generated).lower()},
+        )
     except HTTPException:
         raise
     except Exception as exc:
