@@ -293,6 +293,9 @@ def start_backend(model_path: str | os.PathLike[str], *, preferred_port: int = 8
     )
     for _ in range(120):
         if process.poll() is not None:
+            pid_file.unlink(missing_ok=True)
+            meta_file = BACKEND_META_FILE
+            meta_file.unlink(missing_ok=True)
             log.close()
             raise RuntimeError(f"llama-server exited with code {process.returncode}; see {BACKEND_LOG_FILE}")
         if _url_ok(models_url, timeout=1):
@@ -337,7 +340,8 @@ def discover_backend() -> dict[str, Any]:
         "endpoint_up": endpoint_up,
         "llama_server_binary": binary,
         "managed_pid": pid,
-        "managed_model": meta.get("model"),
+        "managed_model": meta.get("model") if pid is not None else None,
+        "managed_port": meta.get("port") if pid is not None else None,
         "loaded_models": model_ids,
         "ready": endpoint_up,
         "note": "مدل و backend دو مؤلفهٔ جدا هستند؛ سیمورغ فقط backend محلیِ مدیریت‌شدهٔ خودش را در اختیار می‌گیرد.",
