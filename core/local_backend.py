@@ -284,6 +284,22 @@ def start_backend(model_path: str | os.PathLike[str], *, preferred_port: int = 8
     existing = discover_backend()
     if existing["endpoint_up"]:
         if _managed_model_matches(existing, model):
+            port = existing.get("managed_port")
+            if isinstance(port, int) and port > 0:
+                fast_url = f"http://127.0.0.1:{port}/v1/chat/completions"
+                models_url = f"http://127.0.0.1:{port}/v1/models"
+                os.environ["SIMORGH_LLM_FAST_URL"] = fast_url
+                os.environ["SIMORGH_LLM_FAST_MODELS_URL"] = models_url
+                os.environ["SIMORGH_LLM_QUALITY_URL"] = fast_url
+                os.environ["SIMORGH_LLM_QUALITY_MODELS_URL"] = models_url
+                save_config(
+                    {
+                        "llm_fast_url": fast_url,
+                        "llm_fast_models_url": models_url,
+                        "llm_quality_url": fast_url,
+                        "llm_quality_models_url": models_url,
+                    }
+                )
             existing["note"] = "SIMORGH-managed local backend already serves the requested model"
             return existing
         if existing.get("managed_pid") is not None:
