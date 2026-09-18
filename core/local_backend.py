@@ -510,6 +510,11 @@ def start_backend(model_path: str | os.PathLike[str], *, preferred_port: int = 8
             )
             return discover_backend()
         time.sleep(0.25)
+    try:
+        process.terminate()
+    except OSError:
+        pass
+    _cleanup_managed_state()
     log.close()
     raise RuntimeError(f"llama-server did not become ready; see {BACKEND_LOG_FILE}")
 
