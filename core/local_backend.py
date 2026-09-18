@@ -57,13 +57,35 @@ def _model_ids(payload: dict[str, Any] | None) -> list[str]:
     return ids
 
 
+def _binary_usable(path: str) -> bool:
+    try:
+        result = subprocess.run(
+            [path, "--version"],
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            timeout=10,
+            check=False,
+        )
+        return result.returncode == 0
+    except (OSError, subprocess.SubprocessError):
+        return False
+
+
 def _find_binary() -> str | None:
     candidates = [
         shutil.which("llama-server"),
         str(Path(__file__).resolve().parents[1] / "bin" / "llama-server"),
         str(DEFAULT_RUNTIME_DIR / "bin" / "llama-server"),
     ]
-    direct = next((p for p in candidates if p and Path(p).is_file() and os.access(p, os.X_OK)), None)
+    direct = next(
+        (
+            p for p in candidates
+            if p and Path(p).is_file() and os.access(p, os.X_OK) and _binary_usable(p)
+        ),
+        None,
+    )
     if direct:
         return direct
     runtime_bin = DEFAULT_RUNTIME_DIR / "bin"
@@ -71,7 +93,7 @@ def _find_binary() -> str | None:
         nested = sorted(
             (
                 p for p in runtime_bin.rglob("llama-server")
-                if p.is_file() and os.access(p, os.X_OK)
+                if p.is_file() and os.access(p, os.X_OK) and _binary_usable(str(p))
             ),
             key=lambda p: p.stat().st_mtime,
             reverse=True,
