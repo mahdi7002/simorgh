@@ -192,3 +192,36 @@ def test_find_binary_ignores_broken_direct_runtime_binary_and_uses_bundle(monkey
 
     assert local_backend._find_binary() == str(nested)
 
+
+
+def test_start_backend_reuse_persists_quality_routing(monkeypatch, tmp_path):
+    model = tmp_path / "qwen.gguf"
+    model.write_bytes(b"model")
+
+    binary = tmp_path / "llama-server"
+    binary.write_bytes(b"binary")
+    binary.chmod(0o755)
+
+    saved = {}
+
+    monkeypatch.setattr(local_backend, "ensure_llama_server", lambda: {
+        "binary": str(binary),
+        "downloaded": False,
+        "verified": True,
+    })
+    monkeypatch.setattr(local_backend, "discover_backend", lambda: {
+        "endpoint_up": True,
+        "managed_pid": 12345,
+        "managed_model": str(model),
+        "managed_port": 8082,
+        "loaded_models": [str(model)],
+    })
+    monkeypatch.setattr(local_backend, "save_config", lambda config: saved.update(config) or config)
+
+    result = local_backend.start_backend(model, preferred_port=8080)
+
+    assert result["managed_port"] == 8082
+    assert saved["llm_fast_url"] == "http://127.0.0.1:8082/v1/chat/completions"
+    assert saved["llm_fast_models_url"] == "http://127.0.0.1:8082/v1/models"
+    assert saved["llm_quality_url"] == saved["llm_fast_url"]
+    assert saved["llm_quality_models_url"] == saved["llm_fast_models_url"]
