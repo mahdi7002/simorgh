@@ -20,21 +20,17 @@
 
 ## 2. نسخهٔ مبنا
 
-در شروع پذیرش اولیه، `HEAD = a782ceb7f126f37344c093047648d362e0a79820` و `origin/main` نیز همان commit بود.
+این نسخه از گزارش بر پایهٔ merge commit نهایی PR #41 در `main` است:
 
-پس از اصلاح provenance/disclosure و سخت‌سازی audit، کد به commit `ebf4b5c3ceb9f1c86a67b34ff8e292bfc71fdc0a` رسید؛ سپس اصلاح یکپارچهٔ provenance برای همهٔ endpointهای تولید پاسخ در PR #37 با merge commit `602271792e73f4bec512e70bc23310ff9a7e867c` ادغام شد. تغییرات مستندسازی بعدی commitهای Git جداگانه ساخته‌اند و این گزارش عمدتاً دربارهٔ همان code baseline است.
+`486a255b1980095e211e863b4b1219788cd8c389`
 
-در ممیزی واقعی پس از به‌روزرسانی نهایی:
+PR #41 با squash merge ادغام شد. پیش از merge، روی همان شاخهٔ PR چهار workflow اصلی GitHub موفق شدند: CodeQL، Repo Hygiene Guard، Global Compliance Audit و Final Runtime Audit.
 
-`84 passed`
+ممیزی واقعی ماشین پس از اصلاحات نیز:
 
-و این بررسی‌های syntax موفق بودند:
+`97 passed in 10.56s`
 
-```bash
-bash -n install.sh
-bash -n stop.sh
-bash -n scripts/simorgh-run.sh
-```
+را گزارش کرد.
 
 ## 3. معماری اجرای نهایی روی Linux
 
@@ -407,33 +403,76 @@ X-SIMORGH-AI-GENERATED: false
 
 ## 10. مدل‌های محلی
 
-روی ماشین مورد آزمایش، پروفایل سخت‌افزار به‌صورت UI گزارش شد:
+روی ماشین مورد آزمایش:
 
 ```text
 Linux
 x86_64
-4 threads
+4 CPU threads
 RAM ≈ 7.69 GB
 GPU = GeForce GT 730
 tier = small
 ```
 
-کاتالوگ محلی مدل‌ها conservative است و نصب خودکار را ممنوع می‌کند.
-
-برای مدل انتخابی، زنجیرهٔ مورد انتظار:
+مدل انتخابی:
 
 ```text
-explicit user action
-  -> hardware compatibility
-  -> download
-  -> SHA-256 verification
-  -> provenance/license check
-  -> backend verification
-  -> local llama.cpp
-  -> loopback endpoint
+Qwen2.5 1.5B Instruct Q4_K_M
+file = qwen2.5-1.5b-instruct-q4_k_m.gguf
+license = Apache-2.0
 ```
 
-**[NOT VERIFIED]** در این پذیرش، نصب کامل Qwen2.5 1.5B تا اولین generation به‌عنوان یک آزمون end-to-end مستقل ثبت نشده است. بنابراین نباید موفقیت آن را از روی نمایش UI نتیجه گرفت.
+SHA-256 واقعی فایل مدل با مقدار pinned برابر است:
+
+```text
+6a1a2eb6d15622bf3c96857206351ba97e1af16c30d7a74ee38970e434e9407e
+```
+
+نصب end-to-end روی همین ماشین واقعاً انجام شد:
+
+```text
+managed backend = http://127.0.0.1:8081
+llama.cpp release = b11026
+managed PID = 56971
+loaded model = /home/mahdi/.local/share/simorgh/models/qwen2.5-1.5b-instruct-q4_k_m.gguf
+```
+
+همزمان backend قدیمی و غیرمدیریت‌شده روی:
+
+```text
+127.0.0.1:8080
+```
+
+باقی ماند و SIMORGH آن را به‌جای backend خودش استفاده نکرد.
+
+آزمون مستقیم `/v1/chat/completions` روی backend مدیریت‌شده پاسخ واقعی تولید کرد. در یکی از آزمون‌ها 35 توکن در حدود 3.14 ثانیه تولید شد.
+
+آزمون مسیر کامل:
+
+```text
+POST /chat
+agent = hakim
+HTTP 200
+ai_generated = true
+X-SIMORGH-AI-GENERATED: true
+```
+
+زمان یک آزمون واقعی `/chat` حدود 5.9 ثانیه بود.
+
+### محدودیت کیفیت مدل
+
+این شواهد فقط اجرای واقعی مدل و مسیر provenance را ثابت می‌کنند، نه صحت معنایی پاسخ.
+
+در آزمون‌های واقعی، Qwen2.5 1.5B به پرسش سادهٔ «سیمرغ چیست؟» پاسخ نادرست تولید کرد. بنابراین:
+
+```text
+Backend works           = PASS
+Real model generation   = PASS
+AI provenance           = PASS
+Semantic answer quality = NOT PASS
+```
+
+این محدودیت به‌عنوان ضعف مدل کوچک/تنظیمات prompt ثبت می‌شود و نباید با وضعیت زیرساخت اشتباه گرفته شود.
 
 ## 11. مرز شبکه و حریم خصوصی
 
@@ -451,7 +490,7 @@ explicit user action
 
 ## 12. وضعیت GitHub
 
-PRهای مربوط به مسیر user-first و سرویس پایدار ادغام شده‌اند:
+PRهای مسیر user-first و سخت‌سازی عملیاتی:
 
 - #25: user-first runtime foundation
 - #26: self-contained AppImage
@@ -462,21 +501,33 @@ PRهای مربوط به مسیر user-first و سرویس پایدار ادغا
 - #31: final installer health-flow fix
 - #34: crash-recovery audit readiness polling
 - #35: documentation of the crash-recovery audit race
-- #36: synchronization of the final audit with the latest main evidence
-- #37: unified provenance across all response endpoints
+- #36: synchronization of the final audit
+- #37: unified provenance across response endpoints
+- #41: repair local model bootstrap/backend selection و hardening نهایی آن
 
-commit نهایی فعلی `main`:
+PR #41 در تاریخ 2026-09-18 با squash merge ادغام شد.
 
-`602271792e73f4bec512e70bc23310ff9a7e867c`
+merge commit فعلی `main`:
 
-در زمان این گزارش، GitHub connector برای این commit workflow run ثبت‌شده‌ای برنگرداند و status check مستقیمی نیز گزارش نشد. بنابراین این سند **[NOT VERIFIED]** بودن CI برای همین commit را صریحاً نگه می‌دارد و از «CI سبز» نتیجه‌گیری نمی‌کند.
+`486a255b1980095e211e863b4b1219788cd8c389`
+
+شواهد CI پیش از merge برای head PR #41:
+
+```text
+CodeQL                      PASS
+Repo Hygiene Guard          PASS
+SIMORGH Global Compliance   PASS
+SIMORGH Final Runtime Audit PASS
+```
+
+این گزارش **ادعا نمی‌کند که CI همان merge commit به‌صورت مستقل بعد از merge مجدداً PASS شده است**؛ connector مورد استفاده workflowهای مرتبط با PR را برای این commit merge مستقیماً گزارش نمی‌کند.
 
 ## 13. معیارهای پذیرش فعلی
 
 | مورد | وضعیت | شاهد |
 |---|---|---|
 | Git local = origin/main | PASS | commit یکسان |
-| 84 تست Python | PASS | اجرای واقعی محلی پس از اصلاح نهایی |
+| 97 تست Python | PASS | اجرای واقعی محلی روی head PR #41 پیش از merge |
 | shell syntax | PASS | سه اسکریپت |
 | old service disabled | PASS | inactive/disabled |
 | new user service enabled | PASS | systemd user |
@@ -490,11 +541,11 @@ commit نهایی فعلی `main`:
 | health after crash | PASS | healthy |
 | Database-First without model | PASS | UI/runtime evidence |
 | AI/knowledge disclosure distinction in `/chat` | PASS | code + regression test + real local audit |
-| provenance consistency in `/ask`, `/orchestrate`, `/voice` | [NOT VERIFIED] | PR #37 merged; post-merge local execution pending |
+| provenance consistency in `/ask`, `/orchestrate`, `/voice` | [NOT VERIFIED] | PR #37 merged؛ post-merge local execution مخصوص این سه مسیر ثبت نشده |
 | logout end-to-end | [NOT VERIFIED] | هنوز عمداً انجام نشده |
 | reboot end-to-end | [NOT VERIFIED] | هنوز عمداً انجام نشده |
-| Qwen 1.5B full install/generation | [NOT VERIFIED] | آزمون مستقل ثبت نشده |
-| current commit CI green | [NOT VERIFIED] | workflow run/status موجود نبود |
+| Qwen 1.5B full install/generation | PASS | bootstrap واقعی + `/v1/models` + generation + `/chat` |
+| PR #41 CI green before merge | PASS | چهار workflow اصلی قبل از merge موفق شدند |
 | public release/legal clearance | [NOT VERIFIED] | این گزارش clearance حقوقی ایجاد نمی‌کند |
 
 ## 14. دستور ممیزی تکرارپذیر
@@ -517,8 +568,26 @@ chmod +x scripts/simorgh-final-audit.sh
 
 ## 15. جمع‌بندی پذیرش
 
-در تاریخ 2026-09-18 روی Linux Mint مورد آزمایش، هستهٔ محلی سیمرغ با Python 3.13.15 از خود repository اجرا شد، systemd user service فعال شد، linger فعال شد، سرویس پس از `kill -9` خودکار برگشت و health دوباره سالم شد. مسیر داده از مسیر موقت به مسیر دائمی کاربر اصلاح شد و سرویس قدیمی که باعث آلودگی smoke test می‌شد خاموش شد.
+در تاریخ 2026-09-18، مسیر اصلی اجرای محلی SIMORGH روی ماشین Linux مورد آزمایش به یک وضعیت عملیاتی قابل تکرار رسید:
 
-این نقطه را می‌توان **پایان پذیرش مسیر Persistent Local Core روی ماشین آزمایش‌شده** دانست، با این تفاوت شفاف که logout/reboot واقعی، نصب کامل Qwen 1.5B و CI همان commit هنوز به‌عنوان مشاهدهٔ مستقیم ثبت نشده‌اند.
+- checkout محلی با head شاخهٔ PR #41 دقیقاً هم‌تراز GitHub شد؛
+- 97 تست محلی PASS شد؛
+- PR #41 پس از سبز شدن چهار workflow اصلی با squash merge وارد `main` شد؛
+- Qwen2.5 1.5B با SHA-256 pinned واقعاً نصب و اجرا شد؛
+- backend مدیریت‌شدهٔ SIMORGH روی `127.0.0.1:8081` راه افتاد؛
+- backend غیرمدیریت‌شدهٔ موجود روی `127.0.0.1:8080` دست‌نخورده باقی ماند؛
+- مسیر کامل `/chat` واقعاً از مدل استفاده کرد و provenance صحیح را اعلام کرد؛
+- تنظیمات fast/quality backend در runtime کاربر persist شدند؛
+- process و model identity در lifecycle backend سخت‌گیرانه‌تر بررسی می‌شوند.
 
-این تفکیک عمدی است: «کار می‌کند» فقط جایی نوشته شده که شاهد اجرایی داریم.
+محدودیت باقی‌ماندهٔ مهم این است که مدل Qwen2.5 1.5B روی همین پرسش‌های پایه هنوز پاسخ معنایی قابل‌اعتمادی تولید نمی‌کند. بنابراین release این نسخه باید **پایداری زیرساخت، provenance و قابلیت اجرای مدل** را ادعا کند، نه دقت عمومی مدل را.
+
+همچنین logout/reboot فیزیکی end-to-end و اجرای post-merge مستقلِ همهٔ endpointهای provenance هنوز به‌طور مستقیم مشاهده و ثبت نشده‌اند.
+
+این تفکیک عمدی است:
+
+```text
+Installed       ≠ Accurate
+Generated       ≠ Verified
+Healthy         ≠ Correct
+```
