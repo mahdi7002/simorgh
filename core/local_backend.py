@@ -63,7 +63,22 @@ def _find_binary() -> str | None:
         str(Path(__file__).resolve().parents[1] / "bin" / "llama-server"),
         str(DEFAULT_RUNTIME_DIR / "bin" / "llama-server"),
     ]
-    return next((p for p in candidates if p and Path(p).is_file() and os.access(p, os.X_OK)), None)
+    direct = next((p for p in candidates if p and Path(p).is_file() and os.access(p, os.X_OK)), None)
+    if direct:
+        return direct
+    runtime_bin = DEFAULT_RUNTIME_DIR / "bin"
+    if runtime_bin.is_dir():
+        nested = sorted(
+            (
+                p for p in runtime_bin.rglob("llama-server")
+                if p.is_file() and os.access(p, os.X_OK)
+            ),
+            key=lambda p: p.stat().st_mtime,
+            reverse=True,
+        )
+        if nested:
+            return str(nested[0])
+    return None
 
 
 def _free_port(start: int = 8080, end: int = 8090) -> int:
@@ -187,13 +202,9 @@ def ensure_llama_server() -> dict[str, Any]:
         found = next((p for p in backend_dir.rglob("llama-server") if p.is_file()), None)
         if found is None:
             raise RuntimeError("verified llama.cpp archive did not contain llama-server")
-        final = backend_dir / "llama-server"
-        if found != final:
-            final.unlink(missing_ok=True)
-            found.replace(final)
-        final.chmod(final.stat().st_mode | 0o111)
+        found.chmod(found.stat().st_mode | 0o111)
         return {
-            "binary": str(final),
+            "binary": str(found),
             "downloaded": True,
             "verified": True,
             "sha256": expected,
