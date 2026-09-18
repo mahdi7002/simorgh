@@ -434,7 +434,7 @@ SHA-256 واقعی فایل مدل با مقدار pinned برابر است:
 managed backend = http://127.0.0.1:8081
 llama.cpp release = b11026
 managed PID = 56971
-loaded model = /home/mahdi/.local/share/simorgh/models/qwen2.5-1.5b-instruct-q4_k_m.gguf
+loaded model = ~/.local/share/simorgh/models/qwen2.5-1.5b-instruct-q4_k_m.gguf
 ```
 
 همزمان backend قدیمی و غیرمدیریت‌شده روی:
