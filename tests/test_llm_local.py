@@ -12,7 +12,7 @@ def test_local_llm_timeout_defaults_are_suitable_for_cpu_models(monkeypatch):
     importlib.reload(llm_local)
 
     assert llm_local.FAST_TIMEOUT == 30.0
-    assert llm_local.QUALITY_TIMEOUT == 30.0
+    assert llm_local.QUALITY_TIMEOUT == 60.0
 
 
 def test_generate_uses_quality_timeout(monkeypatch):
