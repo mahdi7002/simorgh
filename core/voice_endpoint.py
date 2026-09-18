@@ -43,12 +43,12 @@ async def receive_voice(request: Request):
         user_text = transcribe(str(wav_path)).strip()
         if not user_text:
             raise HTTPException(422, "چیزی شنیده نشد")
-        response_text = ask(user_text, agent="hakim")
+        response_text, ai_generated = ask(user_text, agent="hakim", return_metadata=True)
         audio_out_path = synthesize(response_text)
         return FileResponse(
             audio_out_path,
             media_type="audio/wav",
-            headers={"X-SIMORGH-AI-GENERATED": "true"},
+            headers={"X-SIMORGH-AI-GENERATED": str(ai_generated).lower()},
         )
     except HTTPException:
         raise

@@ -14,7 +14,8 @@ class HakimAgent:
         response = generate(ROLE_PROMPTS["hakim"], query)
         if response:
             return response
-        return f"تحلیل {query} توسط عامل Hakim"
+        logger.warning("HakimAgent model unavailable")
+        return None
 
     def suggest(self, *args, **kwargs):
         return self.analyze(*args, **kwargs)

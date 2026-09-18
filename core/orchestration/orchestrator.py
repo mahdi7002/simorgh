@@ -51,17 +51,19 @@ class Orchestrator:
 
         for agent in dispatch.agents:
             try:
-                result = ask(
+                result, ai_generated = ask(
                     query,
                     agent=agent,
                     tool_context=tool_context,
                     use_builtin_tools=False,
+                    return_metadata=True,
                 )
-                board.record_output(agent, result)
+                board.record_output(agent, result, ai_generated=ai_generated)
             except Exception as exc:
                 board.record_output(
                     agent,
                     f"[NOT_AVAILABLE] persona {agent}: {type(exc).__name__}",
+                    ai_generated=False,
                 )
 
         review = self.reviewer.review(

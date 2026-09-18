@@ -112,8 +112,6 @@ async def security_headers(request: Request, call_next):
     response.headers.setdefault("X-Content-Type-Options", "nosniff")
     response.headers.setdefault("X-Frame-Options", "DENY")
     response.headers.setdefault("Referrer-Policy", "no-referrer")
-    if request.url.path in {"/ask", "/chat", "/orchestrate", "/voice"}:
-        response.headers.setdefault("X-SIMORGH-AI-GENERATED", "true")
     return response
 
 
@@ -160,21 +158,40 @@ async def ask(request: Request, query: str = Form(...)):
         intent = understanding.detect_intent(query)
         goal, obstacle = understanding.extract_goal_obstacle(query)
         cause = why_engine.find_cause(obstacle) if obstacle else None
-        response = agent_manager.consult(goal, obstacle, cause, query)
+        response, ai_generated = agent_manager.consult(
+            goal,
+            obstacle,
+            cause,
+            query,
+            return_metadata=True,
+        )
         memory.store_conversation(
             _session_id(request),
             query,
             response,
-            {"intent": intent, "goal": goal, "obstacle": obstacle, "cause": cause},
+            {
+                "intent": intent,
+                "goal": goal,
+                "obstacle": obstacle,
+                "cause": cause,
+                "ai_generated": ai_generated,
+            },
         )
-        return {
+        payload = {
             "response": response,
             "goal": goal,
             "obstacle": obstacle,
             "cause": cause,
             "intent": intent,
-            "ai_disclosure": AI_DISCLOSURE,
+            "ai_generated": ai_generated,
+            "disclosure": AI_DISCLOSURE if ai_generated else KNOWLEDGE_DISCLOSURE,
+            "ai_disclosure": AI_DISCLOSURE if ai_generated else None,
+            "knowledge_disclosure": KNOWLEDGE_DISCLOSURE if not ai_generated else None,
         }
+        return JSONResponse(
+            content=payload,
+            headers={"X-SIMORGH-AI-GENERATED": str(ai_generated).lower()},
+        )
     except HTTPException:
         raise
     except Exception as exc:
@@ -225,7 +242,21 @@ async def orchestrate(request: Request, query: str = Form(...)):
                 "review": result["review"],
             },
         )
-        return {"response": response, "ai_disclosure": AI_DISCLOSURE, **result}
+        ai_generated = any(
+            bool(value) for value in result.get("ai_generated", {}).values()
+        )
+        payload = {
+            **result,
+            "response": response,
+            "ai_generated": ai_generated,
+            "disclosure": AI_DISCLOSURE if ai_generated else KNOWLEDGE_DISCLOSURE,
+            "ai_disclosure": AI_DISCLOSURE if ai_generated else None,
+            "knowledge_disclosure": KNOWLEDGE_DISCLOSURE if not ai_generated else None,
+        }
+        return JSONResponse(
+            content=payload,
+            headers={"X-SIMORGH-AI-GENERATED": str(ai_generated).lower()},
+        )
     except HTTPException:
         raise
     except Exception as exc:
