@@ -22,7 +22,7 @@
 
 در شروع پذیرش اولیه، `HEAD = a782ceb7f126f37344c093047648d362e0a79820` و `origin/main` نیز همان commit بود.
 
-پس از اصلاح provenance/disclosure و سخت‌سازی audit، `main` به `ebf4b5c3ceb9f1c86a67b34ff8e292bfc71fdc0a` رسید؛ سپس اصلاح یکپارچهٔ provenance برای همهٔ endpointهای تولید پاسخ در PR #37 ادغام شد و `main` اکنون روی `602271792e73f4bec512e70bc23310ff9a7e867c` است.
+پس از اصلاح provenance/disclosure و سخت‌سازی audit، `main` به `ebf4b5c3ceb9f1c86a67b34ff8e292bfc71fdc0a` رسید؛ سپس اصلاح یکپارچهٔ provenance برای همهٔ endpointهای تولید پاسخ در PR #37 ادغام شد و `main` اکنون روی `31c9e0467cc1089ac92a933d8c67e262678dade0` است.
 
 در ممیزی واقعی پس از به‌روزرسانی نهایی:
 
