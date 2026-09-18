@@ -108,7 +108,7 @@ bash: cd: /tmp/tmp.ASBJOMSUN1/simorgh: No such file or directory
 راه‌حل:
 
 ```bash
-export HOME=/home/mahdi
+export HOME=~
 cd ~/simorgh
 ```
 
