@@ -305,6 +305,8 @@ def start_backend(model_path: str | os.PathLike[str], *, preferred_port: int = 8
     models_url = f"http://127.0.0.1:{port}/v1/models"
     env["SIMORGH_LLM_FAST_URL"] = fast_url
     env["SIMORGH_LLM_FAST_MODELS_URL"] = models_url
+    env["SIMORGH_LLM_QUALITY_URL"] = fast_url
+    env["SIMORGH_LLM_QUALITY_MODELS_URL"] = models_url
     log = BACKEND_LOG_FILE.open("ab")
     process = subprocess.Popen(
         [
@@ -340,10 +342,14 @@ def start_backend(model_path: str | os.PathLike[str], *, preferred_port: int = 8
             log.close()
             os.environ["SIMORGH_LLM_FAST_URL"] = fast_url
             os.environ["SIMORGH_LLM_FAST_MODELS_URL"] = models_url
+            os.environ["SIMORGH_LLM_QUALITY_URL"] = fast_url
+            os.environ["SIMORGH_LLM_QUALITY_MODELS_URL"] = models_url
             save_config(
                 {
                     "llm_fast_url": fast_url,
                     "llm_fast_models_url": models_url,
+                    "llm_quality_url": fast_url,
+                    "llm_quality_models_url": models_url,
                     "backend_pid": process.pid,
                     "backend_model": str(model),
                     "backend_binary": binary_info["binary"],
