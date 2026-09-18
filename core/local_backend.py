@@ -327,10 +327,49 @@ def _managed_pid() -> int | None:
     try:
         pid = int(BACKEND_PID_FILE.read_text(encoding="utf-8").strip())
         os.kill(pid, 0)
-        return pid
-    except (OSError, ValueError):
-        BACKEND_PID_FILE.unlink(missing_ok=True)
+        metadata = json.loads(BACKEND_META_FILE.read_text(encoding="utf-8"))
+    except (OSError, ValueError, TypeError, json.JSONDecodeError):
+        _cleanup_managed_state()
         return None
+
+    cmdline = _process_cmdline(pid)
+    if not cmdline or Path(cmdline[0]).name != "llama-server":
+        _cleanup_managed_state()
+        return None
+
+    expected_binary = metadata.get("binary")
+    if isinstance(expected_binary, str) and expected_binary:
+        try:
+            if Path(cmdline[0]).resolve() != Path(expected_binary).expanduser().resolve():
+                _cleanup_managed_state()
+                return None
+        except OSError:
+            _cleanup_managed_state()
+            return None
+
+    expected_model = metadata.get("model")
+    if isinstance(expected_model, str) and expected_model:
+        try:
+            model_index = cmdline.index("--model")
+            if Path(cmdline[model_index + 1]).expanduser().resolve() != Path(expected_model).expanduser().resolve():
+                _cleanup_managed_state()
+                return None
+        except (ValueError, IndexError, OSError):
+            _cleanup_managed_state()
+            return None
+
+    expected_port = metadata.get("port")
+    if isinstance(expected_port, int):
+        try:
+            port_index = cmdline.index("--port")
+            if int(cmdline[port_index + 1]) != expected_port:
+                _cleanup_managed_state()
+                return None
+        except (ValueError, IndexError):
+            _cleanup_managed_state()
+            return None
+
+    return pid
 
 
 def stop_managed_backend() -> bool:
@@ -348,12 +387,14 @@ def stop_managed_backend() -> bool:
 def _managed_model_matches(existing: dict[str, Any], model: Path) -> bool:
     managed_pid = existing.get("managed_pid")
     managed_model = existing.get("managed_model")
+    loaded_models = existing.get("loaded_models") or []
     if not managed_pid or not isinstance(managed_model, str) or not managed_model:
         return False
     try:
-        return Path(managed_model).expanduser().resolve() == model
+        metadata_match = Path(managed_model).expanduser().resolve() == model
     except OSError:
-        return False
+        metadata_match = False
+    return metadata_match and any(_model_id_matches(model_id, model) for model_id in loaded_models)
 
 
 def start_backend(model_path: str | os.PathLike[str], *, preferred_port: int = 8080) -> dict[str, Any]:
