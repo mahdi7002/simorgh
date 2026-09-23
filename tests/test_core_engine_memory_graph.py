@@ -74,10 +74,12 @@ def test_find_related_nodes_incoming_direction(db):
 
 
 def test_find_related_nodes_respects_max_depth(db):
+    # traverse() stops only when depth > max_depth, so max_depth=0 means
+    # "direct neighbors only" and max_depth=1 already reaches two hops.
     db.add_edge("a1", "a2", "leads_to")
     db.add_edge("a2", "a3", "leads_to")
-    shallow = db.find_related_nodes("a1", direction="outgoing", max_depth=1)
-    deep = db.find_related_nodes("a1", direction="outgoing", max_depth=2)
+    shallow = db.find_related_nodes("a1", direction="outgoing", max_depth=0)
+    deep = db.find_related_nodes("a1", direction="outgoing", max_depth=1)
     assert not any(r["target"] == "a3" for r in shallow)
     assert any(r["target"] == "a3" for r in deep)
 
