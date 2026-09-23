@@ -14,8 +14,8 @@ import pytest
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 ROWS = [
-    ("قرآن", "معنوی", "سوره 2 آیه 45 | از صبر و نماز کمک بخواهید."),
-    ("قرآن", "معنوی", "سوره 94 آیه 5 | همانا با سختی آسانی است."),
+    ("قرآن", "معنوی", "سوره 94 آیه 5 | همانا با سختی صبر و آسانی همراه است."),
+    ("قرآن", "معنوی", "سوره 2 آیه 153 | ای کسانی که ایمان آوردید از صبر و نماز کمک بخواهید."),
     ("تفسیر المیزان", "تفسیر", "شرح صبر در آیات قرآن، بدون قالب سوره/آیه."),
 ]
 
@@ -51,9 +51,10 @@ def test_extract_keywords_respects_max_words(qs):
 
 
 def test_get_quran_wisdom_finds_matching_ayah(qs):
+    # keywords are AND-ed together, so the query must hit a row containing BOTH words
     results = qs.get_quran_wisdom("صبر در سختی")
     assert len(results) >= 1
-    assert any(r["surah"] == "2" and r["ayah"] == "45" for r in results)
+    assert any(r["surah"] == "94" and r["ayah"] == "5" for r in results)
 
 
 def test_get_quran_wisdom_only_returns_spiritual_category(qs):
@@ -63,7 +64,7 @@ def test_get_quran_wisdom_only_returns_spiritual_category(qs):
 
 
 def test_get_quran_wisdom_respects_limit(qs):
-    results = qs.get_quran_wisdom("صبر", limit=1)
+    results = qs.get_quran_wisdom("صبر نماز", limit=1)
     assert len(results) <= 1
 
 
