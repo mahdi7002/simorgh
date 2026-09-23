@@ -1,0 +1,90 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "SIMORGH_ACTIVE_MAP_V1",
+  "title": "SIMORGH Active Map V1",
+  "type": "object",
+  "required": [
+    "schema",
+    "scanner",
+    "repository",
+    "git",
+    "modules",
+    "symbols",
+    "imports",
+    "tests",
+    "models",
+    "capabilities",
+    "governance",
+    "runtime",
+    "verification",
+    "missions",
+    "status"
+  ],
+  "properties": {
+    "schema": {
+      "const": "SIMORGH_ACTIVE_MAP_V1"
+    },
+    "scanner": {
+      "type": "object",
+      "required": [
+        "name",
+        "version",
+        "mode",
+        "generated_at"
+      ],
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        },
+        "mode": {
+          "const": "READ_ONLY"
+        },
+        "generated_at": {
+          "type": "string"
+        }
+      }
+    },
+    "repository": {
+      "type": "object"
+    },
+    "git": {
+      "type": "object"
+    },
+    "modules": {
+      "type": "array"
+    },
+    "symbols": {
+      "type": "array"
+    },
+    "imports": {
+      "type": "array"
+    },
+    "tests": {
+      "type": "object"
+    },
+    "models": {
+      "type": "array"
+    },
+    "capabilities": {
+      "type": "array"
+    },
+    "governance": {
+      "type": "object"
+    },
+    "runtime": {
+      "type": "object"
+    },
+    "verification": {
+      "type": "object"
+    },
+    "missions": {
+      "type": "array"
+    },
+    "status": {
+      "type": "object"
+    }
+  }
+}
