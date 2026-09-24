@@ -109,6 +109,13 @@ class MotherLedger:
                     human_review_json TEXT
                 );
                 CREATE INDEX IF NOT EXISTS idx_quarantine_status ON quarantine(status);
+                CREATE TABLE IF NOT EXISTS self_model (
+                    key TEXT PRIMARY KEY,
+                    value_json TEXT NOT NULL,
+                    source TEXT NOT NULL,
+                    status TEXT NOT NULL DEFAULT 'KNOWN',
+                    observed_at TEXT NOT NULL
+                );
                 CREATE TABLE IF NOT EXISTS code_repairs (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     created_at TEXT NOT NULL,
@@ -494,6 +501,31 @@ class MotherLedger:
         item["verification"] = json.loads(item.pop("verification_json")) if item["verification_json"] else None
         return item
 
+
+    def set_self_fact(self, key: str, value: Any, *, source: str, status: str = "KNOWN") -> None:
+        with self.connect() as conn:
+            conn.execute(
+                "INSERT INTO self_model(key,value_json,source,status,observed_at) VALUES(?,?,?,?,?) "
+                "ON CONFLICT(key) DO UPDATE SET value_json=excluded.value_json,source=excluded.source,"
+                "status=excluded.status,observed_at=excluded.observed_at",
+                (key, json.dumps(value, ensure_ascii=False, sort_keys=True, default=str), source, status, utc_now()),
+            )
+
+    def list_self_model(self) -> list[dict[str, Any]]:
+        with self.connect() as conn:
+            rows = conn.execute(
+                "SELECT key,value_json,source,status,observed_at FROM self_model ORDER BY key"
+            ).fetchall()
+        return [
+            {
+                "key": row["key"],
+                "value": json.loads(row["value_json"]),
+                "source": row["source"],
+                "status": row["status"],
+                "observed_at": row["observed_at"],
+            }
+            for row in rows
+        ]
 
     def list_code_repairs(self, limit: int = 50) -> list[dict[str, Any]]:
         with self.connect() as conn:
