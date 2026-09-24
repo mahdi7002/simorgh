@@ -7,7 +7,7 @@ Wants=network-online.target
 Type=simple
 User=__SIMORGH_USER__
 Group=__SIMORGH_USER__
-SupplementaryGroups=adm
+SupplementaryGroups=__JOURNAL_GROUPS__
 WorkingDirectory=__SIMORGH_HOME__/simorgh
 Environment=PYTHONUNBUFFERED=1
 Environment=SIMORGH_RUNTIME_DIR=__SIMORGH_HOME__/.local/share/simorgh
