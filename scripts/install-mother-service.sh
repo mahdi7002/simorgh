@@ -22,6 +22,10 @@ sed \
     -e "s#__SIMORGH_HOME__#$HOME_DIR#g" \
     "$UNIT_SRC" > "$UNIT_TMP"
 
+if ! getent group adm >/dev/null 2>&1; then
+    sed -i '/^SupplementaryGroups=adm$/d' "$UNIT_TMP"
+fi
+
 sudo install -m 0644 "$UNIT_TMP" /etc/systemd/system/simorgh-mother.service
 sudo install -d -m 0700 -o "$USER_NAME" -g "$USER_NAME" "$HOME_DIR/.local/share/simorgh/mother"
 sudo systemctl daemon-reload
