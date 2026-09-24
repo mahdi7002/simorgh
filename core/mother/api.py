@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from typing import Any
 
 from fastapi import APIRouter, HTTPException
@@ -113,7 +114,7 @@ def report_ask():
         "غیرالزامی برای بهبود را بیان کن. هرجا داده کافی نیست صریحاً "
         ""NOT_AVAILABLE" یا "تأیید نشده" بگو. هیچ واقعیت تازه‌ای نساز. "
         "هیچ دستور اجرایی خودکار نده. گزارش را در 5 تا 8 بند کوتاه نگه دار.\n\n"
-        + __import__("json").dumps(evidence, ensure_ascii=False, default=str)
+        + json.dumps(evidence, ensure_ascii=False, default=str)
     )
     response = generate(
         SIMORGH_IDENTITY + (
