@@ -481,3 +481,54 @@ def test_managed_backend_recovers_from_stale_pid_file(monkeypatch, tmp_path):
     assert backend._managed_pid() == 70998
     assert pid_file.read_text(encoding="utf-8").strip() == "70998"
     assert meta_file.is_file()
+
+
+def test_discover_backend_syncs_persisted_urls(monkeypatch, tmp_path):
+    import json
+    import core.local_backend as backend
+
+    meta = tmp_path / "llama-server.json"
+    meta.write_text(
+        json.dumps(
+            {
+                "pid": 70998,
+                "model": "/tmp/qwen.gguf",
+                "port": 8089,
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    monkeypatch.setattr(backend, "BACKEND_META_FILE", meta)
+    monkeypatch.setattr(backend, "_managed_pid", lambda: 70998)
+    monkeypatch.setattr(backend, "_find_binary", lambda: "/tmp/llama-server")
+    monkeypatch.setenv(
+        "SIMORGH_LLM_FAST_URL",
+        "http://127.0.0.1:8087/v1/chat/completions",
+    )
+    monkeypatch.setenv(
+        "SIMORGH_LLM_FAST_MODELS_URL",
+        "http://127.0.0.1:8087/v1/models",
+    )
+    monkeypatch.setattr(
+        backend,
+        "_models_payload",
+        lambda url, timeout=1.5: {"data": [{"id": "/tmp/qwen.gguf"}]},
+    )
+
+    saved = {}
+    monkeypatch.setattr(backend, "save_config", lambda data: saved.update(data))
+
+    import core.user_runtime as user_runtime
+    monkeypatch.setattr(user_runtime, "load_config", lambda: {
+        "llm_fast_url": "http://127.0.0.1:8087/v1/chat/completions",
+        "llm_fast_models_url": "http://127.0.0.1:8087/v1/models",
+        "llm_quality_url": "http://127.0.0.1:8087/v1/chat/completions",
+        "llm_quality_models_url": "http://127.0.0.1:8087/v1/models",
+    })
+
+    result = backend.discover_backend()
+
+    assert result["endpoint"] == "http://127.0.0.1:8089/v1/chat/completions"
+    assert saved["llm_fast_url"].endswith(":8089/v1/chat/completions")
+    assert saved["llm_quality_url"].endswith(":8089/v1/chat/completions")
