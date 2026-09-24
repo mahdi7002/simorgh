@@ -395,3 +395,39 @@ def test_discover_backend_prefers_managed_port_over_stale_environment(monkeypatc
     assert seen["url"] == "http://127.0.0.1:8081/v1/models"
     assert result["endpoint_up"] is True
     assert result["loaded_models"] == ["/tmp/qwen.gguf"]
+
+
+def test_managed_backend_pid_is_accepted_when_process_identity_matches(monkeypatch, tmp_path):
+    import json
+    import core.local_backend as backend
+
+    meta = tmp_path / "llama-server.json"
+    meta.write_text(
+        json.dumps(
+            {
+                "pid": 70998,
+                "model": "/tmp/qwen.gguf",
+                "port": 8089,
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    monkeypatch.setattr(backend, "BACKEND_PID_FILE", tmp_path / "llama-server.pid")
+    backend.BACKEND_PID_FILE.write_text("70998", encoding="utf-8")
+    monkeypatch.setattr(backend, "BACKEND_META_FILE", meta)
+    monkeypatch.setattr(
+        backend,
+        "_process_cmdline",
+        lambda pid: [
+            "/home/mahdi/.local/share/simorgh/bin/llama-server",
+            "--model",
+            "/tmp/qwen.gguf",
+            "--host",
+            "127.0.0.1",
+            "--port",
+            "8089",
+        ],
+    )
+
+    assert backend._managed_pid() == 70998
