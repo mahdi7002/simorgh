@@ -178,7 +178,7 @@ bash scripts/install-mother-service.sh
 نمای مادر:
 
 ```text
-http://127.0.0.1:8000/mother/
+http://127.0.0.1:8010/
 ```
 
 شرح کامل: [docs/MOTHER.md](docs/MOTHER.md)
