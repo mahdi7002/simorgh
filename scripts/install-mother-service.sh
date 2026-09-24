@@ -6,7 +6,7 @@ USER_NAME="${SUDO_USER:-$USER}"
 HOME_DIR="$(getent passwd "$USER_NAME" | cut -d: -f6)"
 SIMORGH_REPO="${SIMORGH_MOTHER_ROOT:-$ROOT}"
 UNIT_SRC="$ROOT/systemd/simorgh-mother.service.in"
-UNIT_TMP="$(mktemp)"
+UNIT_TMP="$(mktemp --suffix=.service)"
 trap 'rm -f "$UNIT_TMP"' EXIT
 
 if [ ! -d "$SIMORGH_REPO" ]; then
@@ -40,7 +40,7 @@ sed \
     -e "s#__JOURNAL_GROUPS__#$journal_groups#g" \
     "$UNIT_SRC" > "$UNIT_TMP"
 
-if ! systemd-analyze verify "$UNIT_TMP" >/tmp/simorgh-mother-systemd-verify.txt 2>&1; then
+if ! sudo systemd-analyze verify "$UNIT_TMP" >/tmp/simorgh-mother-systemd-verify.txt 2>&1; then
     cat /tmp/simorgh-mother-systemd-verify.txt >&2
     rm -f /tmp/simorgh-mother-systemd-verify.txt
     printf "خطا: unit تولیدشده توسط Mother معتبر نیست.\n" >&2
