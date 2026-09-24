@@ -124,10 +124,11 @@ class MotherService:
         )
         self.observe_once()
         self.reports.post_boot(boot)
+        self.reports.daily(with_ai=True)
         self._write_world_state(self.ledger.latest_snapshot())
-        last_daily_refresh = 0.0
-        last_weekly_refresh = 0.0
-        last_quality_check = 0.0
+        last_daily_refresh = time.monotonic()
+        last_weekly_refresh = time.monotonic()
+        last_quality_check = time.monotonic()
 
         while not self._stop:
             now = time.monotonic()
@@ -136,10 +137,13 @@ class MotherService:
                 # Refresh the current-day report repeatedly so it always
                 # represents activity up to the latest observation.
                 if now - last_daily_refresh >= 900:
-                    self.reports.daily()
+                    self.reports.daily(with_ai=False)
                     last_daily_refresh = now
-                if now - last_weekly_refresh >= 21600:
-                    self.reports.weekly()
+                local_now = datetime.now().astimezone()
+                latest_weekly = self.ledger.latest_report("WEEKLY")
+                latest_weekly_date = latest_weekly.get("_ledger", {}).get("created_at", "")[:10]
+                if local_now.weekday() == 6 and latest_weekly_date != local_now.date().isoformat():
+                    self.reports.weekly(with_ai=True)
                     last_weekly_refresh = now
                 if now - last_quality_check >= 86400:
                     run_daily_quality_check(self.ledger)
