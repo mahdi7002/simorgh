@@ -213,6 +213,9 @@ def approve_to_memory(ledger: MotherLedger, item_id: int, reviewer: str = "human
         raise KeyError("quarantine item not found")
     if item["status"] != "QUARANTINED":
         raise ValueError("only QUARANTINED items can be approved")
+
+    from core.memory import MemoryEngine
+    memory = MemoryEngine()
     review = {
         "reviewer": reviewer,
         "decision": "APPROVED",
@@ -220,16 +223,41 @@ def approve_to_memory(ledger: MotherLedger, item_id: int, reviewer: str = "human
         "timestamp": utc_now(),
         "rule": "human approval required before promotion",
     }
+
+    try:
+        memory.store_with_provenance(
+            item["content"],
+            source=item["source_url"],
+            confidence=0.8,
+            tags=["web_quarantine", item["source_domain"]],
+            status="KNOWN",
+        )
+    except Exception as exc:
+        ledger.record_event(
+            component="research",
+            event_type="quarantine_promotion_failed",
+            actor=reviewer,
+            action="promote",
+            severity="error",
+            verified=False,
+            provenance="promotion_attempt",
+            data={"quarantine_id": item_id, "source_url": item["source_url"], "error": type(exc).__name__},
+        )
+        raise
+
     if not ledger.approve_quarantine(item_id, review):
-        raise ValueError("quarantine item changed concurrently")
-    from core.memory import MemoryEngine
-    MemoryEngine().store_with_provenance(
-        item["content"],
-        source=item["source_url"],
-        confidence=0.8,
-        tags=["web_quarantine", item["source_domain"]],
-        status="KNOWN",
-    )
+        ledger.record_event(
+            component="research",
+            event_type="quarantine_review_record_failed",
+            actor=reviewer,
+            action="promote",
+            severity="error",
+            verified=False,
+            provenance="human_review",
+            data={"quarantine_id": item_id, "source_url": item["source_url"]},
+        )
+        raise RuntimeError("knowledge was stored, but quarantine approval could not be recorded")
+
     ledger.record_event(
         component="research",
         event_type="quarantine_promoted",
