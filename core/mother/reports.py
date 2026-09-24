@@ -2,6 +2,7 @@ from __future__ import annotations
 from .local_model import prepare_local_model_environment
 
 import json
+from pathlib import Path
 from collections import Counter
 from datetime import datetime, timedelta, timezone
 from typing import Any
@@ -174,6 +175,7 @@ class ReportEngine:
         report["trends"] = self._trends(report["activity"])
         report["service_needs"] = self._service_needs(report)
         report["next_candidate_objectives"] = self._candidate_objectives(report)
+        report["capability_matrix"] = self._capability_matrix()
         report["self_reflection"] = (
             self._local_model_reflection(report)
             if with_ai
@@ -182,6 +184,31 @@ class ReportEngine:
         )
         self.ledger.save_report("WEEKLY", start, now.isoformat(), report)
         return report
+
+    def _capability_matrix(self) -> dict[str, Any]:
+        root = Path(__file__).resolve().parents[2]
+        checks = {
+            "system_observation": (root / "core/mother/observer.py").is_file(),
+            "persistent_event_ledger": (root / "core/mother/ledger.py").is_file(),
+            "daily_weekly_postboot_reports": (root / "core/mother/reports.py").is_file(),
+            "local_model_coding_assistance": (root / "core/mother/coding.py").is_file(),
+            "web_quarantine_gateway": (root / "core/mother/research.py").is_file(),
+            "quality_feedback_loop": (root / "core/mother/quality.py").is_file(),
+            "godot_state_bridge": (root / "godot/mother_bridge.gd").is_file(),
+            "reviewer_gate": (root / "core/orchestration/reviewer.py").is_file(),
+            "provenance_memory": (root / "core/memory.py").is_file(),
+            "offline_core": (root / "main.py").is_file(),
+        }
+        implemented = [name for name, ok in checks.items() if ok]
+        missing = [name for name, ok in checks.items() if not ok]
+        return {
+            "status": "MEASURED",
+            "implemented_count": len(implemented),
+            "total_count": len(checks),
+            "implemented": implemented,
+            "missing": missing,
+            "note": "وجود فایل به‌تنهایی کیفیت قابلیت را ثابت نمی‌کند؛ آزمون و شواهد runtime نیز باید بررسی شوند.",
+        }
 
     @staticmethod
     def _trends(events: list[dict[str, Any]]) -> list[dict[str, Any]]:
