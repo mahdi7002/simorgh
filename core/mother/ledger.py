@@ -165,6 +165,7 @@ class MotherLedger:
         )
         return {
             "boot_id": current,
+            "started_at": utc_now(),
             "previous_boot_id": previous_id,
             "previous_clean_shutdown": previous["clean_shutdown"] if previous else None,
         }
@@ -392,8 +393,8 @@ class MotherLedger:
         if not row:
             return None
         item = dict(row)
-        for key in ("ai_review_json", "human_review_json"):
-            item[key[:-5]] = json.loads(item.pop(key)) if item[key] else None
+        item["ai_review"] = json.loads(item.pop("ai_review_json")) if item["ai_review_json"] else None
+        item["human_review"] = json.loads(item.pop("human_review_json")) if item["human_review_json"] else None
         return item
 
     def list_quarantine(self, status: str | None = None, limit: int = 50) -> list[dict[str, Any]]:
@@ -465,3 +466,22 @@ class MotherLedger:
         item = dict(row)
         item["verification"] = json.loads(item.pop("verification_json")) if item["verification_json"] else None
         return item
+
+
+    def list_code_repairs(self, limit: int = 50) -> list[dict[str, Any]]:
+        with self.connect() as conn:
+            rows = conn.execute(
+                "SELECT id,created_at,updated_at,task,status,verification_json,applied_commit "
+                "FROM code_repairs ORDER BY id DESC LIMIT ?",
+                (max(1, min(int(limit), 100)),),
+            ).fetchall()
+        result = []
+        for row in rows:
+            item = dict(row)
+            item["verification"] = (
+                json.loads(item.pop("verification_json"))
+                if item["verification_json"]
+                else None
+            )
+            result.append(item)
+        return result
