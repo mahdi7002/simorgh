@@ -34,6 +34,7 @@ PrivateTmp=true
 ProtectSystem=full
 ReadOnlyPaths=/proc /sys /etc/systemd /var/log
 ReadWritePaths=__SIMORGH_HOME__/.local/share/simorgh/mother
+ReadWritePaths=__SIMORGH_HOME__/.local/share/simorgh/memory
 RestrictRealtime=true
 RestrictSUIDSGID=true
 
