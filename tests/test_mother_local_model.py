@@ -23,6 +23,8 @@ def test_local_model_prefers_running_loopback_endpoint(monkeypatch):
             return FakeResponse({"data": []})
         return FakeResponse({"data": [{"id": "gemma-local"}]})
 
+    monkeypatch.delenv("SIMORGH_LLM_QUALITY_MODELS_URL", raising=False)
+    monkeypatch.delenv("SIMORGH_LLM_FAST_MODELS_URL", raising=False)
     monkeypatch.setattr(local_model.requests, "get", fake_get)
     monkeypatch.setattr(
         "core.user_runtime.load_config",
