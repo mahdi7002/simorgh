@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 from typing import Any
 
 from fastapi import APIRouter, HTTPException
@@ -9,6 +10,7 @@ from pydantic import BaseModel, Field
 from .coding import apply_verified_patch, propose_patch, verify_patch
 from core.identity import SIMORGH_IDENTITY
 from core.llm_local import generate
+from core.user_runtime import load_config
 from .ledger import MotherLedger
 from .research import (
     advisory_ai_review,
@@ -94,6 +96,13 @@ def report_weekly():
 @router.post("/report/ask")
 def report_ask():
     """Ask the local model to narrate the latest observed Mother state."""
+    privacy_mode = os.environ.get(
+        "SIMORGH_PRIVACY_MODE",
+        str(load_config().get("privacy_mode", "local-only")),
+    ).strip().lower() or "local-only"
+    if privacy_mode != "local-only":
+        raise HTTPException(409, "local report requires privacy_mode=local-only")
+
     daily = ledger.latest_report("DAILY") or reports.daily(with_ai=False)
     weekly = ledger.latest_report("WEEKLY")
     post_boot = ledger.latest_report("POST_BOOT")
