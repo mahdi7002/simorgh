@@ -39,7 +39,8 @@ def root():
 
 @app.get("/health")
 def health():
-    return {"status": "healthy", "service": "simorgh-mother", "port": PORT}
+    state = SERVICE.health_state()
+    return {**state, "service": "simorgh-mother", "port": PORT}
 
 
 if __name__ == "__main__":
