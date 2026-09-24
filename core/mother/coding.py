@@ -71,7 +71,7 @@ def _extract_patch(raw: str) -> str:
     match = PATCH_RE.search(raw or "")
     if not match:
         return ""
-    patch = match.group(1).strip("\\r\\n")
+    patch = match.group(1).strip("\r\n")
     _validate_patch_paths(patch)
     return patch
 
