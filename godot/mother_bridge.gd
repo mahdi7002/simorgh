@@ -3,7 +3,7 @@ extends Node
 signal mother_state_received(state: Dictionary)
 signal mother_state_failed(message: String)
 
-@export var mother_url := "http://127.0.0.1:8000/api/mother/state"
+@export var mother_url := "http://127.0.0.1:8010/api/mother/state"
 @export var poll_seconds := 10.0
 
 var _http: HTTPRequest
