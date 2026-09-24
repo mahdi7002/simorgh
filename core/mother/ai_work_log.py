@@ -308,6 +308,7 @@ class AIWorkLog:
             models = sorted({row["model"] for row in actor_rows if row["model"]})
             actions = sorted({row["action"] for row in actor_rows if row["action"]})
 
+            entries = [dict(row) for row in actor_rows]
             by_actor[actor] = {
                 "sample_count": sample_count,
                 "verification": {
@@ -327,6 +328,7 @@ class AIWorkLog:
                 },
                 "models": models,
                 "actions": actions,
+                "entries": entries,
             }
 
         return {
