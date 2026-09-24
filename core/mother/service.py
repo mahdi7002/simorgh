@@ -67,6 +67,59 @@ class MotherService:
         tmp.write_text(json.dumps(payload, ensure_ascii=False, indent=2, default=str), encoding="utf-8")
         tmp.replace(target)
 
+    def _update_self_model(self, snapshot: dict[str, Any]) -> None:
+        self.ledger.set_self_fact(
+            "mother.identity",
+            "SIMORGH MOTHER",
+            source="mother_static",
+        )
+        self.ledger.set_self_fact(
+            "mother.capability.observation",
+            True,
+            source="system_observer",
+        )
+        self.ledger.set_self_fact(
+            "mother.capability.persistent_ledger",
+            True,
+            source="mother_ledger",
+        )
+        self.ledger.set_self_fact(
+            "mother.boot_id",
+            snapshot.get("boot_id"),
+            source="kernel_boot_id",
+        )
+        self.ledger.set_self_fact(
+            "mother.host",
+            snapshot.get("host"),
+            source="system_observer",
+        )
+        self.ledger.set_self_fact(
+            "mother.python",
+            snapshot.get("os", {}).get("python"),
+            source="system_observer",
+        )
+        self.ledger.set_self_fact(
+            "mother.cpu_threads",
+            snapshot.get("cpu", {}).get("logical"),
+            source="system_observer",
+        )
+        self.ledger.set_self_fact(
+            "mother.process_count",
+            snapshot.get("processes", {}).get("total_count"),
+            source="system_observer",
+        )
+        self.ledger.set_self_fact(
+            "mother.journal_readable",
+            snapshot.get("access", {}).get("journal_readable"),
+            source="system_observer",
+            status="KNOWN" if snapshot.get("access", {}).get("journal_readable") else "NOT_AVAILABLE",
+        )
+        self.ledger.set_self_fact(
+            "mother.user_repositories",
+            snapshot.get("repositories", {}),
+            source="git_observer",
+        )
+
     def observe_once(self) -> dict[str, Any]:
         previous = self.ledger.latest_snapshot()
         journal = (
@@ -97,6 +150,7 @@ class MotherService:
             )
         snapshot = self.observer.capture()
         self.ledger.save_snapshot(snapshot)
+        self._update_self_model(snapshot)
         self._write_world_state(snapshot)
         if previous:
             changes = self._changed(previous, snapshot)
