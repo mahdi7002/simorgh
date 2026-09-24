@@ -297,7 +297,8 @@ class AIWorkLog:
     def report(self) -> dict[str, Any]:
         with self.ledger.connect() as conn:
             rows = conn.execute(
-                "SELECT actor,verification,model,action FROM ai_work_log ORDER BY id"
+                "SELECT id,ts,actor,model,repo,ref,action,summary,reason,evidence,verification,verified_by "
+                "FROM ai_work_log ORDER BY id"
             ).fetchall()
 
         by_actor: dict[str, dict[str, Any]] = {}
