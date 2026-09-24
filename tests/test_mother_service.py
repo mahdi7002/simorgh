@@ -10,7 +10,7 @@ def test_health_state_reports_degraded_before_observer_runs():
     assert state["observer"] == "not_running"
 
 
-def test_health_state_reports_healthy_after_observer_success(monkeypatch):
+def test_health_state_reports_healthy_after_observer_success():
     service = MotherService()
     service._observer_alive = True
     service._last_observer_error = None
