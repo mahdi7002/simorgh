@@ -431,3 +431,53 @@ def test_managed_backend_pid_is_accepted_when_process_identity_matches(monkeypat
     )
 
     assert backend._managed_pid() == 70998
+
+
+def test_managed_backend_recovers_from_stale_pid_file(monkeypatch, tmp_path):
+    import json
+    import core.local_backend as backend
+
+    pid_file = tmp_path / "llama-server.pid"
+    meta_file = tmp_path / "llama-server.json"
+    pid_file.write_text("69802", encoding="utf-8")
+    meta_file.write_text(
+        json.dumps(
+            {
+                "pid": 70998,
+                "model": "/tmp/qwen.gguf",
+                "port": 8089,
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    monkeypatch.setattr(backend, "BACKEND_PID_FILE", pid_file)
+    monkeypatch.setattr(backend, "BACKEND_META_FILE", meta_file)
+
+    def fake_kill(pid, _signal):
+        if pid == 69802:
+            raise OSError("stale")
+        return None
+
+    monkeypatch.setattr(backend.os, "kill", fake_kill)
+    monkeypatch.setattr(
+        backend,
+        "_process_cmdline",
+        lambda pid: (
+            [
+                "/home/mahdi/.local/share/simorgh/bin/llama-server",
+                "--model",
+                "/tmp/qwen.gguf",
+                "--host",
+                "127.0.0.1",
+                "--port",
+                "8089",
+            ]
+            if pid == 70998
+            else None
+        ),
+    )
+
+    assert backend._managed_pid() == 70998
+    assert pid_file.read_text(encoding="utf-8").strip() == "70998"
+    assert meta_file.is_file()
