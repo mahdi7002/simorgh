@@ -566,24 +566,25 @@ def discover_backend() -> dict[str, Any]:
     model_ids = _model_ids(payload)
     endpoint_up = payload is not None
 
+    managed_model = meta.get("model") if pid is not None else None
+    managed_model_loaded = (
+        isinstance(managed_model, str)
+        and any(
+            _model_id_matches(model_id, Path(managed_model).expanduser().resolve())
+            for model_id in model_ids
+        )
+    )
     if (
         pid is not None
         and isinstance(managed_port, int)
         and managed_port > 0
         and endpoint_up
+        and managed_model_loaded
     ):
         managed_fast_url = f"http://127.0.0.1:{managed_port}/v1/chat/completions"
         managed_models_url = f"http://127.0.0.1:{managed_port}/v1/models"
-        current = {}
-        try:
-            current = json.loads(
-                (Path(os.environ.get("SIMORGH_CONFIG_FILE", "")) if os.environ.get("SIMORGH_CONFIG_FILE") else Path("")).read_text(encoding="utf-8")
-            )
-        except (OSError, ValueError):
-            current = {}
         # Persist the authoritative managed endpoint so a fresh SIMORGH
         # process does not resurrect a stale port from an older environment.
-        config = {}
         try:
             from core.user_runtime import load_config
             config = load_config()
@@ -597,8 +598,6 @@ def discover_backend() -> dict[str, Any]:
         }
         if any(config.get(key) != value for key, value in desired.items()):
             save_config(desired)
-            configured_fast_url = managed_fast_url
-            configured_models_url = managed_models_url
         fast_url = managed_fast_url
         models_url = managed_models_url
     return {
