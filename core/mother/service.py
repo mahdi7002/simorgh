@@ -48,10 +48,29 @@ class MotherService:
                     changes.append({"metric": f"{section}.{key}", "before": a.get(key), "after": b.get(key)})
         return changes[:250]
 
+    def _write_world_state(self, snapshot: dict[str, Any]) -> None:
+        from pathlib import Path
+        import json
+        target = Path(snapshot.get("mother_dir") or self.ledger.db_path.parent) / "world_state.json"
+        target.parent.mkdir(parents=True, exist_ok=True)
+        payload = {
+            "generated_at": snapshot.get("timestamp"),
+            "boot_id": snapshot.get("boot_id"),
+            "snapshot": snapshot,
+            "daily": self.ledger.latest_report("DAILY"),
+            "weekly": self.ledger.latest_report("WEEKLY"),
+            "post_boot": self.ledger.latest_report("POST_BOOT"),
+            "goals": self.ledger.list_goals(),
+        }
+        tmp = target.with_suffix(".tmp")
+        tmp.write_text(json.dumps(payload, ensure_ascii=False, indent=2, default=str), encoding="utf-8")
+        tmp.replace(target)
+
     def observe_once(self) -> dict[str, Any]:
         snapshot = self.observer.capture()
         previous = self.ledger.latest_snapshot()
         self.ledger.save_snapshot(snapshot)
+        self._write_world_state(snapshot)
         if previous:
             changes = self._changed(previous, snapshot)
             if changes:
@@ -80,6 +99,7 @@ class MotherService:
         )
         self.observe_once()
         self.reports.post_boot(boot)
+        self._write_world_state(self.ledger.latest_snapshot())
         last_daily_refresh = 0.0
         last_weekly_refresh = 0.0
 
