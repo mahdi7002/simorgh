@@ -1,4 +1,5 @@
 from __future__ import annotations
+from .local_model import prepare_local_model_environment
 
 import html
 import ipaddress
@@ -197,6 +198,7 @@ def advisory_ai_review(ledger: MotherLedger, item_id: int) -> dict[str, Any]:
         + item["content"][:12000]
     )
     try:
+        prepare_local_model_environment()
         raw = generate(SIMORGH_IDENTITY, prompt, max_tokens=500, needs_quality=True)
     except Exception as exc:
         return {"status": "NOT_AVAILABLE", "reason": type(exc).__name__}
