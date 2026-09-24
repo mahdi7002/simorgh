@@ -28,7 +28,7 @@ def test_mother_code_apply_requires_verified_patch(monkeypatch):
             return {"id": 1, "verification": {"status": "FAILED"}, "patch": "diff"}
 
     from core.mother import api
-    monkeypatch.setattr(api, "ledger", FakeLedger())
+    monkeypatch.setattr(api, "apply_verified_patch", lambda *args, **kwargs: (_ for _ in ()).throw(ValueError("only a VERIFIED patch can be applied")))
     response = TestClient(main.app).post(
         "/api/mother/coding/1/apply",
         json={"approve": True},
