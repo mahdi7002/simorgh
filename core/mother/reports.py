@@ -38,7 +38,8 @@ class ReportEngine:
             "events_total": len(events),
             "events_by_type": {f"{k[0]}:{k[1]}": v for k, v in counters.items()},
             "events_by_component": dict(components),
-            "snapshots": len(snapshots),
+            "snapshots_count": len(snapshots),
+            "snapshots": snapshots[-50:],
             "latest_state": snapshots[-1] if snapshots else self.ledger.latest_snapshot(),
             "goals": self.ledger.list_goals(),
             "known_unknowns": [],
@@ -96,7 +97,7 @@ class ReportEngine:
         now = now or datetime.now(timezone.utc)
         start, end = self._human_period(now)
         report = self._base_report("DAILY", start, end)
-        report["changes"] = self._change_summary(self.ledger.snapshots_since(start))
+        report["changes"] = self._change_summary(report["snapshots"])
         report["self_reflection"] = self._local_model_reflection(report)
         if not report["activity"]:
             report["known_unknowns"].append(
