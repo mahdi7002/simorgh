@@ -28,10 +28,7 @@ class MotherActivityMiddleware:
         )
         started = time.perf_counter()
         status = 500
-        if should_record:
-            body = scope.get("query_string", b"")[:256]
-        else:
-            body = b""
+        body = b""
         async def capture(message):
             nonlocal status
             if message.get("type") == "http.response.start":
@@ -53,6 +50,5 @@ class MotherActivityMiddleware:
                         "path": path,
                         "status": status,
                         "duration_ms": round((time.perf_counter() - started) * 1000, 2),
-                        "query_bytes": body.decode("utf-8", errors="replace")[:256],
                     },
                 )
