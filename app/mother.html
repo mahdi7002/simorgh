@@ -95,7 +95,8 @@ function render(){
  const goals=state.goals||[]; document.getElementById('goals').innerHTML=(goals.length?goals:[]).map(g=>'<div class="item">'+esc(g.title)+' <span class="badge">'+esc(g.status)+'</span></div>').join('')||'<span class="muted">هدف ثبت نشده.</span>';
  const events=(state.daily?.activity||[]).slice(-80).reverse();
  document.getElementById('events').innerHTML=events.map(e=>'<div class="item"><strong>'+esc(e.event_type)+'</strong> · '+esc(e.component)+' · '+esc(e.timestamp)+'<div class="muted">'+esc(JSON.stringify(e.data))+'</div></div>').join('')||'رویدادی ثبت نشده.';
- document.getElementById('self').innerHTML=[kv('رویدادها',state.daily?.events_total||0),kv('snapshotها',state.daily?.snapshots_count||0),kv('پیشنهادهای هفته',((state.weekly||{}).next_candidate_objectives||[]).length),kv('مدل محلی در بازتاب',state.daily?.self_reflection?.status||'NOT_AVAILABLE'),kv('مرز خاموشی',state.post_boot?.offline_boundary||'')].join('');
+ const selfFacts=state.self_model||[];
+ document.getElementById('self').innerHTML=[kv('رویدادها',state.daily?.events_total||0),kv('snapshotها',state.daily?.snapshots_count||0),kv('پیشنهادهای هفته',((state.weekly||{}).next_candidate_objectives||[]).length),kv('مدل محلی در بازتاب',state.daily?.self_reflection?.status||'NOT_AVAILABLE'),kv('مرز خاموشی',state.post_boot?.offline_boundary||'')].join('')+selfFacts.map(x=>'<div class="item"><strong>'+esc(x.key)+'</strong> · <span class="badge">'+esc(x.status)+'</span><div class="muted">'+esc(JSON.stringify(x.value))+'</div></div>').join('');
  document.getElementById('postboot').textContent=json(state.post_boot);
  document.getElementById('daily').textContent=json(state.daily);
  document.getElementById('weekly').textContent=json(state.weekly);
