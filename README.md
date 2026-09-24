@@ -161,6 +161,28 @@ python3 demo/simorgh_minimal.py "عدالت چیست؟"
 
 For the detailed first-run path, see [`QUICKSTART.md`](QUICKSTART.md), [`docs/USER_INSTALL.md`](docs/USER_INSTALL.md), and [`docs/APPIMAGE.md`](docs/APPIMAGE.md).
 
+## SIMORGH Mother
+
+لایهٔ Mother وضعیت systemd، پردازش‌ها، منابع، Git، runtime و رخدادهای قابل مشاهده را در حافظهٔ زمانی محلی ثبت می‌کند و گزارش‌های POST_BOOT، DAILY و WEEKLY می‌سازد.
+
+دروازهٔ تحقیق اینترنتی، نتیجه را ابتدا در QUARANTINE نگه می‌دارد. ارزیابی مدل محلی صرفاً مشورتی است و ورود به حافظهٔ provenance فقط پس از تأیید انسانی انجام می‌شود.
+
+دستیار کدنویسی محلی نیز patch را پیشنهاد می‌دهد، آن را در محیط موقت با pytest آزمون می‌کند و فقط پس از تأیید انسانی آن را روی working tree اعمال می‌کند.
+
+نصب Observer مادر:
+
+```bash
+bash scripts/install-mother-service.sh
+```
+
+نمای مادر:
+
+```text
+http://127.0.0.1:8010/
+```
+
+شرح کامل: [docs/MOTHER.md](docs/MOTHER.md)
+
 ## Agent fabric
 
 SIMORGH intentionally borrows architectural lessons from modern agent systems without depending on them. See [`docs/AGENT_FABRIC.md`](docs/AGENT_FABRIC.md) for the provider-neutral lifecycle, capability boundary, evidence artifacts, and Human Gate model.

@@ -58,3 +58,69 @@ def test_reviewer_accepts_normal_answer_without_evidence_request():
 
     assert result.approved is True
     assert result.warnings == []
+
+
+from core.orchestration.orchestrator import Orchestrator
+from core.orchestration.reviewer import ReviewResult
+
+
+def test_orchestrator_blocks_unapproved_final_output(monkeypatch):
+    monkeypatch.setattr(
+        "core.orchestration.orchestrator.ask",
+        lambda question, agent="hakim", *, tool_context="", use_builtin_tools=False, return_metadata=True:
+            ("طبق منابع این ادعا درست است.", True),
+    )
+    monkeypatch.setattr(
+        "core.orchestration.orchestrator.Reviewer.review",
+        lambda self, query, outputs, tool_results: ReviewResult(
+            approved=False,
+            warnings=["evidence_sensitive_request_without_tool_evidence"],
+            checks=["evidence_gate"],
+        ),
+    )
+
+    result = Orchestrator().run("منبع دقیق این ادعا را بگو", max_agents=1)
+
+    assert result["review"]["approved"] is False
+    assert result["response_blocked"] is True
+    assert result["final_output"].startswith("[NOT_VERIFIED]")
+
+
+
+
+def test_evidence_sensitive_request_is_database_first(monkeypatch):
+    from core.orchestration.orchestrator import Orchestrator
+
+    class FakeRegistry:
+        def execute_many(self, names, query):
+            assert names == ["poetry_search"]
+            return {
+                "poetry_search": {
+                    "tool": "poetry_search",
+                    "status": "OK",
+                    "data": [
+                        {
+                            "poet": "فردوسی",
+                            "title": "شاهنامه",
+                            "snippet": "چو بشنید پیچان شد افراسیاب",
+                        }
+                    ],
+                    "provenance": {"source": "test.poetry", "execution": "local"},
+                }
+            }
+
+    o = Orchestrator()
+    o.tools = FakeRegistry()
+
+    def fail_llm(*args, **kwargs):
+        raise AssertionError("LLM must not be called for evidence-sensitive database-first requests")
+
+    monkeypatch.setattr("core.orchestration.orchestrator.ask", fail_llm)
+
+    result = o.run("این بیت از کیست؟", max_agents=1)
+
+    assert result["review"]["mode"] == "database-first"
+    assert result["review"]["approved"] is True
+    assert result["response_blocked"] is False
+    assert "فردوسی" in result["final_output"]
+    assert result["ai_generated"]["knowledge"] is False
