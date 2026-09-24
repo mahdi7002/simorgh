@@ -108,18 +108,31 @@ def browser_search_urls(query: str) -> dict[str, str]:
 
 
 def fetch_to_quarantine(ledger: MotherLedger, url: str) -> dict[str, Any]:
-    safe_url = _safe_url(url)
-    response = requests.get(
-        safe_url,
-        timeout=(5, 15),
-        headers={
-            "User-Agent": "SIMORGH-Mother/1.0 research-quarantine",
-            "Accept": "text/html,text/plain,application/json,application/xml;q=0.9,*/*;q=0.1",
-        },
-        allow_redirects=True,
-        stream=True,
-    )
-    final_url = _safe_url(response.url)
+    current_url = _safe_url(url)
+    headers = {
+        "User-Agent": "SIMORGH-Mother/1.0 research-quarantine",
+        "Accept": "text/html,text/plain,application/json,application/xml;q=0.9,*/*;q=0.1",
+    }
+    response = None
+    for _ in range(4):
+        response = requests.get(
+            current_url,
+            timeout=(5, 15),
+            headers=headers,
+            allow_redirects=False,
+            stream=True,
+        )
+        if response.status_code not in {301, 302, 303, 307, 308}:
+            break
+        location = response.headers.get("location")
+        if not location:
+            break
+        from urllib.parse import urljoin
+        current_url = _safe_url(urljoin(current_url, location))
+        response.close()
+    if response is None:
+        raise ValueError("research fetch failed")
+    final_url = _safe_url(response.url if response.url else current_url)
     content_type = response.headers.get("content-type", "").split(";", 1)[0].strip().lower()
     if content_type not in ALLOWED_CONTENT_TYPES:
         raise ValueError(f"unsupported content type: {content_type or 'unknown'}")
