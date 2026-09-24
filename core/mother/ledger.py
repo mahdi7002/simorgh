@@ -141,7 +141,7 @@ class MotherLedger:
                 return dict(row)
 
             previous = conn.execute(
-                "SELECT boot_id, started_at, clean_shutdown, status "
+                "SELECT boot_id, started_at, last_shutdown_at, clean_shutdown, status "
                 "FROM boot_sessions ORDER BY id DESC LIMIT 1"
             ).fetchone()
             previous_id = previous["boot_id"] if previous else None
@@ -168,6 +168,8 @@ class MotherLedger:
             "started_at": utc_now(),
             "previous_boot_id": previous_id,
             "previous_clean_shutdown": previous["clean_shutdown"] if previous else None,
+            "previous_started_at": previous["started_at"] if previous else None,
+            "previous_shutdown_at": previous["last_shutdown_at"] if previous else None,
         }
 
     def mark_shutdown(self, clean: bool = True) -> None:
@@ -222,6 +224,19 @@ class MotherLedger:
                 ),
             )
         return event_id
+
+    def events_for_boot(self, boot_id: str, limit: int = 5000) -> list[dict[str, Any]]:
+        with self.connect() as conn:
+            rows = conn.execute(
+                "SELECT * FROM events WHERE boot_id=? ORDER BY timestamp LIMIT ?",
+                (boot_id, max(1, min(int(limit), 10000))),
+            ).fetchall()
+        result = []
+        for row in rows:
+            item = dict(row)
+            item["data"] = json.loads(item.pop("data_json"))
+            result.append(item)
+        return result
 
     def save_snapshot(self, snapshot: dict[str, Any]) -> int:
         raw = json.dumps(snapshot, ensure_ascii=False, sort_keys=True, default=str)
