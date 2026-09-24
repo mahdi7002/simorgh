@@ -324,53 +324,68 @@ def ensure_llama_server() -> dict[str, Any]:
 
 
 def _managed_pid() -> int | None:
+    metadata: dict[str, Any] = {}
     try:
-        pid = int(BACKEND_PID_FILE.read_text(encoding="utf-8").strip())
-        os.kill(pid, 0)
         metadata = json.loads(BACKEND_META_FILE.read_text(encoding="utf-8"))
     except (OSError, ValueError, TypeError, json.JSONDecodeError):
-        _cleanup_managed_state()
-        return None
+        metadata = {}
 
-    cmdline = _process_cmdline(pid)
-    if not cmdline or Path(cmdline[0]).name != "llama-server":
-        _cleanup_managed_state()
-        return None
+    candidate_pids: list[int] = []
+    try:
+        pid = int(BACKEND_PID_FILE.read_text(encoding="utf-8").strip())
+        candidate_pids.append(pid)
+    except (OSError, ValueError):
+        pass
 
-    expected_binary = metadata.get("binary")
-    if isinstance(expected_binary, str) and expected_binary:
+    metadata_pid = metadata.get("pid")
+    if isinstance(metadata_pid, int) and metadata_pid > 0 and metadata_pid not in candidate_pids:
+        candidate_pids.append(metadata_pid)
+
+    for pid in candidate_pids:
         try:
-            if Path(cmdline[0]).resolve() != Path(expected_binary).expanduser().resolve():
-                _cleanup_managed_state()
-                return None
+            os.kill(pid, 0)
         except OSError:
-            _cleanup_managed_state()
-            return None
+            continue
 
-    expected_model = metadata.get("model")
-    if isinstance(expected_model, str) and expected_model:
-        try:
-            model_index = cmdline.index("--model")
-            if Path(cmdline[model_index + 1]).expanduser().resolve() != Path(expected_model).expanduser().resolve():
-                _cleanup_managed_state()
-                return None
-        except (ValueError, IndexError, OSError):
-            _cleanup_managed_state()
-            return None
+        cmdline = _process_cmdline(pid)
+        if not cmdline or Path(cmdline[0]).name != "llama-server":
+            continue
 
-    expected_port = metadata.get("port")
-    if isinstance(expected_port, int):
-        try:
-            port_index = cmdline.index("--port")
-            if int(cmdline[port_index + 1]) != expected_port:
-                _cleanup_managed_state()
-                return None
-        except (ValueError, IndexError):
-            _cleanup_managed_state()
-            return None
+        expected_binary = metadata.get("binary")
+        if isinstance(expected_binary, str) and expected_binary:
+            try:
+                if Path(cmdline[0]).resolve() != Path(expected_binary).expanduser().resolve():
+                    continue
+            except OSError:
+                continue
 
-    return pid
+        expected_model = metadata.get("model")
+        if isinstance(expected_model, str) and expected_model:
+            try:
+                model_index = cmdline.index("--model")
+                if Path(cmdline[model_index + 1]).expanduser().resolve() != Path(expected_model).expanduser().resolve():
+                    continue
+            except (ValueError, IndexError, OSError):
+                continue
 
+        expected_port = metadata.get("port")
+        if isinstance(expected_port, int):
+            try:
+                port_index = cmdline.index("--port")
+                if int(cmdline[port_index + 1]) != expected_port:
+                    continue
+            except (ValueError, IndexError):
+                continue
+
+        # Repair a stale PID file when metadata identifies the live managed
+        # process. This prevents a previous process PID from orphaning a
+        # healthy llama-server instance.
+        if BACKEND_PID_FILE.read_text(encoding="utf-8").strip() != str(pid):
+            BACKEND_PID_FILE.write_text(str(pid), encoding="utf-8")
+        return pid
+
+    _cleanup_managed_state()
+    return None
 
 def stop_managed_backend() -> bool:
     pid = _managed_pid()
