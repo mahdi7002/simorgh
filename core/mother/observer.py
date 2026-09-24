@@ -75,6 +75,7 @@ def _processes() -> list[dict[str, Any]]:
     rows = []
     for proc in psutil.process_iter(["pid", "name", "username", "status", "cpu_percent", "memory_info", "cmdline"]):
         try:
+            total_count += 1
             info = proc.info
             rss = (info.get("memory_info").rss if info.get("memory_info") else 0)
             cmdline = " ".join(info.get("cmdline") or [])[:500]
@@ -92,7 +93,7 @@ def _processes() -> list[dict[str, Any]]:
         except (psutil.NoSuchProcess, psutil.AccessDenied):
             continue
     rows.sort(key=lambda x: (x["rss_mb"], x["cpu_percent"]), reverse=True)
-    return rows[:40]
+    return {"total_count": total_count, "top": rows[:40]}
 
 
 def _repo_state(path: Path) -> dict[str, Any]:
@@ -203,6 +204,33 @@ class SystemObserver:
             "runtime_files": _runtime_files(),
         }
 
+
+    def journal_current_boot(self, limit: int = 2000) -> dict[str, Any]:
+        rc, out, err = _cmd(
+            ["journalctl", "-b", "--no-pager", "-o", "short-iso"],
+            timeout=10,
+        )
+        if rc != 0:
+            return {"status": "NOT_AVAILABLE", "error": err or "journalctl failed"}
+        lines = []
+        for line in out.splitlines():
+            low = line.lower()
+            if (
+                "simorgh" in low
+                or "llama-server" in low
+                or "full reflection" in low
+                or "mother" in low
+                or ("systemd[1]:" in low and any(token in low for token in (
+                    "started ", "stopped ", "failed ", "starting ", "stopping "
+                )))
+            ):
+                lines.append(line)
+        return {
+            "status": "OK",
+            "count": min(len(lines), limit),
+            "truncated": len(lines) > limit,
+            "lines": lines[:limit],
+        }
 
     def journal_since(self, since_iso: str, limit: int = 2000) -> dict[str, Any]:
         rc, out, err = _cmd(
