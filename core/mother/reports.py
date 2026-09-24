@@ -143,8 +143,17 @@ class ReportEngine:
         for snap in self.ledger.snapshots_since("1970-01-01T00:00:00+00:00"):
             if snap.get("boot_id") == previous:
                 previous_state = snap
+        previous_events = self.ledger.events_for_boot(previous, limit=2000) if previous else []
         report["boot"] = boot
         report["previous_boot_last_state"] = previous_state
+        report["previous_boot_activity"] = previous_events
+        report["previous_boot_activity_count"] = len(previous_events)
+        if boot.get("previous_shutdown_at") and boot.get("started_at"):
+            try:
+                offline_seconds = (_dt(boot["started_at"]) - _dt(boot["previous_shutdown_at"])).total_seconds()
+                report["offline_interval_seconds"] = max(0, round(offline_seconds, 3))
+            except (TypeError, ValueError):
+                report["offline_interval_seconds"] = None
         if boot.get("previous_clean_shutdown") is not True:
             report["known_unknowns"].append(
                 "خاموشی قبلی clean ثبت نشده است؛ قطع برق/کرش/ریست سخت محتمل است، اما علت دقیق VERIFIED نیست."
