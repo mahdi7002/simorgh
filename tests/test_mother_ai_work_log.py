@@ -51,6 +51,7 @@ def test_ai_work_log_report_groups_by_actor(tmp_path):
     assert report["sample_count"] == 5
     assert report["by_actor"]["Claude"]["sample_count"] == 2
     assert report["by_actor"]["Claude"]["verification"]["claimed"]["sample_count"] == 2
+    assert len(report["by_actor"]["Claude"]["entries"]) == 2
 
 
 def test_ai_work_log_http_post_and_get(tmp_path, monkeypatch):
@@ -87,6 +88,7 @@ def test_ai_work_log_http_post_and_get(tmp_path, monkeypatch):
     body = report.json()
     assert body["sample_count"] == 1
     assert body["by_actor"]["Claude"]["sample_count"] == 1
+    assert body["by_actor"]["Claude"]["entries"][0]["summary"] == "poetry lookup"
 
 
 def test_ai_work_log_git_verification_requires_actor_contract(tmp_path):
