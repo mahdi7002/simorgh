@@ -11,8 +11,8 @@ def test_local_llm_timeout_defaults_are_suitable_for_cpu_models(monkeypatch):
 
     importlib.reload(llm_local)
 
-    assert llm_local.FAST_TIMEOUT == 30.0
-    assert llm_local.QUALITY_TIMEOUT == 60.0
+    assert llm_local.FAST_TIMEOUT == 60.0
+    assert llm_local.QUALITY_TIMEOUT == 120.0
 
 
 def test_generate_uses_quality_timeout(monkeypatch):
@@ -33,7 +33,7 @@ def test_generate_uses_quality_timeout(monkeypatch):
     monkeypatch.setattr(llm_local, "_prepare_offline_first", lambda: None)
     monkeypatch.setattr(llm_local.requests, "post", fake_post)
     monkeypatch.setenv("SIMORGH_LLM_QUALITY_URL", "http://127.0.0.1:8081/v1/chat/completions")
-    monkeypatch.setattr(llm_local, "QUALITY_TIMEOUT", 60.0)
+    monkeypatch.setattr(llm_local, "QUALITY_TIMEOUT", 120.0)
 
     result = llm_local.generate("system", "user", needs_quality=True)
 
