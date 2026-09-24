@@ -28,6 +28,10 @@ class MotherLedger:
         ).expanduser().resolve()
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
         self._init()
+        try:
+            os.chmod(self.db_path, 0o600)
+        except OSError:
+            pass
 
     @contextmanager
     def connect(self):
