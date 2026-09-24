@@ -16,7 +16,7 @@ from .ledger import MotherLedger, utc_now
 
 MAX_FILE_BYTES = 100_000
 MAX_FILES = 8
-PATCH_RE = re.compile(r"(?:\`\`\`diff|~~~diff)\s*(.*?)(?:\`\`\`|~~~)", re.S | re.I)
+PATCH_START_RE = re.compile(r"(?:```diff|~~~diff)", re.I)
 
 
 def _repo_root() -> Path:
@@ -68,10 +68,24 @@ def _validate_patch_paths(patch: str) -> list[str]:
 
 
 def _extract_patch(raw: str) -> str:
-    match = PATCH_RE.search(raw or "")
-    if not match:
+    text = raw or ""
+    start = PATCH_START_RE.search(text)
+    if not start:
         return ""
-    patch = match.group(1).strip("\r\n")
+    body = text[start.end():]
+    if body.startswith("\r\n"):
+        body = body[2:]
+    elif body.startswith("\n"):
+        body = body[1:]
+    closing_positions = [p for p in (body.find("```"), body.find("~~~")) if p >= 0]
+    if not closing_positions:
+        return ""
+    body = body[:min(closing_positions)]
+    if body.endswith("\r\n"):
+        body = body[:-2]
+    elif body.endswith("\n"):
+        body = body[:-1]
+    patch = body
     _validate_patch_paths(patch)
     return patch
 
