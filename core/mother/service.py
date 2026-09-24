@@ -8,6 +8,7 @@ from typing import Any
 from .ledger import MotherLedger
 from .observer import SystemObserver
 from .reports import ReportEngine
+from .quality import run_daily_quality_check
 
 
 class MotherService:
@@ -126,6 +127,7 @@ class MotherService:
         self._write_world_state(self.ledger.latest_snapshot())
         last_daily_refresh = 0.0
         last_weekly_refresh = 0.0
+        last_quality_check = 0.0
 
         while not self._stop:
             now = time.monotonic()
@@ -139,6 +141,9 @@ class MotherService:
                 if now - last_weekly_refresh >= 21600:
                     self.reports.weekly()
                     last_weekly_refresh = now
+                if now - last_quality_check >= 86400:
+                    run_daily_quality_check(self.ledger)
+                    last_quality_check = now
             except Exception as exc:
                 self.ledger.record_event(
                     component="mother",
