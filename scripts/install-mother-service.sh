@@ -36,6 +36,7 @@ fi
 sed \
     -e "s#__SIMORGH_USER__#$USER_NAME#g" \
     -e "s#__SIMORGH_HOME__#$HOME_DIR#g" \
+    -e "s#__SIMORGH_REPO__#$SIMORGH_REPO#g" \
     -e "s#__JOURNAL_GROUPS__#$journal_groups#g" \
     "$UNIT_SRC" > "$UNIT_TMP"
 
