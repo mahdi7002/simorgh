@@ -1,4 +1,5 @@
 from __future__ import annotations
+from .local_model import prepare_local_model_environment
 
 import json
 import os
@@ -85,6 +86,7 @@ def propose_patch(ledger: MotherLedger, task: str, paths: list[str]) -> dict[str
         f"TASK:\n{task[:4000]}\n\nFILES:\n"
         + json.dumps(context, ensure_ascii=False)
     )
+    prepare_local_model_environment()
     raw = generate(SIMORGH_IDENTITY, prompt, max_tokens=1800, needs_quality=True)
     patch_error = None
     patch = ""
