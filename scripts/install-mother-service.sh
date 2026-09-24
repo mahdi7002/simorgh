@@ -40,6 +40,13 @@ sed \
     -e "s#__JOURNAL_GROUPS__#$journal_groups#g" \
     "$UNIT_SRC" > "$UNIT_TMP"
 
+if ! systemd-analyze verify "$UNIT_TMP" >/tmp/simorgh-mother-systemd-verify.txt 2>&1; then
+    cat /tmp/simorgh-mother-systemd-verify.txt >&2
+    rm -f /tmp/simorgh-mother-systemd-verify.txt
+    printf "خطا: unit تولیدشده توسط Mother معتبر نیست.\n" >&2
+    exit 1
+fi
+rm -f /tmp/simorgh-mother-systemd-verify.txt
 
 sudo install -m 0644 "$UNIT_TMP" /etc/systemd/system/simorgh-mother.service
 sudo install -d -m 0700 -o "$USER_NAME" -g "$USER_NAME" "$HOME_DIR/.local/share/simorgh/mother"
