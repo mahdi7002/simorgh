@@ -565,6 +565,42 @@ def discover_backend() -> dict[str, Any]:
     payload = _models_payload(models_url)
     model_ids = _model_ids(payload)
     endpoint_up = payload is not None
+
+    if (
+        pid is not None
+        and isinstance(managed_port, int)
+        and managed_port > 0
+        and endpoint_up
+    ):
+        managed_fast_url = f"http://127.0.0.1:{managed_port}/v1/chat/completions"
+        managed_models_url = f"http://127.0.0.1:{managed_port}/v1/models"
+        current = {}
+        try:
+            current = json.loads(
+                (Path(os.environ.get("SIMORGH_CONFIG_FILE", "")) if os.environ.get("SIMORGH_CONFIG_FILE") else Path("")).read_text(encoding="utf-8")
+            )
+        except (OSError, ValueError):
+            current = {}
+        # Persist the authoritative managed endpoint so a fresh SIMORGH
+        # process does not resurrect a stale port from an older environment.
+        config = {}
+        try:
+            from core.user_runtime import load_config
+            config = load_config()
+        except Exception:
+            config = {}
+        desired = {
+            "llm_fast_url": managed_fast_url,
+            "llm_fast_models_url": managed_models_url,
+            "llm_quality_url": managed_fast_url,
+            "llm_quality_models_url": managed_models_url,
+        }
+        if any(config.get(key) != value for key, value in desired.items()):
+            save_config(desired)
+            configured_fast_url = managed_fast_url
+            configured_models_url = managed_models_url
+        fast_url = managed_fast_url
+        models_url = managed_models_url
     return {
         "provider": "openai-compatible",
         "endpoint": fast_url,
