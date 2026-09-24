@@ -194,3 +194,34 @@ class SystemObserver:
             },
             "runtime_files": _runtime_files(),
         }
+
+
+    def journal_since(self, since_iso: str, limit: int = 2000) -> dict[str, Any]:
+        rc, out, err = _cmd(
+            ["journalctl", "--since", since_iso, "--no-pager", "-o", "short-iso"],
+            timeout=10,
+        )
+        if rc != 0:
+            return {"status": "NOT_AVAILABLE", "error": err or "journalctl failed"}
+        lines = []
+        for line in out.splitlines():
+            low = line.lower()
+            if (
+                "simorgh" in low
+                or "llama-server" in low
+                or "full reflection" in low
+                or "mother" in low
+                or ("systemd[1]:" in low and any(token in low for token in (
+                    "started ", "stopped ", "failed ", "starting ", "stopping "
+                )))
+            ):
+                lines.append(line)
+        truncated = len(lines) > limit
+        if truncated:
+            lines = lines[:limit]
+        return {
+            "status": "OK",
+            "count": len(lines),
+            "truncated": truncated,
+            "lines": lines,
+        }
