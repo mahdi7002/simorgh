@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 from typing import Any
+from urllib.parse import urlparse
 
 import requests
 
@@ -35,6 +36,9 @@ def prepare_local_model_environment() -> dict[str, Any]:
 
     seen: set[str] = set()
     for base in candidates:
+        parsed = urlparse(base)
+        if parsed.scheme != "http" or parsed.hostname not in {"127.0.0.1", "localhost"}:
+            continue
         if base in seen:
             continue
         seen.add(base)
