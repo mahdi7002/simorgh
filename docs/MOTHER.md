@@ -69,3 +69,11 @@ Mother در هر بوت boot_id را ثبت می‌کند. اگر shutdown تم�
 ~/.local/share/simorgh/mother/world_state.json
 
 Godot می‌تواند این فایل یا /api/mother/state را برای نمایش تغییرات روزانه مصرف کند.
+
+## Non-invasive verification
+
+در checkout توسعه:
+
+bash scripts/mother-smoke.sh
+
+این smoke test فقط syntax، compile و تست‌های Mother را اجرا می‌کند و هیچ سرویس systemd یا پورت زنده‌ای را متوقف نمی‌کند.
