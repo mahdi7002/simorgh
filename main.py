@@ -227,11 +227,9 @@ async def chat(request: Request, query: str = Form(...), agent: str = Form("haki
 async def orchestrate(request: Request, query: str = Form(...)):
     try:
         result = orchestrator.run(query, max_agents=2)
-        response = "\n\n".join(
-            f"[{agent}]\n{text}"
-            for agent, text in result["outputs"].items()
-            if text
-        )
+        review_approved = bool(result.get("review", {}).get("approved"))
+        response = result.get("final_output", "")
+        public_outputs = result.get("outputs", {}) if review_approved else {}
         memory.store_conversation(
             _session_id(request),
             query,
@@ -247,6 +245,7 @@ async def orchestrate(request: Request, query: str = Form(...)):
         )
         payload = {
             **result,
+            "outputs": public_outputs,
             "response": response,
             "ai_generated": ai_generated,
             "disclosure": AI_DISCLOSURE if ai_generated else KNOWLEDGE_DISCLOSURE,
