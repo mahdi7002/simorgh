@@ -12,7 +12,9 @@ WorkingDirectory=__SIMORGH_HOME__/simorgh
 Environment=PYTHONUNBUFFERED=1
 Environment=SIMORGH_RUNTIME_DIR=__SIMORGH_HOME__/.local/share/simorgh
 Environment=SIMORGH_MOTHER_DB=__SIMORGH_HOME__/.local/share/simorgh/mother/mother.db
-ExecStart=__SIMORGH_HOME__/simorgh/.venv/bin/python __SIMORGH_HOME__/simorgh/core/mother/service.py
+Environment=SIMORGH_MOTHER_HOST=127.0.0.1
+Environment=SIMORGH_MOTHER_PORT=8010
+ExecStart=__SIMORGH_HOME__/simorgh/.venv/bin/python __SIMORGH_HOME__/simorgh/core/mother/server.py
 Restart=always
 RestartSec=10
 UMask=0077
