@@ -57,6 +57,7 @@ def state() -> dict[str, Any]:
         "weekly": ledger.latest_report("WEEKLY"),
         "post_boot": ledger.latest_report("POST_BOOT"),
         "goals": ledger.list_goals(),
+        "self_model": ledger.list_self_model(),
         "quarantine": ledger.list_quarantine(limit=20),
         "code_repairs": ledger.list_code_repairs(limit=20),
     }
