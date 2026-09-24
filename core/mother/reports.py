@@ -5,7 +5,6 @@ from collections import Counter
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
-from core.chat import ask
 from core.llm_local import generate
 from core.identity import SIMORGH_IDENTITY
 
@@ -98,6 +97,7 @@ class ReportEngine:
         start, end = self._human_period(now)
         report = self._base_report("DAILY", start, end)
         report["changes"] = self._change_summary(report["snapshots"])
+        report["vs_previous_day"] = self._compare_previous_day(_dt(start), report["latest_state"])
         report["self_reflection"] = self._local_model_reflection(report)
         if not report["activity"]:
             report["known_unknowns"].append(
@@ -109,6 +109,26 @@ class ReportEngine:
         )
         self.ledger.save_report("DAILY", start, end, report)
         return report
+
+    def _compare_previous_day(self, current_start: datetime, latest: dict[str, Any]) -> dict[str, Any]:
+        previous_start = current_start - timedelta(days=1)
+        candidates = [
+            s for s in self.ledger.snapshots_since(previous_start.isoformat())
+            if previous_start <= _dt(s.get("timestamp", "1970-01-01T00:00:00+00:00")) < current_start
+        ]
+        if not candidates:
+            return {"status": "NOT_AVAILABLE", "reason": "no_previous_day_snapshot"}
+        previous = max(candidates, key=lambda s: s.get("timestamp", ""))
+        return {
+            "status": "COMPARABLE",
+            "metrics": {
+                "cpu_percent": {"previous": previous.get("cpu", {}).get("percent"), "current": latest.get("cpu", {}).get("percent") if latest else None},
+                "ram_percent": {"previous": previous.get("memory", {}).get("percent"), "current": latest.get("memory", {}).get("percent") if latest else None},
+                "swap_percent": {"previous": previous.get("swap", {}).get("percent"), "current": latest.get("swap", {}).get("percent") if latest else None},
+                "disk_percent": {"previous": previous.get("disk", {}).get("percent"), "current": latest.get("disk", {}).get("percent") if latest else None},
+            },
+            "note": "این مقایسهٔ عددی است و به‌تنهایی به معنی بهتر یا بدتر بودن کلی نیست.",
+        }
 
     def post_boot(self, boot: dict[str, Any], now: datetime | None = None) -> dict[str, Any]:
         now = now or datetime.now(timezone.utc)
