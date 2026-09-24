@@ -1,4 +1,5 @@
 from __future__ import annotations
+from .local_model import prepare_local_model_environment
 
 import json
 from collections import Counter
@@ -76,6 +77,7 @@ class ReportEngine:
             + json.dumps(compact, ensure_ascii=False, default=str)
         )
         try:
+            prepare_local_model_environment()
             text = generate(
                 SIMORGH_IDENTITY,
                 prompt,
