@@ -2,11 +2,14 @@ extends Node
 
 signal mother_state_received(state: Dictionary)
 signal mother_state_failed(message: String)
+signal mother_changes_received(changes: Array)
 
 @export var mother_url := "http://127.0.0.1:8010/api/mother/state"
 @export var poll_seconds := 10.0
+@export var changes_url := "http://127.0.0.1:8010/api/mother/changes"
 
 var _http: HTTPRequest
+var _last_change_timestamp := ""
 var _timer: Timer
 
 func _ready() -> void:
@@ -17,10 +20,14 @@ func _ready() -> void:
     _timer = Timer.new()
     _timer.wait_time = max(1.0, poll_seconds)
     _timer.autostart = true
-    _timer.timeout.connect(poll)
+    _timer.timeout.connect(_poll_all)
     add_child(_timer)
 
+    _poll_all()
+
+func _poll_all() -> void:
     poll()
+    poll_changes()
 
 func poll() -> void:
     if _http.get_http_client_status() != HTTPClient.STATUS_DISCONNECTED:
@@ -60,3 +67,24 @@ func boot_report(state: Dictionary) -> Dictionary:
 
 func goals(state: Dictionary) -> Array:
     return state.get("goals", [])
+
+
+func poll_changes() -> void:
+    var url := changes_url
+    if _last_change_timestamp != "":
+        url += "?since=" + _last_change_timestamp.uri_encode()
+    var request := HTTPRequest.new()
+    add_child(request)
+    request.request_completed.connect(func(result, response_code, _headers, body):
+        if result == HTTPRequest.RESULT_SUCCESS and response_code >= 200 and response_code < 300:
+            var parsed = JSON.parse_string(body.get_string_from_utf8())
+            if typeof(parsed) == TYPE_DICTIONARY:
+                var events: Array = parsed.get("events", [])
+                if not events.is_empty():
+                    var last = events.back()
+                    if typeof(last) == TYPE_DICTIONARY:
+                        _last_change_timestamp = str(last.get("timestamp", _last_change_timestamp))
+                    mother_changes_received.emit(events)
+        request.queue_free()
+    )
+    request.request(url)
