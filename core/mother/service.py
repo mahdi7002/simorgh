@@ -67,8 +67,32 @@ class MotherService:
         tmp.replace(target)
 
     def observe_once(self) -> dict[str, Any]:
-        snapshot = self.observer.capture()
         previous = self.ledger.latest_snapshot()
+        since = previous.get("timestamp") if previous else None
+        if since:
+            journal = self.observer.journal_since(since)
+            if journal.get("status") == "OK" and journal.get("lines"):
+                self.ledger.record_event(
+                    component="system",
+                    event_type="journal_activity",
+                    actor="journalctl",
+                    action="observe",
+                    severity="info",
+                    verified=True,
+                    provenance="system_journal",
+                    data=journal,
+                )
+            elif journal.get("status") != "OK":
+                self.ledger.record_event(
+                    component="system",
+                    event_type="journal_unavailable",
+                    actor="journalctl",
+                    action="observe",
+                    severity="warning",
+                    verified=False,
+                    data=journal,
+                )
+        snapshot = self.observer.capture()
         self.ledger.save_snapshot(snapshot)
         self._write_world_state(snapshot)
         if previous:
