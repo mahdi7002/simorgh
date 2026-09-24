@@ -4,12 +4,19 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 USER_NAME="${SUDO_USER:-$USER}"
 HOME_DIR="$(getent passwd "$USER_NAME" | cut -d: -f6)"
+SIMORGH_REPO="${SIMORGH_MOTHER_ROOT:-$ROOT}"
 UNIT_SRC="$ROOT/systemd/simorgh-mother.service.in"
 UNIT_TMP="$(mktemp)"
 trap 'rm -f "$UNIT_TMP"' EXIT
 
-if [ ! -x "$ROOT/.venv/bin/python" ]; then
-    printf 'خطا: Python runtime سیمرغ پیدا نشد: %s\n' "$ROOT/.venv/bin/python" >&2
+if [ ! -d "$SIMORGH_REPO" ]; then
+    printf 'خطا: SIMORGH repo پیدا نشد: %s\n' "$SIMORGH_REPO" >&2
+    exit 1
+fi
+
+if [ ! -x "$SIMORGH_REPO/.venv/bin/python" ]; then
+    printf 'خطا: Python runtime سیمرغ پیدا نشد: %s\n' "$SIMORGH_REPO/.venv/bin/python" >&2
+    printf 'برای بررسی worktree می‌توانید SIMORGH_MOTHER_ROOT را به repo آزمایشی تنظیم کنید.\n' >&2
     exit 1
 fi
 
@@ -40,4 +47,5 @@ sudo systemctl daemon-reload
 sudo systemctl enable --now simorgh-mother.service
 
 printf 'SIMORGH Mother فعال شد.\n'
+printf 'repo: %s\n' "$SIMORGH_REPO"
 sudo systemctl status simorgh-mother.service --no-pager -l
