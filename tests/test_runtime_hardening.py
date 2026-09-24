@@ -349,3 +349,49 @@ def test_voice_endpoint_propagates_text_generation_provenance(monkeypatch, tmp_p
 
     assert response.status_code == 200
     assert response.headers["x-simorgh-ai-generated"] == "false"
+
+
+def test_discover_backend_prefers_managed_port_over_stale_environment(monkeypatch, tmp_path):
+    import json
+    import core.local_backend as backend
+
+    meta = tmp_path / "llama-server.json"
+    meta.write_text(
+        json.dumps(
+            {
+                "pid": 12345,
+                "model": "/tmp/qwen.gguf",
+                "port": 8081,
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    monkeypatch.setattr(backend, "BACKEND_META_FILE", meta)
+    monkeypatch.setattr(backend, "_managed_pid", lambda: 12345)
+    monkeypatch.setattr(backend, "_find_binary", lambda: "/tmp/llama-server")
+    monkeypatch.setenv(
+        "SIMORGH_LLM_FAST_URL",
+        "http://127.0.0.1:8090/v1/chat/completions",
+    )
+    monkeypatch.setenv(
+        "SIMORGH_LLM_FAST_MODELS_URL",
+        "http://127.0.0.1:8090/v1/models",
+    )
+
+    seen = {}
+
+    def fake_models_payload(url, timeout=1.5):
+        seen["url"] = url
+        return {"data": [{"id": "/tmp/qwen.gguf"}]}
+
+    monkeypatch.setattr(backend, "_models_payload", fake_models_payload)
+
+    result = backend.discover_backend()
+
+    assert result["managed_port"] == 8081
+    assert result["endpoint"] == "http://127.0.0.1:8081/v1/chat/completions"
+    assert result["models_endpoint"] == "http://127.0.0.1:8081/v1/models"
+    assert seen["url"] == "http://127.0.0.1:8081/v1/models"
+    assert result["endpoint_up"] is True
+    assert result["loaded_models"] == ["/tmp/qwen.gguf"]
