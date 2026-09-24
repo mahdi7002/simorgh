@@ -28,6 +28,7 @@ fi
 
 sudo install -m 0644 "$UNIT_TMP" /etc/systemd/system/simorgh-mother.service
 sudo install -d -m 0700 -o "$USER_NAME" -g "$USER_NAME" "$HOME_DIR/.local/share/simorgh/mother"
+sudo install -d -m 0700 -o "$USER_NAME" -g "$USER_NAME" "$HOME_DIR/.local/share/simorgh/memory"
 sudo systemctl daemon-reload
 sudo systemctl enable --now simorgh-mother.service
 
