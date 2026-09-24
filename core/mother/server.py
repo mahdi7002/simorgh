@@ -8,6 +8,7 @@ from threading import Thread
 from fastapi import FastAPI
 from fastapi.responses import FileResponse
 
+from core.mother.ai_work_log_api import router as ai_work_log_router
 from core.mother.api import router as mother_router
 from core.mother.service import MotherService
 
@@ -29,6 +30,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="SIMORGH Mother", version="1.0.0", lifespan=lifespan)
 app.include_router(mother_router)
+app.include_router(ai_work_log_router)
 
 
 @app.get("/")
