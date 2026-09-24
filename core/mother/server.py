@@ -13,7 +13,7 @@ from core.mother.service import MotherService
 
 PORT = int(os.environ.get("SIMORGH_MOTHER_PORT", "8010"))
 HOST = os.environ.get("SIMORGH_MOTHER_HOST", "127.0.0.1")
-SERVICE = MotherService()
+SERVICE = MotherService(int(os.environ.get("SIMORGH_MOTHER_INTERVAL_SECONDS", "300")))
 
 
 @asynccontextmanager
