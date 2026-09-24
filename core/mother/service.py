@@ -21,6 +21,8 @@ class MotherService:
         self.reports = ReportEngine(self.ledger)
         self._stop = False
         self._last_observation = None
+        self._observer_alive = False
+        self._last_observer_error: dict[str, Any] | None = None
 
     def _handle_signal(self, signum, _frame) -> None:
         if signum in {signal.SIGTERM, signal.SIGINT}:
@@ -178,10 +180,18 @@ class MotherService:
             verified=True,
             data={"interval_seconds": self.interval_seconds},
         )
-        self.observe_once()
+        try:
+            self.observe_once()
+            self._observer_alive = True
+            self._last_observer_error = None
+        except Exception as exc:
+            self._record_observer_error(exc)
+
         self.reports.post_boot(boot)
         self.reports.daily(with_ai=True)
-        self._write_world_state(self.ledger.latest_snapshot())
+        latest_snapshot = self.ledger.latest_snapshot()
+        if latest_snapshot:
+            self._write_world_state(latest_snapshot)
         last_daily_refresh = time.monotonic()
         last_weekly_refresh = time.monotonic()
         last_quality_check = time.monotonic()
@@ -190,6 +200,8 @@ class MotherService:
             now = time.monotonic()
             try:
                 self.observe_once()
+                self._observer_alive = True
+                self._last_observer_error = None
                 # Refresh the current-day report repeatedly so it always
                 # represents activity up to the latest observation.
                 if now - last_daily_refresh >= 900:
@@ -205,18 +217,28 @@ class MotherService:
                     run_daily_quality_check(self.ledger)
                     last_quality_check = now
             except Exception as exc:
-                self.ledger.record_event(
-                    component="mother",
-                    event_type="observer_error",
-                    actor="mother",
-                    action="observe",
-                    severity="error",
-                    verified=False,
-                    data={"error": type(exc).__name__, "detail": str(exc)[:1000]},
-                )
+                self._record_observer_error(exc)
             self._sleep_interruptibly()
 
         self.ledger.mark_shutdown(clean=True)
+
+    def health_state(self) -> dict[str, Any]:
+        if self._observer_alive:
+            return {"status": "healthy", "observer": "running", "last_error": self._last_observer_error}
+        return {"status": "degraded", "observer": "not_running", "last_error": self._last_observer_error}
+
+    def _record_observer_error(self, exc: Exception) -> None:
+        self._observer_alive = False
+        self._last_observer_error = {"type": type(exc).__name__, "detail": str(exc)[:1000]}
+        self.ledger.record_event(
+            component="mother",
+            event_type="observer_error",
+            actor="mother",
+            action="observe",
+            severity="error",
+            verified=False,
+            data=self._last_observer_error,
+        )
 
     def _sleep_interruptibly(self) -> None:
         deadline = time.monotonic() + self.interval_seconds
