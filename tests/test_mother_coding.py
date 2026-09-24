@@ -14,6 +14,7 @@ def test_patch_paths_are_repo_relative():
     assert _validate_patch_paths(patch) == ["core/x.py"]
     extracted = _extract_patch("~~~diff\n" + patch + "\n~~~")
     assert extracted == patch
+    assert extracted.endswith("+new\n")
 
 
 def test_patch_paths_reject_traversal():
