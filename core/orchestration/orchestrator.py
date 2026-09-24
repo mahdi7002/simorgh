@@ -80,4 +80,19 @@ class Orchestrator:
             "tool_plan_reason": plan.reason,
         }
 
-        return board.as_dict()
+        # The review result is a real boundary, not a diagnostic hint.  Keep
+        # raw agent outputs available for local audit, but expose a safe final
+        # answer only when the reviewer approves the assembled response.
+        state = board.as_dict()
+        combined_response = "\\n\\n".join(
+            f"[{agent}]\\n{text}"
+            for agent, text in board.outputs.items()
+            if text
+        )
+        state["final_output"] = (
+            combined_response
+            if review.approved
+            else "[NOT_VERIFIED] پاسخ به دلیل نبود شواهد کافی تأیید نشد و نمایش داده نمی‌شود."
+        )
+        state["response_blocked"] = not review.approved
+        return state
