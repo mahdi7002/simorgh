@@ -6,6 +6,8 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
 from .coding import apply_verified_patch, propose_patch, verify_patch
+from core.identity import SIMORGH_IDENTITY
+from core.llm_local import generate
 from .ledger import MotherLedger
 from .research import (
     advisory_ai_review,
@@ -86,6 +88,50 @@ def report_daily():
 @router.post("/reports/weekly")
 def report_weekly():
     return reports.weekly()
+
+
+@router.post("/report/ask")
+def report_ask():
+    """Ask the local model to narrate the latest observed Mother state."""
+    daily = ledger.latest_report("DAILY") or reports.daily(with_ai=False)
+    weekly = ledger.latest_report("WEEKLY")
+    post_boot = ledger.latest_report("POST_BOOT")
+    latest = ledger.latest_snapshot() or observer.capture()
+
+    evidence = {
+        "latest_snapshot": latest,
+        "daily": daily,
+        "weekly": weekly,
+        "post_boot": post_boot,
+        "goals": ledger.list_goals(),
+        "self_model": ledger.list_self_model(),
+    }
+    prompt = (
+        "این داده‌ها گزارش و مشاهدهٔ واقعی محلی سیمرغ Mother هستند. "
+        "فقط بر اساس همین داده‌ها یک گزارش فارسی روشن برای انسان بنویس. "
+        "وضعیت فعلی، تغییرات، رخدادهای مهم، محدودیت‌های مشاهده و چند پیشنهاد "
+        "غیرالزامی برای بهبود را بیان کن. هرجا داده کافی نیست صریحاً "
+        ""NOT_AVAILABLE" یا "تأیید نشده" بگو. هیچ واقعیت تازه‌ای نساز. "
+        "هیچ دستور اجرایی خودکار نده. گزارش را در 5 تا 8 بند کوتاه نگه دار.\n\n"
+        + __import__("json").dumps(evidence, ensure_ascii=False, default=str)
+    )
+    response = generate(
+        SIMORGH_IDENTITY + (
+            "\n\nنقش تو «راصد نور» است: وضعیت را دقیق و بی‌طرفانه گزارش کن؛ "
+            "حدس را از مشاهده جدا نگه دار."
+        ),
+        prompt,
+        max_tokens=650,
+        needs_quality=True,
+    )
+    if not response:
+        raise HTTPException(503, "local model unavailable")
+    return {
+        "response": response,
+        "ai_generated": True,
+        "model_mode": "local-only",
+        "evidence_scope": "mother_local_state",
+    }
 
 
 @router.post("/goals")
