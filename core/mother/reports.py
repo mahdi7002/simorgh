@@ -43,6 +43,7 @@ class ReportEngine:
             "snapshots": snapshots[-50:],
             "latest_state": snapshots[-1] if snapshots else self.ledger.latest_snapshot(),
             "goals": self.ledger.list_goals(),
+            "self_model": self.ledger.list_self_model(),
             "known_unknowns": [],
             "activity": events,
         }
