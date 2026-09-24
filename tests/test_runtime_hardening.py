@@ -349,3 +349,187 @@ def test_voice_endpoint_propagates_text_generation_provenance(monkeypatch, tmp_p
 
     assert response.status_code == 200
     assert response.headers["x-simorgh-ai-generated"] == "false"
+
+
+def test_discover_backend_prefers_managed_port_over_stale_environment(monkeypatch, tmp_path):
+    import json
+    import core.local_backend as backend
+
+    meta = tmp_path / "llama-server.json"
+    meta.write_text(
+        json.dumps(
+            {
+                "pid": 12345,
+                "model": "/tmp/qwen.gguf",
+                "port": 8081,
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    monkeypatch.setattr(backend, "BACKEND_META_FILE", meta)
+    monkeypatch.setattr(backend, "_managed_pid", lambda: 12345)
+    monkeypatch.setattr(backend, "_find_binary", lambda: "/tmp/llama-server")
+    monkeypatch.setenv(
+        "SIMORGH_LLM_FAST_URL",
+        "http://127.0.0.1:8090/v1/chat/completions",
+    )
+    monkeypatch.setenv(
+        "SIMORGH_LLM_FAST_MODELS_URL",
+        "http://127.0.0.1:8090/v1/models",
+    )
+
+    seen = {}
+
+    def fake_models_payload(url, timeout=1.5):
+        seen["url"] = url
+        return {"data": [{"id": "/tmp/qwen.gguf"}]}
+
+    monkeypatch.setattr(backend, "_models_payload", fake_models_payload)
+
+    result = backend.discover_backend()
+
+    assert result["managed_port"] == 8081
+    assert result["endpoint"] == "http://127.0.0.1:8081/v1/chat/completions"
+    assert result["models_endpoint"] == "http://127.0.0.1:8081/v1/models"
+    assert seen["url"] == "http://127.0.0.1:8081/v1/models"
+    assert result["endpoint_up"] is True
+    assert result["loaded_models"] == ["/tmp/qwen.gguf"]
+
+
+def test_managed_backend_pid_is_accepted_when_process_identity_matches(monkeypatch, tmp_path):
+    import json
+    import core.local_backend as backend
+
+    meta = tmp_path / "llama-server.json"
+    meta.write_text(
+        json.dumps(
+            {
+                "pid": 70998,
+                "model": "/tmp/qwen.gguf",
+                "port": 8089,
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    monkeypatch.setattr(backend, "BACKEND_PID_FILE", tmp_path / "llama-server.pid")
+    backend.BACKEND_PID_FILE.write_text("70998", encoding="utf-8")
+    monkeypatch.setattr(backend, "BACKEND_META_FILE", meta)
+    monkeypatch.setattr(backend.os, "kill", lambda pid, sig: None)
+    monkeypatch.setattr(
+        backend,
+        "_process_cmdline",
+        lambda pid: [
+            "/tmp/simorgh-test-bin/llama-server",
+            "--model",
+            "/tmp/qwen.gguf",
+            "--host",
+            "127.0.0.1",
+            "--port",
+            "8089",
+        ],
+    )
+
+    assert backend._managed_pid() == 70998
+
+
+def test_managed_backend_recovers_from_stale_pid_file(monkeypatch, tmp_path):
+    import json
+    import core.local_backend as backend
+
+    pid_file = tmp_path / "llama-server.pid"
+    meta_file = tmp_path / "llama-server.json"
+    pid_file.write_text("69802", encoding="utf-8")
+    meta_file.write_text(
+        json.dumps(
+            {
+                "pid": 70998,
+                "model": "/tmp/qwen.gguf",
+                "port": 8089,
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    monkeypatch.setattr(backend, "BACKEND_PID_FILE", pid_file)
+    monkeypatch.setattr(backend, "BACKEND_META_FILE", meta_file)
+
+    def fake_kill(pid, _signal):
+        if pid == 69802:
+            raise OSError("stale")
+        return None
+
+    monkeypatch.setattr(backend.os, "kill", fake_kill)
+    monkeypatch.setattr(
+        backend,
+        "_process_cmdline",
+        lambda pid: (
+            [
+                "/tmp/simorgh-test-bin/llama-server",
+                "--model",
+                "/tmp/qwen.gguf",
+                "--host",
+                "127.0.0.1",
+                "--port",
+                "8089",
+            ]
+            if pid == 70998
+            else None
+        ),
+    )
+
+    assert backend._managed_pid() == 70998
+    assert pid_file.read_text(encoding="utf-8").strip() == "70998"
+    assert meta_file.is_file()
+
+
+def test_discover_backend_syncs_persisted_urls(monkeypatch, tmp_path):
+    import json
+    import core.local_backend as backend
+
+    meta = tmp_path / "llama-server.json"
+    meta.write_text(
+        json.dumps(
+            {
+                "pid": 70998,
+                "model": "/tmp/qwen.gguf",
+                "port": 8089,
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    monkeypatch.setattr(backend, "BACKEND_META_FILE", meta)
+    monkeypatch.setattr(backend, "_managed_pid", lambda: 70998)
+    monkeypatch.setattr(backend, "_find_binary", lambda: "/tmp/llama-server")
+    monkeypatch.setenv(
+        "SIMORGH_LLM_FAST_URL",
+        "http://127.0.0.1:8087/v1/chat/completions",
+    )
+    monkeypatch.setenv(
+        "SIMORGH_LLM_FAST_MODELS_URL",
+        "http://127.0.0.1:8087/v1/models",
+    )
+    monkeypatch.setattr(
+        backend,
+        "_models_payload",
+        lambda url, timeout=1.5: {"data": [{"id": "/tmp/qwen.gguf"}]},
+    )
+
+    saved = {}
+    monkeypatch.setattr(backend, "save_config", lambda data: saved.update(data))
+
+    import core.user_runtime as user_runtime
+    monkeypatch.setattr(user_runtime, "load_config", lambda: {
+        "llm_fast_url": "http://127.0.0.1:8087/v1/chat/completions",
+        "llm_fast_models_url": "http://127.0.0.1:8087/v1/models",
+        "llm_quality_url": "http://127.0.0.1:8087/v1/chat/completions",
+        "llm_quality_models_url": "http://127.0.0.1:8087/v1/models",
+    })
+
+    result = backend.discover_backend()
+
+    assert result["endpoint"] == "http://127.0.0.1:8089/v1/chat/completions"
+    assert saved["llm_fast_url"].endswith(":8089/v1/chat/completions")
+    assert saved["llm_quality_url"].endswith(":8089/v1/chat/completions")

@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SIMORGH Mother | مادر سیمرغ</title>
+<style>
+:root{--bg:#07100f;--panel:#0d1816;--line:#1b302b;--text:#edf5f0;--muted:#91aaa2;--accent:#d6b65a;--good:#48c78e;--danger:#e27d62;--blue:#79a7ff}
+*{box-sizing:border-box}body{margin:0;background:linear-gradient(160deg,#07100f,#0a1412 55%,#081110);color:var(--text);font:15px/1.8 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+main{max-width:1250px;margin:auto;padding:24px 16px 60px}header{display:flex;justify-content:space-between;gap:20px;align-items:end;margin-bottom:16px}
+h1{margin:0;font-size:34px}h1 small{display:block;font-size:14px;color:var(--accent)}h2{margin:0 0 10px;font-size:18px}
+.card{background:rgba(13,24,22,.94);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:12px}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px}.muted{color:var(--muted)}
+.kv{display:flex;justify-content:space-between;gap:10px;padding:4px 0;border-bottom:1px solid rgba(27,48,43,.55)}.kv:last-child{border:0}
+button{border:0;border-radius:9px;padding:9px 12px;background:var(--accent);color:#162019;font-weight:800;cursor:pointer}button.secondary{background:#18302a;color:var(--text)}button.danger{background:#5a2a21;color:#fff}button:disabled{opacity:.45;cursor:not-allowed}
+textarea,input{width:100%;background:#091310;color:var(--text);border:1px solid var(--line);border-radius:9px;padding:9px;font:inherit}textarea{min-height:110px}
+.row{display:flex;gap:8px;flex-wrap:wrap}.row>*{flex:1;min-width:180px}.scroll{max-height:360px;overflow:auto}.item{padding:9px 0;border-bottom:1px solid var(--line)}.badge{display:inline-block;padding:2px 8px;border-radius:999px;background:#18342b;color:var(--good);font-size:12px}.warn{color:var(--danger)}pre{white-space:pre-wrap;background:#06100e;padding:10px;border-radius:9px;overflow:auto}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}.tab.active{background:var(--accent);color:#162019}.panel{display:none}.panel.active{display:block}
+a{color:var(--blue);word-break:break-all}
+</style>
+</head>
+<body>
+<main>
+<header>
+<div><h1>مادر سیمرغ <small>SIMORGH MOTHER • مشاهده، حافظه، بازتاب، قرنطینه</small></h1><div class="muted">هیچ ورودی وب یا اصلاح کد مستقیماً وارد هسته نمی‌شود.</div></div>
+<button class="secondary" id="refresh">بازخوانی</button>
+</header>
+
+<div class="tabs">
+<button class="tab active" data-tab="state">وضعیت</button>
+<button class="tab" data-tab="reports">گزارش‌ها</button>
+<button class="tab" data-tab="research">درگاه تحقیق</button>
+<button class="tab" data-tab="coding">آزمایش کد</button>
+</div>
+
+<section class="panel active" id="state">
+<div class="grid">
+<div class="card"><h2>بوت فعلی</h2><div id="boot" class="muted">...</div></div>
+<div class="card"><h2>سیستم و دسترسی</h2><div id="system" class="muted">...</div></div>
+<div class="card"><h2>اهداف</h2><div id="goals" class="muted">...</div></div>
+<div class="card"><h2>ماتریس قابلیت</h2><div id="capabilities" class="muted">...</div></div>
+</div>
+<div class="card"><h2>فعالیت‌های اخیر</h2><div id="events" class="scroll muted">...</div></div>
+<div class="card"><h2>خودشناسی</h2><div id="self" class="scroll muted">...</div></div>
+</section>
+
+<section class="panel" id="reports">
+<div class="grid">
+<div class="card"><h2>گزارش بوت</h2><pre id="postboot">...</pre></div>
+<div class="card"><h2>گزارش روزانه</h2><pre id="daily">...</pre></div>
+<div class="card"><h2>گزارش هفتگی</h2><pre id="weekly">...</pre></div>
+</div>
+</section>
+
+<section class="panel" id="research">
+<div class="card">
+<h2>درگاه تحقیق اینترنتی</h2>
+<p class="muted">جست‌وجو در مرورگر انجام می‌شود. هیچ نتیجه‌ای بدون عبور از قرنطینه وارد حافظهٔ سیمرغ نمی‌شود.</p>
+<div class="row"><input id="searchQ" placeholder="موضوع مورد نیاز..."><button id="searchBtn">جست‌وجو</button></div>
+<div id="searchLinks" class="item"></div>
+</div>
+<div class="card">
+<h2>ورود URL به قرنطینه</h2>
+<div class="row"><input id="url" placeholder="https://example.org/article"><button id="quarantineBtn">دریافت و قرنطینه</button></div>
+<div id="quarantineList" class="scroll"></div>
+</div>
+</section>
+
+<section class="panel" id="coding">
+<div class="card">
+<h2>دستیار کدنویسی محلی</h2>
+<p class="muted">مدل محلی فقط پیشنهاد می‌دهد. patch در محیط موقت آزمون می‌شود. اعمال روی مخزن نیازمند تأیید انسانی است.</p>
+<div class="row"><textarea id="codeTask" placeholder="مثلاً: علت شکست تست X را بررسی و کم‌خطرترین اصلاح را پیشنهاد کن."></textarea></div>
+<div class="row"><input id="codePaths" placeholder="فایل‌ها با فاصله، مثلاً core/local_backend.py tests/..."><button id="codePropose">پیشنهاد patch</button></div>
+<div id="codeResult" class="scroll"></div>
+</div>
+<div class="card"><h2>اصلاحیه‌های ثبت‌شده</h2><div id="repairs" class="scroll"></div></div>
+</section>
+
+<script>
+let state=null;
+const esc=s=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+function kv(a,b){return '<div class="kv"><span class="muted">'+esc(a)+'</span><span>'+esc(b)+'</span></div>'}
+function json(v){return JSON.stringify(v||{},null,2)}
+async function api(url,opt){const r=await fetch(url,opt);const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.detail||JSON.stringify(d));return d}
+async function refresh(){
+ try{state=await api('/api/mother/state');render();}catch(e){document.getElementById('system').innerHTML='<span class="warn">'+esc(e.message)+'</span>'}
+}
+function render(){
+ const b=state.boot||{}, s=state.snapshot||{}, m=s.memory||{}, d=s.disk||{}, cpu=s.cpu||{};
+ document.getElementById('boot').innerHTML=[kv('boot_id',b.boot_id),kv('شروع',b.started_at||''),kv('بوت قبلی',b.previous_boot_id||'ندارد'),kv('خاموشی قبلی',b.previous_clean_shutdown===true?'تمیز':b.previous_clean_shutdown===false?'نامشخص/غیرتمیز':'ثبت نشده')].join('');
+ const access=s.access||{};
+ document.getElementById('system').innerHTML=[kv('CPU',cpu.percent+'%'),kv('RAM',m.percent+'%'),kv('فضای دیسک',d.percent+'%'),kv('Python',s.os?.python||''),kv('Host',s.host||''),kv('کاربر',access.user||''),kv('Journal',access.journal_readable?'قابل‌خواندن':'محدود')].join('');
+ const cm=state.weekly?.capability_matrix||{};
+ document.getElementById('capabilities').innerHTML=[kv('اندازه‌گیری',cm.status||'NOT_AVAILABLE'),kv('قابلیت‌های موجود',String(cm.implemented_count??'')+'/'+String(cm.total_count??'')),kv('شکاف‌ها',(cm.missing||[]).join(', ')||'گزارش نشده')].join('');
+ const goals=state.goals||[]; document.getElementById('goals').innerHTML=(goals.length?goals:[]).map(g=>'<div class="item">'+esc(g.title)+' <span class="badge">'+esc(g.status)+'</span></div>').join('')||'<span class="muted">هدف ثبت نشده.</span>';
+ const events=(state.daily?.activity||[]).slice(-80).reverse();
+ document.getElementById('events').innerHTML=events.map(e=>'<div class="item"><strong>'+esc(e.event_type)+'</strong> · '+esc(e.component)+' · '+esc(e.timestamp)+'<div class="muted">'+esc(JSON.stringify(e.data))+'</div></div>').join('')||'رویدادی ثبت نشده.';
+ const selfFacts=state.self_model||[];
+ document.getElementById('self').innerHTML=[kv('رویدادها',state.daily?.events_total||0),kv('snapshotها',state.daily?.snapshots_count||0),kv('پیشنهادهای هفته',((state.weekly||{}).next_candidate_objectives||[]).length),kv('مدل محلی در بازتاب',state.daily?.self_reflection?.status||'NOT_AVAILABLE'),kv('مرز خاموشی',state.post_boot?.offline_boundary||'')].join('')+selfFacts.map(x=>'<div class="item"><strong>'+esc(x.key)+'</strong> · <span class="badge">'+esc(x.status)+'</span><div class="muted">'+esc(JSON.stringify(x.value))+'</div></div>').join('');
+ document.getElementById('postboot').textContent=json(state.post_boot);
+ document.getElementById('daily').textContent=json(state.daily);
+ document.getElementById('weekly').textContent=json(state.weekly);
+ renderQuarantine(state.quarantine||[]);
+ renderRepairs(state.code_repairs||[]);
+}
+function renderQuarantine(items){
+ document.getElementById('quarantineList').innerHTML=(items||[]).map(i=>'<div class="item"><strong>#'+i.id+'</strong> <span class="badge">'+esc(i.status)+'</span><br><a href="'+esc(i.source_url)+'" target="_blank" rel="noreferrer">'+esc(i.source_url)+'</a><br>'+esc(i.title||'بدون عنوان')+'<br>'+ (i.status==='QUARANTINED'?'<div class="row" style="margin-top:6px"><button data-qai="'+i.id+'" class="secondary">بازبینی مدل محلی</button><button data-qok="'+i.id+'">تأیید و ورود</button><button data-qno="'+i.id+'" class="danger">رد</button></div>':'')+'</div>').join('')||'<span class="muted">قرنطینه خالی است.</span>';
+ document.querySelectorAll('[data-qai]').forEach(b=>b.onclick=async()=>{b.disabled=true;try{alert(json(await api('/api/mother/research/quarantine/'+b.dataset.qai+'/ai-review',{method:'POST'})))}catch(e){alert(e.message)}});
+ document.querySelectorAll('[data-qok]').forEach(b=>b.onclick=async()=>{const note=prompt('یادداشت صحت‌سنجی انسانی را وارد کن:')||'';try{await api('/api/mother/research/quarantine/'+b.dataset.qok+'/approve',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({note})});await refresh()}catch(e){alert(e.message)}});
+ document.querySelectorAll('[data-qno]').forEach(b=>b.onclick=async()=>{const note=prompt('دلیل رد:')||'';try{await api('/api/mother/research/quarantine/'+b.dataset.qno+'/reject',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({note})});await refresh()}catch(e){alert(e.message)}});
+}
+function renderRepairs(items){
+ document.getElementById('repairs').innerHTML=(items||[]).map(i=>'<div class="item"><strong>#'+i.id+'</strong> <span class="badge">'+esc(i.status)+'</span><br>'+esc(i.task)+'<br>'+esc(i.verification?.status||'NOT VERIFIED')+'<div class="row" style="margin-top:6px">'+(i.status==='PROPOSED'?'<button data-verify="'+i.id+'">آزمون ایزوله</button>':'')+(i.status==='VERIFIED'?'<button data-apply="'+i.id+'">اعمال اصلاحیه</button>':'')+'</div></div>').join('')||'اصلاحیه‌ای ثبت نشده.';
+ document.querySelectorAll('[data-verify]').forEach(b=>b.onclick=async()=>{b.disabled=true;try{alert(json(await api('/api/mother/coding/'+b.dataset.verify+'/verify',{method:'POST'})));await refresh()}catch(e){alert(e.message)}});
+ document.querySelectorAll('[data-apply]').forEach(b=>b.onclick=async()=>{if(!confirm('این patch قبلاً آزمون شده است. اعمال روی working tree؟'))return;try{alert(json(await api('/api/mother/coding/'+b.dataset.apply+'/apply',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({approve:true})})));await refresh()}catch(e){alert(e.message)}});
+}
+document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>{document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));document.querySelectorAll('.panel').forEach(x=>x.classList.remove('active'));b.classList.add('active');document.getElementById(b.dataset.tab).classList.add('active')});
+document.getElementById('refresh').onclick=refresh;
+document.getElementById('searchBtn').onclick=async()=>{const q=document.getElementById('searchQ').value.trim();if(!q)return;try{const d=await api('/api/mother/research/search?q='+encodeURIComponent(q));const links=d.search_urls;document.getElementById('searchLinks').innerHTML=Object.entries(links).map(([k,v])=>'<div><button class="secondary" data-search="'+esc(v)+'">'+esc(k)+'</button> <a href="'+esc(v)+'" target="_blank" rel="noreferrer">'+esc(v)+'</a></div>').join('');document.querySelectorAll('[data-search]').forEach(b=>b.onclick=()=>window.open(b.dataset.search,'_blank','noopener,noreferrer'))}catch(e){alert(e.message)}};
+document.getElementById('quarantineBtn').onclick=async()=>{const url=document.getElementById('url').value.trim();if(!url)return;try{await api('/api/mother/research/quarantine',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url})});document.getElementById('url').value='';await refresh()}catch(e){alert(e.message)}};
+document.getElementById('codePropose').onclick=async()=>{const task=document.getElementById('codeTask').value.trim();const paths=document.getElementById('codePaths').value.trim().split(/[\s,]+/).filter(Boolean);if(!task)return;try{document.getElementById('codeResult').textContent='در حال درخواست از مدل محلی...';const d=await api('/api/mother/coding/propose',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({task,paths})});document.getElementById('codeResult').innerHTML='<pre>'+esc(json(d))+'</pre>';await refresh()}catch(e){document.getElementById('codeResult').textContent=e.message}};
+refresh();
+</script>
+</main>
+</body>
+</html>

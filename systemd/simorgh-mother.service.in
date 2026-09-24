@@ -1,0 +1,42 @@
+[Unit]
+Description=SIMORGH Mother observer and reporting engine
+After=network.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=__SIMORGH_USER__
+Group=__SIMORGH_USER__
+SupplementaryGroups=__JOURNAL_GROUPS__
+WorkingDirectory=__SIMORGH_REPO__
+Environment=PYTHONUNBUFFERED=1
+Environment=SIMORGH_RUNTIME_DIR=__SIMORGH_HOME__/.local/share/simorgh
+Environment=SIMORGH_MEMORY_DIR=__SIMORGH_HOME__/.local/share/simorgh/memory
+Environment=SIMORGH_LOG_DIR=__SIMORGH_HOME__/.local/share/simorgh/logs
+Environment=SIMORGH_APP_DB=__SIMORGH_HOME__/.local/share/simorgh/data/simorgh.db
+Environment=SIMORGH_BOOKS_DB=__SIMORGH_HOME__/.local/share/simorgh/data/books.db
+Environment=SIMORGH_LIBRARY_DB=__SIMORGH_HOME__/.local/share/simorgh/data/library_catalog.db
+Environment=SIMORGH_JOURNAL_DB=__SIMORGH_HOME__/.local/share/simorgh/memory/journal.db
+Environment=SIMORGH_ACTIVITY_DB=__SIMORGH_HOME__/.local/share/simorgh/data/activity.db
+Environment=SIMORGH_IMPORTS_DIR=__SIMORGH_HOME__/.local/share/simorgh/imports
+Environment=SIMORGH_TRANSCRIPTS_DIR=__SIMORGH_HOME__/.local/share/simorgh/transcripts
+Environment=SIMORGH_AUDIO_OUT_DIR=__SIMORGH_HOME__/.local/share/simorgh/audio_out
+Environment=SIMORGH_PROPOSAL_DIR=__SIMORGH_HOME__/.local/share/simorgh/data/reflection_proposals
+Environment=SIMORGH_MOTHER_DB=__SIMORGH_HOME__/.local/share/simorgh/mother/mother.db
+Environment=SIMORGH_MOTHER_HOST=127.0.0.1
+Environment=SIMORGH_MOTHER_PORT=8010
+ExecStart=__SIMORGH_REPO__/.venv/bin/python -m core.mother.server
+Restart=always
+RestartSec=10
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ReadOnlyPaths=/proc /sys /etc/systemd /var/log
+ReadWritePaths=__SIMORGH_HOME__/.local/share/simorgh/mother
+ReadWritePaths=__SIMORGH_HOME__/.local/share/simorgh/memory
+RestrictRealtime=true
+RestrictSUIDSGID=true
+
+[Install]
+WantedBy=multi-user.target

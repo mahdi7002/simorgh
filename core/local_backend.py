@@ -324,53 +324,68 @@ def ensure_llama_server() -> dict[str, Any]:
 
 
 def _managed_pid() -> int | None:
+    metadata: dict[str, Any] = {}
     try:
-        pid = int(BACKEND_PID_FILE.read_text(encoding="utf-8").strip())
-        os.kill(pid, 0)
         metadata = json.loads(BACKEND_META_FILE.read_text(encoding="utf-8"))
     except (OSError, ValueError, TypeError, json.JSONDecodeError):
-        _cleanup_managed_state()
-        return None
+        metadata = {}
 
-    cmdline = _process_cmdline(pid)
-    if not cmdline or Path(cmdline[0]).name != "llama-server":
-        _cleanup_managed_state()
-        return None
+    candidate_pids: list[int] = []
+    try:
+        pid = int(BACKEND_PID_FILE.read_text(encoding="utf-8").strip())
+        candidate_pids.append(pid)
+    except (OSError, ValueError):
+        pass
 
-    expected_binary = metadata.get("binary")
-    if isinstance(expected_binary, str) and expected_binary:
+    metadata_pid = metadata.get("pid")
+    if isinstance(metadata_pid, int) and metadata_pid > 0 and metadata_pid not in candidate_pids:
+        candidate_pids.append(metadata_pid)
+
+    for pid in candidate_pids:
         try:
-            if Path(cmdline[0]).resolve() != Path(expected_binary).expanduser().resolve():
-                _cleanup_managed_state()
-                return None
+            os.kill(pid, 0)
         except OSError:
-            _cleanup_managed_state()
-            return None
+            continue
 
-    expected_model = metadata.get("model")
-    if isinstance(expected_model, str) and expected_model:
-        try:
-            model_index = cmdline.index("--model")
-            if Path(cmdline[model_index + 1]).expanduser().resolve() != Path(expected_model).expanduser().resolve():
-                _cleanup_managed_state()
-                return None
-        except (ValueError, IndexError, OSError):
-            _cleanup_managed_state()
-            return None
+        cmdline = _process_cmdline(pid)
+        if not cmdline or Path(cmdline[0]).name != "llama-server":
+            continue
 
-    expected_port = metadata.get("port")
-    if isinstance(expected_port, int):
-        try:
-            port_index = cmdline.index("--port")
-            if int(cmdline[port_index + 1]) != expected_port:
-                _cleanup_managed_state()
-                return None
-        except (ValueError, IndexError):
-            _cleanup_managed_state()
-            return None
+        expected_binary = metadata.get("binary")
+        if isinstance(expected_binary, str) and expected_binary:
+            try:
+                if Path(cmdline[0]).resolve() != Path(expected_binary).expanduser().resolve():
+                    continue
+            except OSError:
+                continue
 
-    return pid
+        expected_model = metadata.get("model")
+        if isinstance(expected_model, str) and expected_model:
+            try:
+                model_index = cmdline.index("--model")
+                if Path(cmdline[model_index + 1]).expanduser().resolve() != Path(expected_model).expanduser().resolve():
+                    continue
+            except (ValueError, IndexError, OSError):
+                continue
 
+        expected_port = metadata.get("port")
+        if isinstance(expected_port, int):
+            try:
+                port_index = cmdline.index("--port")
+                if int(cmdline[port_index + 1]) != expected_port:
+                    continue
+            except (ValueError, IndexError):
+                continue
+
+        # Repair a stale PID file when metadata identifies the live managed
+        # process. This prevents a previous process PID from orphaning a
+        # healthy llama-server instance.
+        if BACKEND_PID_FILE.read_text(encoding="utf-8").strip() != str(pid):
+            BACKEND_PID_FILE.write_text(str(pid), encoding="utf-8")
+        return pid
+
+    _cleanup_managed_state()
+    return None
 
 def stop_managed_backend() -> bool:
     pid = _managed_pid()
@@ -520,8 +535,14 @@ def start_backend(model_path: str | os.PathLike[str], *, preferred_port: int = 8
 
 
 def discover_backend() -> dict[str, Any]:
-    fast_url = os.environ.get("SIMORGH_LLM_FAST_URL", "http://127.0.0.1:8080/v1/chat/completions")
-    models_url = os.environ.get("SIMORGH_LLM_FAST_MODELS_URL", "http://127.0.0.1:8080/v1/models")
+    configured_fast_url = os.environ.get(
+        "SIMORGH_LLM_FAST_URL",
+        "http://127.0.0.1:8080/v1/chat/completions",
+    )
+    configured_models_url = os.environ.get(
+        "SIMORGH_LLM_FAST_MODELS_URL",
+        "http://127.0.0.1:8080/v1/models",
+    )
     binary = _find_binary()
     pid = _managed_pid()
     meta: dict[str, Any] = {}
@@ -529,9 +550,56 @@ def discover_backend() -> dict[str, Any]:
         meta = json.loads(BACKEND_META_FILE.read_text(encoding="utf-8"))
     except (OSError, ValueError):
         pass
+
+    managed_port = meta.get("port") if pid is not None else None
+    if isinstance(managed_port, int) and managed_port > 0:
+        # The managed process metadata is authoritative for the process we
+        # discovered. Do not let a stale shell/runtime environment point
+        # discovery at a different port.
+        fast_url = f"http://127.0.0.1:{managed_port}/v1/chat/completions"
+        models_url = f"http://127.0.0.1:{managed_port}/v1/models"
+    else:
+        fast_url = configured_fast_url
+        models_url = configured_models_url
+
     payload = _models_payload(models_url)
     model_ids = _model_ids(payload)
     endpoint_up = payload is not None
+
+    managed_model = meta.get("model") if pid is not None else None
+    managed_model_loaded = (
+        isinstance(managed_model, str)
+        and any(
+            _model_id_matches(model_id, Path(managed_model).expanduser().resolve())
+            for model_id in model_ids
+        )
+    )
+    if (
+        pid is not None
+        and isinstance(managed_port, int)
+        and managed_port > 0
+        and endpoint_up
+        and managed_model_loaded
+    ):
+        managed_fast_url = f"http://127.0.0.1:{managed_port}/v1/chat/completions"
+        managed_models_url = f"http://127.0.0.1:{managed_port}/v1/models"
+        # Persist the authoritative managed endpoint so a fresh SIMORGH
+        # process does not resurrect a stale port from an older environment.
+        try:
+            from core.user_runtime import load_config
+            config = load_config()
+        except Exception:
+            config = {}
+        desired = {
+            "llm_fast_url": managed_fast_url,
+            "llm_fast_models_url": managed_models_url,
+            "llm_quality_url": managed_fast_url,
+            "llm_quality_models_url": managed_models_url,
+        }
+        if any(config.get(key) != value for key, value in desired.items()):
+            save_config(desired)
+        fast_url = managed_fast_url
+        models_url = managed_models_url
     return {
         "provider": "openai-compatible",
         "endpoint": fast_url,
@@ -540,7 +608,7 @@ def discover_backend() -> dict[str, Any]:
         "llama_server_binary": binary,
         "managed_pid": pid,
         "managed_model": meta.get("model") if pid is not None else None,
-        "managed_port": meta.get("port") if pid is not None else None,
+        "managed_port": managed_port,
         "loaded_models": model_ids,
         "ready": endpoint_up,
         "note": "مدل و backend دو مؤلفهٔ جدا هستند؛ سیمورغ فقط backend محلیِ مدیریت‌شدهٔ خودش را در اختیار می‌گیرد.",
