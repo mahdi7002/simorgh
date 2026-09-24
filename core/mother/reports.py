@@ -92,13 +92,18 @@ class ReportEngine:
         except Exception as exc:
             return {"status": "NOT_AVAILABLE", "reason": type(exc).__name__}
 
-    def daily(self, now: datetime | None = None) -> dict[str, Any]:
+    def daily(self, now: datetime | None = None, *, with_ai: bool = True) -> dict[str, Any]:
         now = now or datetime.now(timezone.utc)
         start, end = self._human_period(now)
         report = self._base_report("DAILY", start, end)
         report["changes"] = self._change_summary(report["snapshots"])
         report["vs_previous_day"] = self._compare_previous_day(_dt(start), report["latest_state"])
-        report["self_reflection"] = self._local_model_reflection(report)
+        report["self_reflection"] = (
+            self._local_model_reflection(report)
+            if with_ai
+            else (self.ledger.latest_report("DAILY").get("self_reflection")
+                  or {"status": "NOT_AVAILABLE", "reason": "daily_ai_refresh_skipped"})
+        )
         if not report["activity"]:
             report["known_unknowns"].append(
                 "هیچ رویداد قابل مشاهده‌ای برای این بازه ثبت نشده است."
@@ -150,7 +155,7 @@ class ReportEngine:
         self.ledger.save_report("POST_BOOT", boot.get("started_at", now.isoformat()), now.isoformat(), report)
         return report
 
-    def weekly(self, now: datetime | None = None) -> dict[str, Any]:
+    def weekly(self, now: datetime | None = None, *, with_ai: bool = True) -> dict[str, Any]:
         now = now or datetime.now(timezone.utc)
         start = (now - timedelta(days=7)).isoformat()
         report = self._base_report("WEEKLY", start, now.isoformat())
@@ -158,7 +163,12 @@ class ReportEngine:
         report["trends"] = self._trends(report["activity"])
         report["service_needs"] = self._service_needs(report)
         report["next_candidate_objectives"] = self._candidate_objectives(report)
-        report["self_reflection"] = self._local_model_reflection(report)
+        report["self_reflection"] = (
+            self._local_model_reflection(report)
+            if with_ai
+            else (self.ledger.latest_report("WEEKLY").get("self_reflection")
+                  or {"status": "NOT_AVAILABLE", "reason": "weekly_ai_refresh_skipped"})
+        )
         self.ledger.save_report("WEEKLY", start, now.isoformat(), report)
         return report
 
