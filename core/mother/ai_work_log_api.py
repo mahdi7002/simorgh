@@ -7,7 +7,14 @@ from .ai_work_log import ACTORS, AIWorkLog
 from .ledger import MotherLedger
 
 router = APIRouter(prefix="/api/mother", tags=["mother-ai-work-log"])
-work_log = AIWorkLog(MotherLedger())
+_work_log: AIWorkLog | None = None
+
+
+def get_work_log() -> AIWorkLog:
+    global _work_log
+    if _work_log is None:
+        _work_log = AIWorkLog(MotherLedger())
+    return _work_log
 
 
 class AIWorkLogRequest(BaseModel):
@@ -26,7 +33,7 @@ def create_ai_work_log(payload: AIWorkLogRequest):
     if payload.actor not in ACTORS:
         raise HTTPException(400, f"actor must be one of: {', '.join(ACTORS)}")
     try:
-        entry_id = work_log.record(
+        entry_id = get_work_log().record(
             actor=payload.actor,
             model=payload.model,
             repo=payload.repo,
@@ -43,7 +50,7 @@ def create_ai_work_log(payload: AIWorkLogRequest):
 
 @router.get("/ai-work-log/report")
 def ai_work_log_report():
-    return work_log.report()
+    return get_work_log().report()
 
 
-__all__ = ["router", "work_log"]
+__all__ = ["router", "get_work_log"]
