@@ -520,8 +520,14 @@ def start_backend(model_path: str | os.PathLike[str], *, preferred_port: int = 8
 
 
 def discover_backend() -> dict[str, Any]:
-    fast_url = os.environ.get("SIMORGH_LLM_FAST_URL", "http://127.0.0.1:8080/v1/chat/completions")
-    models_url = os.environ.get("SIMORGH_LLM_FAST_MODELS_URL", "http://127.0.0.1:8080/v1/models")
+    configured_fast_url = os.environ.get(
+        "SIMORGH_LLM_FAST_URL",
+        "http://127.0.0.1:8080/v1/chat/completions",
+    )
+    configured_models_url = os.environ.get(
+        "SIMORGH_LLM_FAST_MODELS_URL",
+        "http://127.0.0.1:8080/v1/models",
+    )
     binary = _find_binary()
     pid = _managed_pid()
     meta: dict[str, Any] = {}
@@ -529,6 +535,18 @@ def discover_backend() -> dict[str, Any]:
         meta = json.loads(BACKEND_META_FILE.read_text(encoding="utf-8"))
     except (OSError, ValueError):
         pass
+
+    managed_port = meta.get("port") if pid is not None else None
+    if isinstance(managed_port, int) and managed_port > 0:
+        # The managed process metadata is authoritative for the process we
+        # discovered. Do not let a stale shell/runtime environment point
+        # discovery at a different port.
+        fast_url = f"http://127.0.0.1:{managed_port}/v1/chat/completions"
+        models_url = f"http://127.0.0.1:{managed_port}/v1/models"
+    else:
+        fast_url = configured_fast_url
+        models_url = configured_models_url
+
     payload = _models_payload(models_url)
     model_ids = _model_ids(payload)
     endpoint_up = payload is not None
@@ -540,7 +558,7 @@ def discover_backend() -> dict[str, Any]:
         "llama_server_binary": binary,
         "managed_pid": pid,
         "managed_model": meta.get("model") if pid is not None else None,
-        "managed_port": meta.get("port") if pid is not None else None,
+        "managed_port": managed_port,
         "loaded_models": model_ids,
         "ready": endpoint_up,
         "note": "مدل و backend دو مؤلفهٔ جدا هستند؛ سیمورغ فقط backend محلیِ مدیریت‌شدهٔ خودش را در اختیار می‌گیرد.",
