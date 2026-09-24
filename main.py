@@ -11,6 +11,8 @@ from fastapi import FastAPI, Form, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from core.body_limit import RequestBodyLimitMiddleware
+from core.mother.api import router as mother_router
+from core.mother.middleware import MotherActivityMiddleware
 
 from core.paths import DASHBOARD_HTML, LOG_DIR
 
@@ -86,6 +88,7 @@ def _session_id(request: Request) -> str:
 
 app = FastAPI(title="SIMORGH", version=os.getenv("SIMORGH_VERSION", "0.1.0"))
 app.add_middleware(RequestBodyLimitMiddleware, max_body_size=MAX_REQUEST_BYTES)
+app.add_middleware(MotherActivityMiddleware)
 from core.voice_docs import router as voice_docs_router
 from core.dashboard_api import router as dashboard_api_router
 from core.voice_endpoint import router as voice_endpoint_router
@@ -94,6 +97,8 @@ app.include_router(voice_docs_router)
 app.include_router(dashboard_api_router)
 app.include_router(voice_endpoint_router)
 app.include_router(bootstrap_api_router)
+app.include_router(mother_router)
+
 
 if EXTERNAL_BIND:
     @app.middleware("http")
@@ -277,6 +282,14 @@ async def quran_search_route(q: str):
 async def personas_route():
     from core.chat import PERSONAS
     return {"personas": [{"id": k, **v} for k, v in PERSONAS.items()]}
+
+
+@app.get("/mother/")
+async def mother_console():
+    mother_html = Path(__file__).resolve().parent / "app" / "mother.html"
+    if not mother_html.is_file():
+        raise HTTPException(404, "SIMORGH Mother console not found")
+    return FileResponse(mother_html)
 
 
 @app.get("/dashboard/")
