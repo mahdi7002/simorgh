@@ -421,7 +421,7 @@ def test_managed_backend_pid_is_accepted_when_process_identity_matches(monkeypat
         backend,
         "_process_cmdline",
         lambda pid: [
-            "/home/mahdi/.local/share/simorgh/bin/llama-server",
+            "/tmp/simorgh-test-bin/llama-server",
             "--model",
             "/tmp/qwen.gguf",
             "--host",
@@ -466,7 +466,7 @@ def test_managed_backend_recovers_from_stale_pid_file(monkeypatch, tmp_path):
         "_process_cmdline",
         lambda pid: (
             [
-                "/home/mahdi/.local/share/simorgh/bin/llama-server",
+                "/tmp/simorgh-test-bin/llama-server",
                 "--model",
                 "/tmp/qwen.gguf",
                 "--host",
