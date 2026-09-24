@@ -101,6 +101,8 @@ class ReportEngine:
         report = self._base_report("DAILY", start, end)
         report["changes"] = self._change_summary(report["snapshots"])
         report["vs_previous_day"] = self._compare_previous_day(_dt(start), report["latest_state"])
+        quality = self.ledger.latest_event("daily_test_run")
+        report["latest_quality_check"] = quality
         report["self_reflection"] = (
             self._local_model_reflection(report)
             if with_ai
