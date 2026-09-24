@@ -35,8 +35,9 @@ a{color:var(--blue);word-break:break-all}
 <section class="panel active" id="state">
 <div class="grid">
 <div class="card"><h2>بوت فعلی</h2><div id="boot" class="muted">...</div></div>
-<div class="card"><h2>سیستم</h2><div id="system" class="muted">...</div></div>
+<div class="card"><h2>سیستم و دسترسی</h2><div id="system" class="muted">...</div></div>
 <div class="card"><h2>اهداف</h2><div id="goals" class="muted">...</div></div>
+<div class="card"><h2>ماتریس قابلیت</h2><div id="capabilities" class="muted">...</div></div>
 </div>
 <div class="card"><h2>فعالیت‌های اخیر</h2><div id="events" class="scroll muted">...</div></div>
 <div class="card"><h2>خودشناسی</h2><div id="self" class="scroll muted">...</div></div>
@@ -87,7 +88,10 @@ async function refresh(){
 function render(){
  const b=state.boot||{}, s=state.snapshot||{}, m=s.memory||{}, d=s.disk||{}, cpu=s.cpu||{};
  document.getElementById('boot').innerHTML=[kv('boot_id',b.boot_id),kv('شروع',b.started_at||''),kv('بوت قبلی',b.previous_boot_id||'ندارد'),kv('خاموشی قبلی',b.previous_clean_shutdown===true?'تمیز':b.previous_clean_shutdown===false?'نامشخص/غیرتمیز':'ثبت نشده')].join('');
- document.getElementById('system').innerHTML=[kv('CPU',cpu.percent+'%'),kv('RAM',m.percent+'%'),kv('فضای دیسک',d.percent+'%'),kv('Python',s.os?.python||''),kv('Host',s.host||'')].join('');
+ const access=s.access||{};
+ document.getElementById('system').innerHTML=[kv('CPU',cpu.percent+'%'),kv('RAM',m.percent+'%'),kv('فضای دیسک',d.percent+'%'),kv('Python',s.os?.python||''),kv('Host',s.host||''),kv('کاربر',access.user||''),kv('Journal',access.journal_readable?'قابل‌خواندن':'محدود')].join('');
+ const cm=state.weekly?.capability_matrix||{};
+ document.getElementById('capabilities').innerHTML=[kv('اندازه‌گیری',cm.status||'NOT_AVAILABLE'),kv('قابلیت‌های موجود',String(cm.implemented_count??'')+'/'+String(cm.total_count??'')),kv('شکاف‌ها',(cm.missing||[]).join(', ')||'گزارش نشده')].join('');
  const goals=state.goals||[]; document.getElementById('goals').innerHTML=(goals.length?goals:[]).map(g=>'<div class="item">'+esc(g.title)+' <span class="badge">'+esc(g.status)+'</span></div>').join('')||'<span class="muted">هدف ثبت نشده.</span>';
  const events=(state.daily?.activity||[]).slice(-80).reverse();
  document.getElementById('events').innerHTML=events.map(e=>'<div class="item"><strong>'+esc(e.event_type)+'</strong> · '+esc(e.component)+' · '+esc(e.timestamp)+'<div class="muted">'+esc(JSON.stringify(e.data))+'</div></div>').join('')||'رویدادی ثبت نشده.';
