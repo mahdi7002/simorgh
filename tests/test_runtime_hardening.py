@@ -416,6 +416,7 @@ def test_managed_backend_pid_is_accepted_when_process_identity_matches(monkeypat
     monkeypatch.setattr(backend, "BACKEND_PID_FILE", tmp_path / "llama-server.pid")
     backend.BACKEND_PID_FILE.write_text("70998", encoding="utf-8")
     monkeypatch.setattr(backend, "BACKEND_META_FILE", meta)
+    monkeypatch.setattr(backend.os, "kill", lambda pid, sig: None)
     monkeypatch.setattr(
         backend,
         "_process_cmdline",
