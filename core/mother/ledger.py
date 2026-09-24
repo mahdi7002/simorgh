@@ -225,6 +225,18 @@ class MotherLedger:
             )
         return event_id
 
+    def latest_event(self, event_type: str) -> dict[str, Any] | None:
+        with self.connect() as conn:
+            row = conn.execute(
+                "SELECT * FROM events WHERE event_type=? ORDER BY timestamp DESC LIMIT 1",
+                (event_type,),
+            ).fetchone()
+        if not row:
+            return None
+        item = dict(row)
+        item["data"] = json.loads(item.pop("data_json"))
+        return item
+
     def events_for_boot(self, boot_id: str, limit: int = 5000) -> list[dict[str, Any]]:
         with self.connect() as conn:
             rows = conn.execute(
