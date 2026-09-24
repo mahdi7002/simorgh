@@ -13,18 +13,25 @@ if [ ! -x "$ROOT/.venv/bin/python" ]; then
     exit 1
 fi
 
-if ! getent group adm >/dev/null 2>&1; then
-    printf 'هشدار: گروه adm موجود نیست؛ دسترسی به journal ممکن است محدود شود.\n' >&2
+journal_groups=""
+for group in adm systemd-journal; do
+    if getent group "$group" >/dev/null 2>&1; then
+        if [ -n "$journal_groups" ]; then
+            journal_groups="$journal_groups "
+        fi
+        journal_groups="$journal_groups$group"
+    fi
+done
+if [ -z "$journal_groups" ]; then
+    printf 'هشدار: گروه خواندنی journal پیدا نشد؛ Mother با دسترسی محدود ادامه می‌دهد.\n' >&2
 fi
 
 sed \
     -e "s#__SIMORGH_USER__#$USER_NAME#g" \
     -e "s#__SIMORGH_HOME__#$HOME_DIR#g" \
+    -e "s#__JOURNAL_GROUPS__#$journal_groups#g" \
     "$UNIT_SRC" > "$UNIT_TMP"
 
-if ! getent group adm >/dev/null 2>&1; then
-    sed -i '/^SupplementaryGroups=adm$/d' "$UNIT_TMP"
-fi
 
 sudo install -m 0644 "$UNIT_TMP" /etc/systemd/system/simorgh-mother.service
 sudo install -d -m 0700 -o "$USER_NAME" -g "$USER_NAME" "$HOME_DIR/.local/share/simorgh/mother"
