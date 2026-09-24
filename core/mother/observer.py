@@ -71,7 +71,8 @@ def _ports() -> list[dict[str, Any]]:
     return rows
 
 
-def _processes() -> list[dict[str, Any]]:
+def _processes() -> dict[str, Any]:
+    total_count = 0
     rows = []
     for proc in psutil.process_iter(["pid", "name", "username", "status", "cpu_percent", "memory_info", "cmdline"]):
         try:
