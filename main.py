@@ -5,7 +5,10 @@ import uvicorn
 import logging
 import os
 import subprocess
-import psutil
+try:
+    import psutil
+except ImportError:
+    psutil = None
 from pathlib import Path
 
 # Configure logging
@@ -20,13 +23,19 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-app = FastAPI()
-from core.voice_docs import router as voice_docs_router
-app.include_router(voice_docs_router)
-from core.dashboard_api import router as dashboard_api_router
-app.include_router(dashboard_api_router)
-from core.voice_endpoint import router as voice_endpoint_router
-app.include_router(voice_endpoint_router)
+app = FastAPI(title="Simorgh", version="3.0.0")
+
+def _safe_include(import_path: str, attr: str = "router"):
+    try:
+        mod = __import__(import_path, fromlist=[attr])
+        app.include_router(getattr(mod, attr))
+        logger.info("router loaded: %s", import_path)
+    except Exception as e:
+        logger.warning("router skipped %s: %s", import_path, e)
+
+_safe_include("core.voice_docs")
+_safe_include("core.dashboard_api")
+_safe_include("core.voice_endpoint")
 
 # CORS
 app.add_middleware(
@@ -133,9 +142,9 @@ async def status():
         up = True if name == "simorgh-core" else port_is_open(port)
         services.append({"name": name, "port": port, "up": up})
     return {
-        "cpu": psutil.cpu_percent(interval=0.3),
-        "ram": psutil.virtual_memory().percent,
-        "disk": psutil.disk_usage("/").percent,
+        "cpu": (psutil.cpu_percent(interval=0.3) if psutil else None),
+        "ram": (psutil.virtual_memory().percent if psutil else None),
+        "disk": (psutil.disk_usage("/").percent if psutil else None),
         "services": services,
     }
 
@@ -145,7 +154,7 @@ async def health_check():
     return {
         "status": "healthy",
         "version": "3.0.0",
-        "python_version": f"{Path('/usr/bin/python3.11').resolve()}"
+        "python_version": __import__("sys").version.split()[0]
     }
 
 if __name__ == "__main__":

@@ -12,9 +12,15 @@ os.makedirs(VOICE_DIR, exist_ok=True)
 #   transcribe(audio_path: str) -> str          (core/stt.py)
 #   ask(question: str, agent: str = "hakim") -> str   (core/chat.py)
 #   synthesize(text: str) -> str  (مسیر فایل صوتی خروجی)  (core/tts.py)
-from core.stt import transcribe
 from core.chat import ask
-from core.tts import synthesize
+try:
+    from core.stt import transcribe
+except Exception:
+    transcribe = None
+try:
+    from core.tts import synthesize
+except Exception:
+    synthesize = None
 
 
 @router.post("/voice")
@@ -36,6 +42,9 @@ async def receive_voice(request: Request):
             wf.writeframes(raw_pcm)
 
         logger.info(f"Voice received: {len(raw_pcm)} bytes -> {wav_path}")
+
+        if transcribe is None:
+            raise HTTPException(status_code=503, detail="STT unavailable")
 
         # ۱. گفتار به متن
         user_text = transcribe(wav_path)

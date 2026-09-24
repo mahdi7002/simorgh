@@ -4,9 +4,21 @@ from pydantic import BaseModel
 import shutil, tempfile
 from pathlib import Path
 
-from core.tts import synthesize
-from core.stt import transcribe
-from core.doc_import import import_file, search_books
+try:
+    from core.tts import synthesize
+except Exception:
+    synthesize = None
+try:
+    from core.stt import transcribe
+except Exception:
+    transcribe = None
+try:
+    from core.doc_import import import_file, search_books
+except Exception:
+    def import_file(*a, **k):
+        raise RuntimeError('doc_import unavailable')
+    def search_books(*a, **k):
+        return []
 
 router = APIRouter()
 
@@ -15,11 +27,17 @@ class SpeakRequest(BaseModel):
 
 @router.post("/speak")
 def speak(req: SpeakRequest):
+    if synthesize is None:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=503, detail='TTS unavailable')
     path = synthesize(req.text)
     return FileResponse(path, media_type="audio/wav")
 
 @router.post("/listen")
 async def listen(file: UploadFile = File(...)):
+    if transcribe is None:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=503, detail='STT unavailable')
     with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as tmp:
         shutil.copyfileobj(file.file, tmp)
         tmp_path = tmp.name
