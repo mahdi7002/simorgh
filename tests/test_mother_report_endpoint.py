@@ -69,7 +69,11 @@ def test_report_ask_returns_503_when_local_model_unavailable(monkeypatch):
     app.include_router(mother_api.router)
     client = TestClient(app)
 
-    monkeypatch.setattr(mother_api.ledger, "latest_report", lambda _kind: {})
+    monkeypatch.setattr(
+        mother_api.ledger,
+        "latest_report",
+        lambda kind: {"report_type": kind},
+    )
     monkeypatch.setattr(
         mother_api.ledger,
         "latest_snapshot",
