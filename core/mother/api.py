@@ -62,6 +62,16 @@ def state() -> dict[str, Any]:
     }
 
 
+@router.get("/changes")
+def changes(since: str | None = None, limit: int = 500):
+    if since:
+        start = since[:64]
+    else:
+        from datetime import datetime, timedelta, timezone
+        start = (datetime.now(timezone.utc) - timedelta(hours=24)).isoformat()
+    return {"since": start, "events": ledger.events_between(start, limit=max(1, min(int(limit), 2000)))}
+
+
 @router.get("/reports")
 def report_list(limit: int = 20):
     return {"reports": ledger.list_reports(limit)}
