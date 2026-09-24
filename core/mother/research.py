@@ -132,6 +132,10 @@ def fetch_to_quarantine(ledger: MotherLedger, url: str) -> dict[str, Any]:
         response.close()
     if response is None:
         raise ValueError("research fetch failed")
+    if not 200 <= response.status_code < 300:
+        status = response.status_code
+        response.close()
+        raise ValueError(f"source returned HTTP {status}")
     final_url = _safe_url(response.url if response.url else current_url)
     content_type = response.headers.get("content-type", "").split(";", 1)[0].strip().lower()
     if content_type not in ALLOWED_CONTENT_TYPES:
