@@ -1,0 +1,28 @@
+[Unit]
+Description=SIMORGH Mother observer and reporting engine
+After=network.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=__SIMORGH_USER__
+Group=__SIMORGH_USER__
+SupplementaryGroups=adm
+WorkingDirectory=__SIMORGH_HOME__/simorgh
+Environment=PYTHONUNBUFFERED=1
+Environment=SIMORGH_RUNTIME_DIR=__SIMORGH_HOME__/.local/share/simorgh
+Environment=SIMORGH_MOTHER_DB=__SIMORGH_HOME__/.local/share/simorgh/mother/mother.db
+ExecStart=__SIMORGH_HOME__/simorgh/.venv/bin/python __SIMORGH_HOME__/simorgh/core/mother/service.py
+Restart=always
+RestartSec=10
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ReadOnlyPaths=/proc /sys /etc/systemd /var/log
+ReadWritePaths=__SIMORGH_HOME__/.local/share/simorgh/mother
+RestrictRealtime=true
+RestrictSUIDSGID=true
+
+[Install]
+WantedBy=multi-user.target
