@@ -58,3 +58,30 @@ def test_reviewer_accepts_normal_answer_without_evidence_request():
 
     assert result.approved is True
     assert result.warnings == []
+
+
+from core.orchestration.orchestrator import Orchestrator
+from core.orchestration.reviewer import ReviewResult
+
+
+def test_orchestrator_blocks_unapproved_final_output(monkeypatch):
+    monkeypatch.setattr(
+        "core.orchestration.orchestrator.ask",
+        lambda question, agent="hakim", *, tool_context="", use_builtin_tools=False, return_metadata=True:
+            ("طبق منابع این ادعا درست است.", True),
+    )
+    monkeypatch.setattr(
+        "core.orchestration.orchestrator.Reviewer.review",
+        lambda self, query, outputs, tool_results: ReviewResult(
+            approved=False,
+            warnings=["evidence_sensitive_request_without_tool_evidence"],
+            checks=["evidence_gate"],
+        ),
+    )
+
+    result = Orchestrator().run("منبع دقیق این ادعا را بگو", max_agents=1)
+
+    assert result["review"]["approved"] is False
+    assert result["response_blocked"] is True
+    assert result["final_output"].startswith("[NOT_VERIFIED]")
+
