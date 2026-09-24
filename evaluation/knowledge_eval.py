@@ -77,8 +77,12 @@ def evaluate(
     false_positive = 0
     abstained_known = 0
 
+    per_case_ms: list[float] = []
+
     for case in cases:
+        case_started = time.perf_counter()
         raw = function(str(case["q"]))
+        per_case_ms.append((time.perf_counter() - case_started) * 1000)
         result = normalize(raw)
 
         expected_poet = case.get("poet")
@@ -119,6 +123,7 @@ def evaluate(
                 "expected_poet": expected_poet,
                 "expected_status": expected_status,
                 "result": result,
+                "latency_ms": round(per_case_ms[-1], 3),
             }
         )
 
@@ -145,16 +150,7 @@ def evaluate(
         "abstained_known_cases": abstained_known,
         "elapsed_seconds": round(elapsed, 6),
         "latency_ms_mean": round((elapsed / len(cases)) * 1000, 3) if cases else 0.0,
-        "latency_ms_median": round(
-            statistics.median(
-                [
-                    elapsed / len(cases) * 1000
-                ]
-            ),
-            3,
-        )
-        if cases
-        else 0.0,
+        "latency_ms_median": round(statistics.median(per_case_ms), 3) if per_case_ms else 0.0,
         "rows": rows,
     }
 
