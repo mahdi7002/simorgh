@@ -149,6 +149,8 @@ class SystemObserver:
         disk = psutil.disk_usage("/")
         load = getattr(os, "getloadavg", lambda: (0.0, 0.0, 0.0))()
         cpu_freq = psutil.cpu_freq()
+        groups = _cmd(["id", "-nG"], timeout=2)[1].split()
+        journal_probe = _cmd(["journalctl", "-n", "1", "--no-pager"], timeout=3)
         return {
             "timestamp": _now(),
             "boot_id": _boot_id(),
@@ -183,6 +185,12 @@ class SystemObserver:
                 "used_gb": round(disk.used / 1024 / 1024 / 1024, 2),
                 "free_gb": round(disk.free / 1024 / 1024 / 1024, 2),
                 "percent": disk.percent,
+            },
+            "access": {
+                "user": os.environ.get("USER") or _cmd(["id", "-un"], timeout=2)[1],
+                "groups": groups,
+                "journal_readable": journal_probe[0] == 0,
+                "journal_probe_error": journal_probe[2] if journal_probe[0] != 0 else None,
             },
             "systemd": _systemd_units(),
             "ports": _ports(),
