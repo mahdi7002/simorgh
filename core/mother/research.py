@@ -140,6 +140,7 @@ def fetch_to_quarantine(ledger: MotherLedger, url: str) -> dict[str, Any]:
     final_url = _safe_url(response.url if response.url else current_url)
     content_type = response.headers.get("content-type", "").split(";", 1)[0].strip().lower()
     if content_type not in ALLOWED_CONTENT_TYPES:
+        response.close()
         raise ValueError(f"unsupported content type: {content_type or 'unknown'}")
     raw = bytearray()
     for chunk in response.iter_content(chunk_size=65536):
@@ -147,6 +148,7 @@ def fetch_to_quarantine(ledger: MotherLedger, url: str) -> dict[str, Any]:
             continue
         raw.extend(chunk)
         if len(raw) > MAX_FETCH_BYTES:
+            response.close()
             raise ValueError("quarantine fetch exceeded 2 MiB limit")
     encoding = response.encoding or "utf-8"
     decoded = bytes(raw).decode(encoding, errors="replace")
@@ -160,7 +162,9 @@ def fetch_to_quarantine(ledger: MotherLedger, url: str) -> dict[str, Any]:
         title = (response.headers.get("x-title") or "")[:300]
         content = html.unescape(decoded).strip()
     if not content:
+        response.close()
         raise ValueError("source returned no textual content")
+    response.close()
     item_id = ledger.add_quarantine(
         source_url=final_url,
         source_domain=urlparse(final_url).hostname or "",
