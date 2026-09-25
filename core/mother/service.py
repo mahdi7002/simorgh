@@ -188,7 +188,7 @@ class MotherService:
             self._record_observer_error(exc)
 
         self.reports.post_boot(boot)
-        self.reports.daily(with_ai=True)
+        self.reports.daily(with_ai=False)
         latest_snapshot = self.ledger.latest_snapshot()
         if latest_snapshot:
             self._write_world_state(latest_snapshot)
@@ -211,7 +211,7 @@ class MotherService:
                 latest_weekly = self.ledger.latest_report("WEEKLY")
                 latest_weekly_date = latest_weekly.get("_ledger", {}).get("created_at", "")[:10]
                 if local_now.weekday() == 6 and latest_weekly_date != local_now.date().isoformat():
-                    self.reports.weekly(with_ai=True)
+                    self.reports.weekly(with_ai=False)
                     last_weekly_refresh = now
                 if now - last_quality_check >= 86400:
                     run_daily_quality_check(self.ledger)

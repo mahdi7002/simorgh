@@ -214,6 +214,11 @@ class MotherLedger:
         data: dict[str, Any] | None = None,
         timestamp: str | None = None,
     ) -> str:
+        # Database invariant: events.provenance is NOT NULL.
+        # Normalize an explicit None before the SQLite INSERT.
+        if provenance is None:
+            provenance = "system_observation"
+
         event_id = str(uuid.uuid4())
         payload = data or {}
         with self.connect() as conn:
@@ -515,6 +520,19 @@ class MotherLedger:
                 (key, json.dumps(value, ensure_ascii=False, sort_keys=True, default=str), source, status, utc_now()),
             )
 
+    def record_capability(self, key: str, status: str, evidence: str,
+                           source: str = "human_verified") -> None:
+        """ثبت دستی وضعیت یک قابلیت با شواهد، جدا از observer خودکار سیستم."""
+        import json, datetime
+        value = json.dumps({"status": status, "evidence": evidence}, ensure_ascii=False)
+        with self.connect() as c:
+            c.execute(
+                "INSERT INTO self_model(key,value_json,source,status,observed_at) VALUES(?,?,?,?,?) "
+                "ON CONFLICT(key) DO UPDATE SET value_json=excluded.value_json, source=excluded.source, "
+                "status=excluded.status, observed_at=excluded.observed_at",
+                (key, value, source, status, datetime.datetime.utcnow().isoformat() + "Z"),
+            )
+
     def list_self_model(self) -> list[dict[str, Any]]:
         with self.connect() as conn:
             rows = conn.execute(
@@ -548,3 +566,13 @@ class MotherLedger:
             )
             result.append(item)
         return result
+
+# SIMORGH_BILINGUAL_LEDGER_BRIDGE_V1
+# Bilingual narration is a sidecar. It does not replace or alter ledger facts.
+try:
+    from .bilingual_activity import install_ledger_bridge
+    install_ledger_bridge(MotherLedger)
+except Exception:
+    # Mother must remain bootable even if narration storage has a problem.
+    pass
+

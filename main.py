@@ -2,6 +2,29 @@ from pathlib import Path
 import hashlib
 import logging
 import os
+
+# SECURITY: evaluate external bind policy before importing project modules.
+# This keeps fail-closed startup fast and prevents project import side effects
+# from delaying rejection of an unsafe external bind.
+HOST = os.getenv("SIMORGH_HOST", "127.0.0.1")
+PORT = int(os.getenv("SIMORGH_PORT", "8000"))
+SIMORGH_KEY = os.getenv("SIMORGH_KEY")
+MAX_REQUEST_BYTES = int(
+    os.getenv("SIMORGH_MAX_REQUEST_BYTES", str(10 * 1024 * 1024))
+)
+
+if MAX_REQUEST_BYTES < 1:
+    raise RuntimeError("SIMORGH_MAX_REQUEST_BYTES must be a positive integer")
+
+LOOPBACK_HOSTS = {"127.0.0.1", "localhost", "::1"}
+EXTERNAL_BIND = HOST not in LOOPBACK_HOSTS
+
+if EXTERNAL_BIND and not SIMORGH_KEY:
+    raise RuntimeError(
+        "Refusing non-loopback bind without explicit SIMORGH_KEY. "
+        "Use 127.0.0.1/localhost for local-only mode or configure authentication."
+    )
+
 import secrets
 import subprocess
 
@@ -53,22 +76,6 @@ def _configure_logging():
 
 
 logger = _configure_logging()
-
-HOST = os.getenv("SIMORGH_HOST", "127.0.0.1")
-PORT = int(os.getenv("SIMORGH_PORT", "8000"))
-SIMORGH_KEY = os.getenv("SIMORGH_KEY")
-MAX_REQUEST_BYTES = int(os.getenv("SIMORGH_MAX_REQUEST_BYTES", str(10 * 1024 * 1024)))
-
-if MAX_REQUEST_BYTES < 1:
-    raise RuntimeError("SIMORGH_MAX_REQUEST_BYTES must be a positive integer")
-
-LOOPBACK_HOSTS = {"127.0.0.1", "localhost", "::1"}
-EXTERNAL_BIND = HOST not in LOOPBACK_HOSTS
-if EXTERNAL_BIND and not SIMORGH_KEY:
-    raise RuntimeError(
-        "Refusing non-loopback bind without explicit SIMORGH_KEY. "
-        "Use 127.0.0.1/localhost for local-only mode or configure authentication."
-    )
 
 AI_DISCLOSURE = "این پاسخ با استفاده از مدل زبانی محلی تولید شده است؛ پیش از تصمیم‌گیری، آن را بررسی کنید."
 KNOWLEDGE_DISCLOSURE = "این پاسخ مستقیماً از پایگاه دانش محلی سیمرغ بازیابی شده است و در تولید آن از مدل زبانی استفاده نشده است."

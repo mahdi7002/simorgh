@@ -42,14 +42,22 @@ def test_report_ask_returns_local_model_response(monkeypatch):
 
     captured = {}
 
-    def fake_generate(system_prompt, user_message, max_tokens=350, needs_quality=False):
-        captured["system_prompt"] = system_prompt
-        captured["user_message"] = user_message
-        captured["max_tokens"] = max_tokens
-        captured["needs_quality"] = needs_quality
+    def fake_generate(*args, **kwargs):
+        captured["system_prompt"] = (
+            args[0] if len(args) > 0
+            else kwargs.get("system_prompt")
+        )
+        captured["user_message"] = (
+            args[1] if len(args) > 1
+            else kwargs.get("user_message")
+        )
+        captured["max_tokens"] = kwargs.get("max_tokens")
+        captured["needs_quality"] = kwargs.get("needs_quality")
+        captured["task_class"] = kwargs.get("task_class")
         return "گزارش تولیدشده توسط Gemma"
 
     monkeypatch.setattr(mother_api, "generate", fake_generate)
+    monkeypatch.setattr(mother_api, "review_report_with_gemma", lambda *args, **kwargs: {"status": "MODEL_PASS"})
 
     response = client.post("/api/mother/report/ask")
 
@@ -59,9 +67,13 @@ def test_report_ask_returns_local_model_response(monkeypatch):
     assert body["ai_generated"] is True
     assert body["model_mode"] == "local-only"
     assert body["evidence_scope"] == "mother_local_state"
+    assert body["observation"]["source"] == "ledger.latest_snapshot"
+    assert body["observation"]["timestamp"] == "2026-09-25T00:00:00+00:00"
+    assert isinstance(body["observation"]["age_seconds"], (int, float))
+    assert '"observation"' in captured["user_message"]
     assert captured["needs_quality"] is True
-    assert captured["max_tokens"] == 650
-    assert "گزارش و مشاهدهٔ واقعی محلی" in captured["user_message"]
+    assert captured["max_tokens"] == 180
+    assert "مشاهدهٔ واقعی محلی" in captured["user_message"]
 
 
 def test_report_ask_returns_503_when_local_model_unavailable(monkeypatch):

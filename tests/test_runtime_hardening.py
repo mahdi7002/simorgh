@@ -22,14 +22,42 @@ def test_fast_llm_uses_fast_timeout(monkeypatch):
         captured["timeout"] = kwargs["timeout"]
         return FakeResponse()
 
+    monkeypatch.setattr(llm, "_prepare_offline_first", lambda: None)
+
+    monkeypatch.setattr(
+        llm,
+        "discover_local_brain",
+        lambda: {
+            "backend": "llama.cpp",
+            "base_url": "http://127.0.0.1:8080",
+            "model": "test-fast-model",
+            "n_ctx": 4096,
+            "n_ctx_train": 131072,
+            "status": "READY",
+        },
+    )
+
+    monkeypatch.setattr(
+        llm,
+        "count_input_tokens",
+        lambda *args, **kwargs: 10,
+    )
+
     monkeypatch.setattr(llm.requests, "post", fake_post)
     monkeypatch.setenv("SIMORGH_LLM_FAST_URL", llm.FAST_URL)
     monkeypatch.setattr(llm, "FAST_TIMEOUT", 8.0)
     monkeypatch.setattr(llm, "QUALITY_TIMEOUT", 2.0)
 
-    assert llm.generate("system", "hello", needs_quality=False) == "ok"
-    assert captured["url"] == llm.FAST_URL
-    assert captured["timeout"] == pytest.approx(8.0)
+    assert llm.generate(
+        "system",
+        "hello",
+        needs_quality=False,
+    ) == "ok"
+
+    assert captured["timeout"] == 8.0
+    assert captured["url"] == (
+        "http://127.0.0.1:8080/v1/chat/completions"
+    )
 
 
 def test_quality_llm_uses_quality_timeout(monkeypatch):
@@ -49,14 +77,42 @@ def test_quality_llm_uses_quality_timeout(monkeypatch):
         captured["timeout"] = kwargs["timeout"]
         return FakeResponse()
 
+    monkeypatch.setattr(llm, "_prepare_offline_first", lambda: None)
+
+    monkeypatch.setattr(
+        llm,
+        "discover_local_brain",
+        lambda: {
+            "backend": "llama.cpp",
+            "base_url": "http://127.0.0.1:8081",
+            "model": "test-quality-model",
+            "n_ctx": 4096,
+            "n_ctx_train": 131072,
+            "status": "READY",
+        },
+    )
+
+    monkeypatch.setattr(
+        llm,
+        "count_input_tokens",
+        lambda *args, **kwargs: 10,
+    )
+
     monkeypatch.setattr(llm.requests, "post", fake_post)
     monkeypatch.setenv("SIMORGH_LLM_QUALITY_URL", llm.QUALITY_URL)
     monkeypatch.setattr(llm, "FAST_TIMEOUT", 8.0)
     monkeypatch.setattr(llm, "QUALITY_TIMEOUT", 2.0)
 
-    assert llm.generate("system", "hello", needs_quality=True) == "ok"
-    assert captured["url"] == llm.QUALITY_URL
-    assert captured["timeout"] == pytest.approx(2.0)
+    assert llm.generate(
+        "system",
+        "hello",
+        needs_quality=True,
+    ) == "ok"
+
+    assert captured["timeout"] == 2.0
+    assert captured["url"] == (
+        "http://127.0.0.1:8081/v1/chat/completions"
+    )
 
 
 def test_reviewer_does_not_treat_failed_tool_as_evidence():

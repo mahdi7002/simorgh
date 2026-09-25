@@ -27,6 +27,27 @@ def _cmd(args: list[str], timeout: float = 3.0) -> tuple[int, str, str]:
         return 127, "", str(exc)
 
 
+def _journalctl_since_arg(value: str) -> str:
+    """Normalize an ISO-8601 Mother timestamp for journalctl --since.
+
+    Mother keeps the original high-precision timestamp as FACT.
+    Only the command-line query representation is normalized because
+    journalctl on this system rejects the ISO offset form and accepts
+    the UTC textual form without microseconds.
+    """
+    text = str(value).strip()
+    try:
+        parsed = datetime.fromisoformat(text.replace("Z", "+00:00"))
+    except ValueError:
+        return text
+
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
+
+    parsed = parsed.astimezone(timezone.utc).replace(microsecond=0)
+    return parsed.strftime("%Y-%m-%d %H:%M:%S UTC")
+
+
 def _boot_id() -> str:
     try:
         return Path("/proc/sys/kernel/random/boot_id").read_text(encoding="utf-8").strip()
@@ -208,7 +229,15 @@ class SystemObserver:
 
     def journal_current_boot(self, limit: int = 2000) -> dict[str, Any]:
         rc, out, err = _cmd(
-            ["journalctl", "-b", "--no-pager", "-o", "short-iso"],
+            [
+                "journalctl",
+                "-b",
+                "--no-pager",
+                "-n",
+                str(limit),
+                "-o",
+                "short-iso",
+            ],
             timeout=10,
         )
         if rc != 0:
@@ -235,7 +264,16 @@ class SystemObserver:
 
     def journal_since(self, since_iso: str, limit: int = 2000) -> dict[str, Any]:
         rc, out, err = _cmd(
-            ["journalctl", "--since", since_iso, "--no-pager", "-o", "short-iso"],
+            [
+                "journalctl",
+                "--since",
+                _journalctl_since_arg(since_iso),
+                "--no-pager",
+                "-n",
+                str(limit),
+                "-o",
+                "short-iso",
+            ],
             timeout=10,
         )
         if rc != 0:

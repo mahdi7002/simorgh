@@ -1,7 +1,9 @@
 from __future__ import annotations
+from core.mother.brain_registry import discover_local_brain
 
 import json
 import os
+from datetime import datetime, timezone
 from typing import Any
 
 from fastapi import APIRouter, HTTPException
@@ -21,6 +23,7 @@ from .research import (
 )
 from .reports import ReportEngine
 from .observer import SystemObserver
+from .report_context import build_report_evidence, build_verification, review_report_with_gemma
 
 router = APIRouter(prefix="/api/mother", tags=["mother"])
 
@@ -95,53 +98,131 @@ def report_weekly():
 
 @router.post("/report/ask")
 def report_ask():
-    """Ask the local model to narrate the latest observed Mother state."""
+    """Generate a bounded, traceable report with the local Gemma brain."""
     privacy_mode = os.environ.get(
         "SIMORGH_PRIVACY_MODE",
         str(load_config().get("privacy_mode", "local-only")),
     ).strip().lower() or "local-only"
+
     if privacy_mode != "local-only":
         raise HTTPException(409, "local report requires privacy_mode=local-only")
 
-    daily = ledger.latest_report("DAILY") or reports.daily(with_ai=False)
+    daily = ledger.latest_report("DAILY")
     weekly = ledger.latest_report("WEEKLY")
     post_boot = ledger.latest_report("POST_BOOT")
-    latest = ledger.latest_snapshot() or observer.capture()
+    latest = ledger.latest_snapshot()
+    observation_source = "ledger.latest_snapshot"
 
-    evidence = {
-        "latest_snapshot": latest,
-        "daily": daily,
-        "weekly": weekly,
-        "post_boot": post_boot,
-        "goals": ledger.list_goals(),
-        "self_model": ledger.list_self_model(),
+    if latest is None:
+        latest = observer.capture()
+        observation_source = "observer.capture"
+
+    observation_timestamp = latest.get("timestamp") if isinstance(latest, dict) else None
+    observation_age_seconds = None
+
+    if observation_timestamp:
+        try:
+            observed_at = datetime.fromisoformat(observation_timestamp)
+            if observed_at.tzinfo is None:
+                observed_at = observed_at.replace(tzinfo=timezone.utc)
+            observation_age_seconds = (
+                datetime.now(timezone.utc) - observed_at
+            ).total_seconds()
+        except (TypeError, ValueError):
+            observation_age_seconds = None
+
+    observation = {
+        "source": observation_source,
+        "timestamp": observation_timestamp,
+        "age_seconds": observation_age_seconds,
     }
+
+    evidence = build_report_evidence(
+        latest_snapshot=latest,
+        daily=daily,
+        weekly=weekly,
+        post_boot=post_boot,
+        goals=ledger.list_goals(),
+        self_model=ledger.list_self_model(),
+    )
+    evidence["observation"] = observation
+
     prompt = (
-        "این داده‌ها گزارش و مشاهدهٔ واقعی محلی سیمرغ Mother هستند. "
-        "فقط بر اساس همین داده‌ها یک گزارش فارسی روشن برای انسان بنویس. "
-        "وضعیت فعلی، تغییرات، رخدادهای مهم، محدودیت‌های مشاهده و چند پیشنهاد "
-        "غیرالزامی برای بهبود را بیان کن. هرجا داده کافی نیست صریحاً "
-        "\"NOT_AVAILABLE\" یا \"تأیید نشده\" بگو. هیچ واقعیت تازه‌ای نساز. "
-        "هیچ دستور اجرایی خودکار نده. گزارش را در 5 تا 8 بند کوتاه نگه دار.\n\n"
-        + json.dumps(evidence, ensure_ascii=False, default=str)
+        "این داده‌ها فقط مشاهدهٔ واقعی محلی Mother هستند. "
+        "فقط بر اساس همین evidence یک گزارش فارسی روشن و کوتاه بنویس. "
+        "وضعیت فعلی، تغییرات مهم، رخدادهای مهم، محدودیت‌های مشاهده و "
+        "چند پیشنهاد غیرالزامی برای بهبود را بیان کن. "
+        "هرجا داده کافی نیست NOT_AVAILABLE یا تأیید نشده بگو. "
+        "هیچ واقعیت تازه‌ای نساز و هیچ دستور اجرایی خودکار نده. "
+        "گزارش را در 4 بند کوتاه نگه دار.\n\n"
+        + json.dumps(
+            evidence,
+            ensure_ascii=False,
+            sort_keys=True,
+            default=str,
+        )
     )
+
+    report_system_prompt = (
+        "تو راصد محلی SIMORGH MOTHER هستی. "
+        "فقط evidence را گزارش کن. "
+        "KNOWN و INFERRED را جدا نگه دار. "
+        "هیچ واقعیت تازه‌ای نساز."
+    )
+
     response = generate(
-        SIMORGH_IDENTITY + (
-            "\n\nنقش تو «راصد نور» است: وضعیت را دقیق و بی‌طرفانه گزارش کن؛ "
-            "حدس را از مشاهده جدا نگه دار."
-        ),
+        report_system_prompt,
         prompt,
-        max_tokens=650,
+        max_tokens=180,
         needs_quality=True,
+        task_class="report",
     )
+
     if not response:
         raise HTTPException(503, "local model unavailable")
+
+    verification = build_verification(response, evidence)
+
+    try:
+        model_review = review_report_with_gemma(response, evidence)
+    except Exception as exc:
+        model_review = {
+            "status": "MODEL_REVIEW_UNAVAILABLE",
+            "reason": type(exc).__name__,
+        }
+
+    ledger.record_event(
+        component="report",
+        event_type="gemma_report_generated",
+        actor="Gemma",
+        action="report",
+        severity="info",
+        verified=False,
+        provenance="local_llm",
+        data={
+            "evidence_sha256": verification["evidence_sha256"],
+            "response_sha256": verification["response_sha256"],
+            "model": discover_local_brain().get("model"),
+            "model_review_status": model_review.get("status"),
+        },
+    )
+
     return {
         "response": response,
         "ai_generated": True,
         "model_mode": "local-only",
+        "model": discover_local_brain().get("model"),
         "evidence_scope": "mother_local_state",
+        "verification": verification,
+        "model_review": model_review,
+        "brain": discover_local_brain(),
+        "observation": observation,
     }
+
+
+@router.get("/brain")
+def brain():
+    return discover_local_brain()
 
 
 @router.post("/goals")

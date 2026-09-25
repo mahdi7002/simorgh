@@ -16,6 +16,7 @@ from .ledger import MotherLedger, utc_now
 
 MAX_FILE_BYTES = 100_000
 MAX_FILES = 8
+MAX_CONTEXT_CHARS = 22_000
 PATCH_START_RE = re.compile(r"(?:```diff|~~~diff)", re.I)
 
 
@@ -34,6 +35,7 @@ def _safe_rel(path: str) -> Path:
 def read_context(paths: list[str]) -> dict[str, str]:
     result: dict[str, str] = {}
     root = _repo_root()
+    total_chars = 0
     for raw in paths[:MAX_FILES]:
         rel = _safe_rel(raw)
         file = (root / rel).resolve()
@@ -45,7 +47,15 @@ def read_context(paths: list[str]) -> dict[str, str]:
             continue
         if file.stat().st_size > MAX_FILE_BYTES:
             raise ValueError(f"context file too large: {rel}")
-        result[str(rel)] = file.read_text(encoding="utf-8", errors="replace")
+        text = file.read_text(encoding="utf-8", errors="replace")
+        next_total = total_chars + len(text)
+        if next_total > MAX_CONTEXT_CHARS:
+            raise ValueError(
+                f"model context budget exceeded: {next_total} chars > {MAX_CONTEXT_CHARS}; "
+                "provide fewer or smaller files"
+            )
+        result[str(rel)] = text
+        total_chars = next_total
     return result
 
 

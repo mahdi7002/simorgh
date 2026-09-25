@@ -10,7 +10,10 @@ from fastapi.responses import FileResponse
 
 from core.mother.ai_work_log_api import router as ai_work_log_router
 from core.mother.api import router as mother_router
+from core.mother.language_api import router as language_router
+from core.mother.bilingual_activity import ensure_storage
 from core.mother.service import MotherService
+from core.mother.ai_work_log_contract_api import router as ai_work_log_contract_router
 
 PORT = int(os.environ.get("SIMORGH_MOTHER_PORT", "8010"))
 HOST = os.environ.get("SIMORGH_MOTHER_HOST", "127.0.0.1")
@@ -19,6 +22,7 @@ SERVICE = MotherService(int(os.environ.get("SIMORGH_MOTHER_INTERVAL_SECONDS", "3
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    ensure_storage()
     thread = Thread(target=SERVICE.start, name="simorgh-mother-observer", daemon=True)
     thread.start()
     try:
@@ -30,7 +34,9 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="SIMORGH Mother", version="1.0.0", lifespan=lifespan)
 app.include_router(mother_router)
+app.include_router(language_router)
 app.include_router(ai_work_log_router)
+app.include_router(ai_work_log_contract_router)
 
 
 @app.get("/")
