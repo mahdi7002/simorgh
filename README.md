@@ -166,3 +166,14 @@ For the detailed first-run path, see [`QUICKSTART.md`](QUICKSTART.md), [`docs/US
 SIMORGH intentionally borrows architectural lessons from modern agent systems without depending on them. See [`docs/AGENT_FABRIC.md`](docs/AGENT_FABRIC.md) for the provider-neutral lifecycle, capability boundary, evidence artifacts, and Human Gate model.
 
 ## Repository map
+
+
+### Project continuity
+
+For new AI collaborators and developers, start with the Git-readable project map:
+
+- [`docs/PROJECT_MAP.md`](docs/PROJECT_MAP.md) — architecture, verification rules, onboarding, workspace boundaries, and current authorized scope
+- [`docs/AI_WORK_CONTRACT.md`](docs/AI_WORK_CONTRACT.md) — evidence, change-control, and unplanned-work rules
+
+These documents are deliberately separate from volatile runtime state. Always inspect the
+actual checkout and run the declared tests before making claims about the live system.
