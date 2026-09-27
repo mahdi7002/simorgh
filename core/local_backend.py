@@ -16,7 +16,7 @@ import urllib.request
 from pathlib import Path
 from typing import Any
 
-from core.user_runtime import DEFAULT_RUNTIME_DIR, RUNTIME_LOG_DIR, ensure_user_dirs, save_config
+from core.user_runtime import DEFAULT_RUNTIME_DIR, RUNTIME_LOG_DIR, ensure_user_dirs, load_config, save_config
 
 BACKEND_PID_FILE = DEFAULT_RUNTIME_DIR / "llama-server.pid"
 BACKEND_META_FILE = DEFAULT_RUNTIME_DIR / "llama-server.json"
@@ -470,9 +470,8 @@ def start_backend(model_path: str | os.PathLike[str], *, preferred_port: int = 8
     )
     for _ in range(120):
         if process.poll() is not None:
-            pid_file.unlink(missing_ok=True)
-            meta_file = BACKEND_META_FILE
-            meta_file.unlink(missing_ok=True)
+            BACKEND_PID_FILE.unlink(missing_ok=True)
+            BACKEND_META_FILE.unlink(missing_ok=True)
             log.close()
             raise RuntimeError(f"llama-server exited with code {process.returncode}; see {BACKEND_LOG_FILE}")
         if _url_ok(models_url, timeout=1):
@@ -519,6 +518,38 @@ def start_backend(model_path: str | os.PathLike[str], *, preferred_port: int = 8
     raise RuntimeError(f"llama-server did not become ready; see {BACKEND_LOG_FILE}")
 
 
+def autostart_configured_backend() -> dict[str, Any] | None:
+    """Start the persisted local model backend without downloading on application boot."""
+    config = load_config()
+    model_value = config.get("backend_model")
+    if not isinstance(model_value, str) or not model_value.strip():
+        return None
+
+    model = Path(model_value).expanduser().resolve()
+    if not model.is_file():
+        return {
+            "started": False,
+            "ready": False,
+            "model": str(model),
+            "note": "configured local model is not available; SIMORGH core continues without AI",
+        }
+
+    # Startup must remain offline-safe. A missing backend binary is not an
+    # invitation to download software during boot.
+    binary = _find_binary()
+    if not binary:
+        return {
+            "started": False,
+            "ready": False,
+            "model": str(model),
+            "note": "no local llama-server binary is available; SIMORGH core continues without AI",
+        }
+
+    result = start_backend(model)
+    result["started"] = True
+    return result
+
+
 def discover_backend() -> dict[str, Any]:
     fast_url = os.environ.get("SIMORGH_LLM_FAST_URL", "http://127.0.0.1:8080/v1/chat/completions")
     models_url = os.environ.get("SIMORGH_LLM_FAST_MODELS_URL", "http://127.0.0.1:8080/v1/models")
@@ -547,4 +578,4 @@ def discover_backend() -> dict[str, Any]:
     }
 
 
-__all__ = ["discover_backend", "ensure_llama_server", "start_backend", "stop_managed_backend"]
+__all__ = ["autostart_configured_backend", "discover_backend", "ensure_llama_server", "start_backend", "stop_managed_backend"]

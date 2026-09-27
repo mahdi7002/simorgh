@@ -1,0 +1,3702 @@
+{
+  "schema_version": 1,
+  "root": "/home/mahdi/simorgh/data",
+  "databases_found": 6,
+  "databases": [
+    {
+      "path": "data/activity.db",
+      "size_bytes": 12288,
+      "sha256": "b33ed21f137a96040351d4e7362aa183f82955b5243bdc72f1061c624baf1b15",
+      "integrity_check": "ok",
+      "tables": [
+        {
+          "table": "activity_log",
+          "row_count": 0,
+          "columns": [
+            {
+              "cid": 0,
+              "name": "id",
+              "declared_type": "INTEGER",
+              "not_null": false,
+              "primary_key": true
+            },
+            {
+              "cid": 1,
+              "name": "timestamp",
+              "declared_type": "TEXT",
+              "not_null": true,
+              "primary_key": false
+            },
+            {
+              "cid": 2,
+              "name": "app",
+              "declared_type": "TEXT",
+              "not_null": false,
+              "primary_key": false
+            },
+            {
+              "cid": 3,
+              "name": "window_title",
+              "declared_type": "TEXT",
+              "not_null": false,
+              "primary_key": false
+            }
+          ],
+          "text_columns": [
+            "timestamp",
+            "app",
+            "window_title"
+          ],
+          "hint_columns": [
+            "window_title"
+          ],
+          "fts": false,
+          "sql": "CREATE TABLE activity_log (\n            id INTEGER PRIMARY KEY AUTOINCREMENT,\n            timestamp TEXT NOT NULL,\n            app TEXT,\n            window_title TEXT\n        )",
+          "samples": {
+            "window_title": []
+          }
+        }
+      ],
+      "errors": []
+    },
+    {
+      "path": "data/grid/quran.db",
+      "size_bytes": 4452352,
+      "sha256": "929cc4183ccd4e036066b2457b7d524f7e9b4488cfe556a2f6fe604408373a94",
+      "integrity_check": "ok",
+      "tables": [
+        {
+          "table": "knowledge_fts",
+          "row_count": 6236,
+          "columns": [
+            {
+              "cid": 0,
+              "name": "source",
+              "declared_type": "",
+              "not_null": false,
+              "primary_key": false
+            },
+            {
+              "cid": 1,
+              "name": "category",
+              "declared_type": "",
+              "not_null": false,
+              "primary_key": false
+            },
+            {
+              "cid": 2,
+              "name": "content",
+              "declared_type": "",
+              "not_null": false,
+              "primary_key": false
+            }
+          ],
+          "text_columns": [],
+          "hint_columns": [
+            "source",
+            "category"
+          ],
+          "fts": true,
+          "sql": "CREATE VIRTUAL TABLE knowledge_fts USING fts5(\n                source,\n                category,\n                content\n            )",
+          "samples": {
+            "source": [
+              "قرآن"
+            ],
+            "category": [
+              "معنوی"
+            ]
+          }
+        },
+        {
+          "table": "knowledge_fts_config",
+          "row_count": 1,
+          "columns": [
+            {
+              "cid": 0,
+              "name": "k",
+              "declared_type": "",
+              "not_null": true,
+              "primary_key": true
+            },
+            {
+              "cid": 1,
+              "name": "v",
+              "declared_type": "",
+              "not_null": false,
+              "primary_key": false
+            }
+          ],
+          "text_columns": [],
+          "hint_columns": [],
+          "fts": false,
+          "sql": "CREATE TABLE 'knowledge_fts_config'(k PRIMARY KEY, v) WITHOUT ROWID",
+          "samples": {}
+        },
+        {
+          "table": "knowledge_fts_content",
+          "row_count": 6236,
+          "columns": [
+            {
+              "cid": 0,
+              "name": "id",
+              "declared_type": "INTEGER",
+              "not_null": false,
+              "primary_key": true
+            },
+            {
+              "cid": 1,
+              "name": "c0",
+              "declared_type": "",
+              "not_null": false,
+              "primary_key": false
+            },
+            {
+              "cid": 2,
+              "name": "c1",
+              "declared_type": "",
+              "not_null": false,
+              "primary_key": false
+            },
+            {
+              "cid": 3,
+              "name": "c2",
+              "declared_type": "",
+              "not_null": false,
+              "primary_key": false
+            }
+          ],
+          "text_columns": [],
+          "hint_columns": [],
+          "fts": false,
+          "sql": "CREATE TABLE 'knowledge_fts_content'(id INTEGER PRIMARY KEY, c0, c1, c2)",
+          "samples": {}
+        },
+        {
+          "table": "knowledge_fts_data",
+          "row_count": 284,
+          "columns": [
+            {
+              "cid": 0,
+              "name": "id",
+              "declared_type": "INTEGER",
+              "not_null": false,
+              "primary_key": true
+            },
+            {
+              "cid": 1,
+              "name": "block",
+              "declared_type": "BLOB",
+              "not_null": false,
+              "primary_key": false
+            }
+          ],
+          "text_columns": [],
+          "hint_columns": [],
+          "fts": false,
+          "sql": "CREATE TABLE 'knowledge_fts_data'(id INTEGER PRIMARY KEY, block BLOB)",
+          "samples": {}
+        },
+        {
+          "table": "knowledge_fts_docsize",
+          "row_count": 6236,
+          "columns": [
+            {
+              "cid": 0,
+              "name": "id",
+              "declared_type": "INTEGER",
+              "not_null": false,
+              "primary_key": true
+            },
+            {
+              "cid": 1,
+              "name": "sz",
+              "declared_type": "BLOB",
+              "not_null": false,
+              "primary_key": false
+            }
+          ],
+          "text_columns": [],
+          "hint_columns": [],
+          "fts": false,
+          "sql": "CREATE TABLE 'knowledge_fts_docsize'(id INTEGER PRIMARY KEY, sz BLOB)",
+          "samples": {}
+        },
+        {
+          "table": "knowledge_fts_idx",
+          "row_count": 206,
+          "columns": [
+            {
+              "cid": 0,
+              "name": "segid",
+              "declared_type": "",
+              "not_null": true,
+              "primary_key": true
+            },
+            {
+              "cid": 1,
+              "name": "term",
+              "declared_type": "",
+              "not_null": true,
+              "primary_key": true
+            },
+            {
+              "cid": 2,
+              "name": "pgno",
+              "declared_type": "",
+              "not_null": false,
+              "primary_key": false
+            }
+          ],
+          "text_columns": [],
+          "hint_columns": [],
+          "fts": false,
+          "sql": "CREATE TABLE 'knowledge_fts_idx'(segid, term, pgno, PRIMARY KEY(segid, term)) WITHOUT ROWID",
+          "samples": {}
+        },
+        {
+          "table": "metadata",
+          "row_count": 9,
+          "columns": [
+            {
+              "cid": 0,
+              "name": "key",
+              "declared_type": "TEXT",
+              "not_null": false,
+              "primary_key": true
+            },
+            {
+              "cid": 1,
+              "name": "value",
+              "declared_type": "TEXT",
+              "not_null": true,
+              "primary_key": false
+            }
+          ],
+          "text_columns": [
+            "key",
+            "value"
+          ],
+          "hint_columns": [],
+          "fts": false,
+          "sql": "CREATE TABLE metadata (\n                key TEXT PRIMARY KEY,\n                value TEXT NOT NULL\n            )",
+          "samples": {}
+        }
+      ],
+      "errors": []
+    },
+    {
+      "path": "data/simorgh.db",
+      "size_bytes": 184320,
+      "sha256": "d375f6d7126e94d66ebbaa7083fb213ecdc95313e25b8d2e953669bb5600dfc6",
+      "integrity_check": "ok",
+      "tables": [
+        {
+          "table": "edges",
+          "row_count": 79,
+          "columns": [
+            {
+              "cid": 0,
+              "name": "id",
+              "declared_type": "INTEGER",
+              "not_null": false,
+              "primary_key": true
+            },
+            {
+              "cid": 1,
+              "name": "source_id",
+              "declared_type": "INTEGER",
+              "not_null": false,
+              "primary_key": false
+            },
+            {
+              "cid": 2,
+              "name": "target_id",
+              "declared_type": "INTEGER",
+              "not_null": false,
+              "primary_key": false
+            },
+            {
+              "cid": 3,
+              "name": "relation",
+              "declared_type": "TEXT",
+              "not_null": true,
+              "primary_key": false
+            },
+            {
+              "cid": 4,
+              "name": "confidence",
+              "declared_type": "REAL",
+              "not_null": false,
+              "primary_key": false
+            },
+            {
+              "cid": 5,
+              "name": "explanation",
+              "declared_type": "TEXT",
+              "not_null": false,
+              "primary_key": false
+            },
+            {
+              "cid": 6,
+              "name": "created_at",
+              "declared_type": "TIMESTAMP",
+              "not_null": false,
+              "primary_key": false
+            }
+          ],
+          "text_columns": [
+            "relation",
+            "explanation"
+          ],
+          "hint_columns": [
+            "source_id"
+          ],
+          "fts": false,
+          "sql": "CREATE TABLE edges (id INTEGER PRIMARY KEY AUTOINCREMENT, source_id INTEGER, target_id INTEGER, relation TEXT NOT NULL, confidence REAL DEFAULT 1.0, explanation TEXT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY(source_id) REFERENCES nodes(id), FOREIGN KEY(target_id) REFERENCES nodes(id))",
+          "samples": {
+            "source_id": [
+              "1",
+              "3",
+              "5",
+              "7",
+              "9",
+              "11",
+              "19",
+              "6",
+              "10",
+              "18",
+              "143",
+              "145",
+              "147",
+              "149",
+              "151",
+              "153",
+              "155",
+              "157",
+              "159",
+              "161"
+            ]
+          }
+        },
+        {
+          "table": "events",
+          "row_count": 0,
+          "columns": [
+            {
+              "cid": 0,
+              "name": "id",
+              "declared_type": "INTEGER",
+              "not_null": false,
+              "primary_key": true
+            },
+            {
+              "cid": 1,
+              "name": "entity_name",
+              "declared_type": "TEXT",
+              "not_null": false,
+              "primary_key": false
+            },
+            {
+              "cid": 2,
+              "name": "event_type",
+              "declared_type": "TEXT",
+              "not_null": false,
+              "primary_key": false
+            },
+            {
+              "cid": 3,
+              "name": "payload",
+              "declared_type": "TEXT",
+              "not_null": false,
+              "primary_key": false
+            },
+            {
+              "cid": 4,
+              "name": "timestamp",
+              "declared_type": "TIMESTAMP",
+              "not_null": false,
+              "primary_key": false
+            }
+          ],
+          "text_columns": [
+            "entity_name",
+            "event_type",
+            "payload"
+          ],
+          "hint_columns": [
+            "entity_name"
+          ],
+          "fts": false,
+          "sql": "CREATE TABLE events (id INTEGER PRIMARY KEY AUTOINCREMENT, entity_name TEXT, event_type TEXT, payload TEXT, timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP)",
+          "samples": {
+            "entity_name": []
+          }
+        },
+        {
+          "table": "fast_cache",
+          "row_count": 5,
+          "columns": [
+            {
+              "cid": 0,
+              "name": "hash",
+              "declared_type": "TEXT",
+              "not_null": false,
+              "primary_key": true
+            },
+            {
+              "cid": 1,
+              "name": "response",
+              "declared_type": "TEXT",
+              "not_null": false,
+              "primary_key": false
+            },
+            {
+              "cid": 2,
+              "name": "intent",
+              "declared_type": "TEXT",
+              "not_null": false,
+              "primary_key": false
+            },
+            {
+              "cid": 3,
+              "name": "created_at",
+              "declared_type": "TIMESTAMP",
+              "not_null": false,
+              "primary_key": false
+            }
+          ],
+          "text_columns": [
+            "hash",
+            "response",
+            "intent"
+          ],
+          "hint_columns": [],
+          "fts": false,
+          "sql": "CREATE TABLE fast_cache (hash TEXT PRIMARY KEY, response TEXT, intent TEXT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)",
+          "samples": {}
+        },
+        {
+          "table": "memory_fts",
+          "row_count": 74,
+          "columns": [
+            {
+              "cid": 0,
+              "name": "node_id",
+              "declared_type": "",
+              "not_null": false,
+              "primary_key": false
+            },
+            {
+              "cid": 1,
+              "name": "content",
+              "declared_type": "",
+              "not_null": false,
+              "primary_key": false
+            }
+          ],
+          "text_columns": [],
+          "hint_columns": [],
+          "fts": true,
+          "sql": "CREATE VIRTUAL TABLE memory_fts USING fts5(node_id, content, tokenize='unicode61')",
+          "samples": {}
+        },
+        {
+          "table": "memory_fts_config",
+          "row_count": 1,
+          "columns": [
+            {
+              "cid": 0,
+              "name": "k",
+              "declared_type": "",
+              "not_null": true,
+              "primary_key": true
+            },
+            {
+              "cid": 1,
+              "name": "v",
+              "declared_type": "",
+              "not_null": false,
+              "primary_key": false
+            }
+          ],
+          "text_columns": [],
+          "hint_columns": [],
+          "fts": false,
+          "sql": "CREATE TABLE 'memory_fts_config'(k PRIMARY KEY, v) WITHOUT ROWID",
+          "samples": {}
+        },
+        {
+          "table": "memory_fts_content",
+          "row_count": 74,
+          "columns": [
+            {
+              "cid": 0,
+              "name": "id",
+              "declared_type": "INTEGER",
+              "not_null": false,
+              "primary_key": true
+            },
+            {
+              "cid": 1,
+              "name": "c0",
+              "declared_type": "",
+              "not_null": false,
+              "primary_key": false
+            },
+            {
+              "cid": 2,
+              "name": "c1",
+              "declared_type": "",
+              "not_null": false,
+              "primary_key": false
+            }
+          ],
+          "text_columns": [],
+          "hint_columns": [],
+          "fts": false,
+          "sql": "CREATE TABLE 'memory_fts_content'(id INTEGER PRIMARY KEY, c0, c1)",
+          "samples": {}
+        },
+        {
+          "table": "memory_fts_data",
+          "row_count": 9,
+          "columns": [
+            {
+              "cid": 0,
+              "name": "id",
+              "declared_type": "INTEGER",
+              "not_null": false,
+              "primary_key": true
+            },
+            {
+              "cid": 1,
+              "name": "block",
+              "declared_type": "BLOB",
+              "not_null": false,
+              "primary_key": false
+            }
+          ],
+          "text_columns": [],
+          "hint_columns": [],
+          "fts": false,
+          "sql": "CREATE TABLE 'memory_fts_data'(id INTEGER PRIMARY KEY, block BLOB)",
+          "samples": {}
+        },
+        {
+          "table": "memory_fts_docsize",
+          "row_count": 74,
+          "columns": [
+            {
+              "cid": 0,
+              "name": "id",
+              "declared_type": "INTEGER",
+              "not_null": false,
+              "primary_key": true
+            },
+            {
+              "cid": 1,
+              "name": "sz",
+              "declared_type": "BLOB",
+              "not_null": false,
+              "primary_key": false
+            }
+          ],
+          "text_columns": [],
+          "hint_columns": [],
+          "fts": false,
+          "sql": "CREATE TABLE 'memory_fts_docsize'(id INTEGER PRIMARY KEY, sz BLOB)",
+          "samples": {}
+        },
+        {
+          "table": "memory_fts_idx",
+          "row_count": 7,
+          "columns": [
+            {
+              "cid": 0,
+              "name": "segid",
+              "declared_type": "",
+              "not_null": true,
+              "primary_key": true
+            },
+            {
+              "cid": 1,
+              "name": "term",
+              "declared_type": "",
+              "not_null": true,
+              "primary_key": true
+            },
+            {
+              "cid": 2,
+              "name": "pgno",
+              "declared_type": "",
+              "not_null": false,
+              "primary_key": false
+            }
+          ],
+          "text_columns": [],
+          "hint_columns": [],
+          "fts": false,
+          "sql": "CREATE TABLE 'memory_fts_idx'(segid, term, pgno, PRIMARY KEY(segid, term)) WITHOUT ROWID",
+          "samples": {}
+        },
+        {
+          "table": "nodes",
+          "row_count": 249,
+          "columns": [
+            {
+              "cid": 0,
+              "name": "id",
+              "declared_type": "INTEGER",
+              "not_null": false,
+              "primary_key": true
+            },
+            {
+              "cid": 1,
+              "name": "type",
+              "declared_type": "TEXT",
+              "not_null": true,
+              "primary_key": false
+            },
+            {
+              "cid": 2,
+              "name": "name",
+              "declared_type": "TEXT",
+              "not_null": true,
+              "primary_key": false
+            },
+            {
+              "cid": 3,
+              "name": "properties",
+              "declared_type": "TEXT",
+              "not_null": false,
+              "primary_key": false
+            },
+            {
+              "cid": 4,
+              "name": "created_at",
+              "declared_type": "TIMESTAMP",
+              "not_null": false,
+              "primary_key": false
+            }
+          ],
+          "text_columns": [
+            "type",
+            "name",
+            "properties"
+          ],
+          "hint_columns": [
+            "name"
+          ],
+          "fts": false,
+          "sql": "CREATE TABLE nodes (id INTEGER PRIMARY KEY AUTOINCREMENT, type TEXT NOT NULL, name TEXT NOT NULL, properties TEXT DEFAULT '{}', created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)",
+          "samples": {
+            "name": [
+              "Mahdi",
+              "Build Simorgh",
+              "Low RAM",
+              "TV Failure",
+              "Watch Movie",
+              "Power Outage",
+              "Printer Failure",
+              "Print Document",
+              "No Paper",
+              "Cook Food",
+              "Broken Oven",
+              "Relaxation",
+              "Work",
+              "Health",
+              "سلامتی",
+              "صداقت",
+              "خانواده",
+              "دانش",
+              "انصاف",
+              "چرا تلویزیون روشن نمیشه"
+            ]
+          }
+        },
+        {
+          "table": "personal_memory",
+          "row_count": 1,
+          "columns": [
+            {
+              "cid": 0,
+              "name": "key",
+              "declared_type": "TEXT",
+              "not_null": false,
+              "primary_key": true
+            },
+            {
+              "cid": 1,
+              "name": "value",
+              "declared_type": "TEXT",
+              "not_null": false,
+              "primary_key": false
+            },
+            {
+              "cid": 2,
+              "name": "updated_at",
+              "declared_type": "TIMESTAMP",
+              "not_null": false,
+              "primary_key": false
+            }
+          ],
+          "text_columns": [
+            "key",
+            "value"
+          ],
+          "hint_columns": [],
+          "fts": false,
+          "sql": "CREATE TABLE personal_memory (key TEXT PRIMARY KEY, value TEXT, updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)",
+          "samples": {}
+        },
+        {
+          "table": "predictions",
+          "row_count": 0,
+          "columns": [
+            {
+              "cid": 0,
+              "name": "id",
+              "declared_type": "INTEGER",
+              "not_null": false,
+              "primary_key": true
+            },
+            {
+              "cid": 1,
+              "name": "entity_name",
+              "declared_type": "TEXT",
+              "not_null": false,
+              "primary_key": false
+            },
+            {
+              "cid": 2,
+              "name": "predicted_state_json",
+              "declared_type": "TEXT",
+              "not_null": false,
+              "primary_key": false
+            },
+            {
+              "cid": 3,
+              "name": "confidence",
+              "declared_type": "REAL",
+              "not_null": false,
+              "primary_key": false
+            },
+            {
+              "cid": 4,
+              "name": "made_at",
+              "declared_type": "TIMESTAMP",
+              "not_null": false,
+              "primary_key": false
+            },
+            {
+              "cid": 5,
+              "name": "observed_outcome",
+              "declared_type": "TEXT",
+              "not_null": false,
+              "primary_key": false
+            },
+            {
+              "cid": 6,
+              "name": "outcome_accuracy",
+              "declared_type": "REAL",
+              "not_null": false,
+              "primary_key": false
+            }
+          ],
+          "text_columns": [
+            "entity_name",
+            "predicted_state_json",
+            "observed_outcome"
+          ],
+          "hint_columns": [
+            "entity_name"
+          ],
+          "fts": false,
+          "sql": "CREATE TABLE predictions (id INTEGER PRIMARY KEY AUTOINCREMENT, entity_name TEXT, predicted_state_json TEXT, confidence REAL, made_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, observed_outcome TEXT, outcome_accuracy REAL)",
+          "samples": {
+            "entity_name": []
+          }
+        },
+        {
+          "table": "request_log",
+          "row_count": 7,
+          "columns": [
+            {
+              "cid": 0,
+              "name": "id",
+              "declared_type": "INTEGER",
+              "not_null": false,
+              "primary_key": true
+            },
+            {
+              "cid": 1,
+              "name": "query",
+              "declared_type": "TEXT",
+              "not_null": false,
+              "primary_key": false
+            },
+            {
+              "cid": 2,
+              "name": "intent",
+              "declared_type": "TEXT",
+              "not_null": false,
+              "primary_key": false
+            },
+            {
+              "cid": 3,
+              "name": "goal",
+              "declared_type": "TEXT",
+              "not_null": false,
+              "primary_key": false
+            },
+            {
+              "cid": 4,
+              "name": "obstacle",
+              "declared_type": "TEXT",
+              "not_null": false,
+              "primary_key": false
+            },
+            {
+              "cid": 5,
+              "name": "reasoning_path",
+              "declared_type": "TEXT",
+              "not_null": false,
+              "primary_key": false
+            },
+            {
+              "cid": 6,
+              "name": "selected_agents",
+              "declared_type": "TEXT",
+              "not_null": false,
+              "primary_key": false
+            },
+            {
+              "cid": 7,
+              "name": "response_time_ms",
+              "declared_type": "REAL",
+              "not_null": false,
+              "primary_key": false
+            },
+            {
+              "cid": 8,
+              "name": "memory_hits",
+              "declared_type": "INTEGER",
+              "not_null": false,
+              "primary_key": false
+            },
+            {
+              "cid": 9,
+              "name": "cache_hit",
+              "declared_type": "INTEGER",
+              "not_null": false,
+              "primary_key": false
+            },
+            {
+              "cid": 10,
+              "name": "timestamp",
+              "declared_type": "TIMESTAMP",
+              "not_null": false,
+              "primary_key": false
+            }
+          ],
+          "text_columns": [
+            "query",
+            "intent",
+            "goal",
+            "obstacle",
+            "reasoning_path",
+            "selected_agents"
+          ],
+          "hint_columns": [],
+          "fts": false,
+          "sql": "CREATE TABLE request_log (id INTEGER PRIMARY KEY AUTOINCREMENT, query TEXT, intent TEXT, goal TEXT, obstacle TEXT, reasoning_path TEXT, selected_agents TEXT, response_time_ms REAL, memory_hits INTEGER DEFAULT 0, cache_hit INTEGER DEFAULT 0, timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP)",
+          "samples": {}
+        },
+        {
+          "table": "short_term_memory",
+          "row_count": 0,
+          "columns": [
+            {
+              "cid": 0,
+              "name": "id",
+              "declared_type": "INTEGER",
+              "not_null": false,
+              "primary_key": true
+            },
+            {
+              "cid": 1,
+              "name": "session_id",
+              "declared_type": "TEXT",
+              "not_null": false,
+              "primary_key": false
+            },
+            {
+              "cid": 2,
+              "name": "role",
+              "declared_type": "TEXT",
+              "not_null": false,
+              "primary_key": false
+            },
+            {
+              "cid": 3,
+              "name": "content",
+              "declared_type": "TEXT",
+              "not_null": false,
+              "primary_key": false
+            },
+            {
+              "cid": 4,
+              "name": "timestamp",
+              "declared_type": "TIMESTAMP",
+              "not_null": false,
+              "primary_key": false
+            }
+          ],
+          "text_columns": [
+            "session_id",
+            "role",
+            "content"
+          ],
+          "hint_columns": [],
+          "fts": false,
+          "sql": "CREATE TABLE short_term_memory (id INTEGER PRIMARY KEY AUTOINCREMENT, session_id TEXT, role TEXT, content TEXT, timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP)",
+          "samples": {}
+        },
+        {
+          "table": "state_history",
+          "row_count": 0,
+          "columns": [
+            {
+              "cid": 0,
+              "name": "id",
+              "declared_type": "INTEGER",
+              "not_null": false,
+              "primary_key": true
+            },
+            {
+              "cid": 1,
+              "name": "entity_name",
+              "declared_type": "TEXT",
+              "not_null": false,
+              "primary_key": false
+            },
+            {
+              "cid": 2,
+              "name": "state_json",
+              "declared_type": "TEXT",
+              "not_null": false,
+              "primary_key": false
+            },
+            {
+              "cid": 3,
+              "name": "timestamp",
+              "declared_type": "TIMESTAMP",
+              "not_null": false,
+              "primary_key": false
+            }
+          ],
+          "text_columns": [
+            "entity_name",
+            "state_json"
+          ],
+          "hint_columns": [
+            "entity_name"
+          ],
+          "fts": false,
+          "sql": "CREATE TABLE state_history (id INTEGER PRIMARY KEY AUTOINCREMENT, entity_name TEXT, state_json TEXT, timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP)",
+          "samples": {
+            "entity_name": []
+          }
+        },
+        {
+          "table": "tasks",
+          "row_count": 0,
+          "columns": [
+            {
+              "cid": 0,
+              "name": "id",
+              "declared_type": "INTEGER",
+              "not_null": false,
+              "primary_key": true
+            },
+            {
+              "cid": 1,
+              "name": "phase",
+              "declared_type": "TEXT",
+              "not_null": false,
+              "primary_key": false
+            },
+            {
+              "cid": 2,
+              "name": "week",
+              "declared_type": "TEXT",
+              "not_null": false,
+              "primary_key": false
+            },
+            {
+              "cid": 3,
+              "name": "title",
+              "declared_type": "TEXT",
+              "not_null": false,
+              "primary_key": false
+            },
+            {
+              "cid": 4,
+              "name": "description",
+              "declared_type": "TEXT",
+              "not_null": false,
+              "primary_key": false
+            },
+            {
+              "cid": 5,
+              "name": "done",
+              "declared_type": "INTEGER",
+              "not_null": false,
+              "primary_key": false
+            },
+            {
+              "cid": 6,
+              "name": "tags",
+              "declared_type": "TEXT",
+              "not_null": false,
+              "primary_key": false
+            },
+            {
+              "cid": 7,
+              "name": "created_at",
+              "declared_type": "TIMESTAMP",
+              "not_null": false,
+              "primary_key": false
+            }
+          ],
+          "text_columns": [
+            "phase",
+            "week",
+            "title",
+            "description",
+            "tags"
+          ],
+          "hint_columns": [
+            "title"
+          ],
+          "fts": false,
+          "sql": "CREATE TABLE tasks (id INTEGER PRIMARY KEY AUTOINCREMENT, phase TEXT, week TEXT, title TEXT, description TEXT, done INTEGER DEFAULT 0, tags TEXT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)",
+          "samples": {
+            "title": []
+          }
+        },
+        {
+          "table": "terminal_history",
+          "row_count": 0,
+          "columns": [
+            {
+              "cid": 0,
+              "name": "id",
+              "declared_type": "INTEGER",
+              "not_null": false,
+              "primary_key": true
+            },
+            {
+              "cid": 1,
+              "name": "command",
+              "declared_type": "TEXT",
+              "not_null": false,
+              "primary_key": false
+            },
+            {
+              "cid": 2,
+              "name": "cwd",
+              "declared_type": "TEXT",
+              "not_null": false,
+              "primary_key": false
+            },
+            {
+              "cid": 3,
+              "name": "exit_code",
+              "declared_type": "INTEGER",
+              "not_null": false,
+              "primary_key": false
+            },
+            {
+              "cid": 4,
+              "name": "timestamp",
+              "declared_type": "TIMESTAMP",
+              "not_null": false,
+              "primary_key": false
+            }
+          ],
+          "text_columns": [
+            "command",
+            "cwd"
+          ],
+          "hint_columns": [],
+          "fts": false,
+          "sql": "CREATE TABLE terminal_history (\n        id INTEGER PRIMARY KEY AUTOINCREMENT,\n        command TEXT,\n        cwd TEXT,\n        exit_code INTEGER,\n        timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP\n    )",
+          "samples": {}
+        },
+        {
+          "table": "transitions",
+          "row_count": 0,
+          "columns": [
+            {
+              "cid": 0,
+              "name": "entity_name",
+              "declared_type": "TEXT",
+              "not_null": false,
+              "primary_key": true
+            },
+            {
+              "cid": 1,
+              "name": "from_state",
+              "declared_type": "TEXT",
+              "not_null": false,
+              "primary_key": true
+            },
+            {
+              "cid": 2,
+              "name": "to_state",
+              "declared_type": "TEXT",
+              "not_null": false,
+              "primary_key": true
+            },
+            {
+              "cid": 3,
+              "name": "count",
+              "declared_type": "INTEGER",
+              "not_null": false,
+              "primary_key": false
+            }
+          ],
+          "text_columns": [
+            "entity_name",
+            "from_state",
+            "to_state"
+          ],
+          "hint_columns": [
+            "entity_name"
+          ],
+          "fts": false,
+          "sql": "CREATE TABLE transitions (entity_name TEXT, from_state TEXT, to_state TEXT, count INTEGER DEFAULT 1, PRIMARY KEY (entity_name, from_state, to_state))",
+          "samples": {
+            "entity_name": []
+          }
+        }
+      ],
+      "errors": []
+    },
+    {
+      "path": "data/simorgh_full.db",
+      "size_bytes": 392294400,
+      "sha256": "09a60e42883fb65da50b0d93e1233911dba8e7a8c5a5ea1f2b664a1a8d6efc75",
+      "integrity_check": "ok",
+      "tables": [
+        {
+          "table": "book_chunks_fts",
+          "row_count": 2387,
+          "columns": [
+            {
+              "cid": 0,
+              "name": "doc_name",
+              "declared_type": "",
+              "not_null": false,
+              "primary_key": false
+            },
+            {
+              "cid": 1,
+              "name": "category",
+              "declared_type": "",
+              "not_null": false,
+              "primary_key": false
+            },
+            {
+              "cid": 2,
+              "name": "chunk_text",
+              "declared_type": "",
+              "not_null": false,
+              "primary_key": false
+            }
+          ],
+          "text_columns": [],
+          "hint_columns": [
+            "doc_name",
+            "category",
+            "chunk_text"
+          ],
+          "fts": true,
+          "sql": "CREATE VIRTUAL TABLE book_chunks_fts\n        USING fts5(doc_name, category, chunk_text)",
+          "samples": {
+            "doc_name": [
+              "example.pdf",
+              "idea-arch.pdf",
+              "onboarding.pdf",
+              "Saaghar-Manual.pdf",
+              "اصول_کافی_گزیده",
+              "books",
+              "books_and_talks",
+              "معرفی_سیمرغ",
+              "معماری_سیمرغ",
+              "صحیفه_سجادیه",
+              "قرآن_مکارم",
+              "نهج_البلاغه_دشتی",
+              "اسرار التوحید (مقامات شیخ ابوسعید)",
+              "بوستان سعدی",
+              "تاریخ بیهقی",
+              "ترجمه قرآن (گزیده)",
+              "دیوان حافظ",
+              "رباعیات خیام",
+              "سیاست نامه خواجه نظام‌الملک",
+              "شاهنامه فردوسی"
+            ],
+            "category": [
+              "عمومی",
+              "فنی/برنامه‌نویسی",
+              "کتابخانه کلاسیک",
+              "کتاب"
+            ],
+            "chunk_text": [
+              "USENIX Example Paper\n\n                                 Pekka Nikander          Jane-Ellen Long\n                                 Aalto University      USENIX Association\n\n                    Abstract\nThis is an example for a USENIX paper, in the form\nof an HTML/CSS template. Being heavily self-ref-\ne",
+              "hose authors that want to use HTML/CSS to write        Figure 1: This figure is showed for illustrational purpos-\ntheir papers. This template has been prepared by        es only; floppy disks are not required to use this tem-\nHåkon Wium Lie, and is based on a guide to using        plate.\nFrameMaker ",
+              "yle manuals available. To mention\n2 Related Work\n                                                        just a couple, The Elements of Style by Strunk and\nPreparing good-looking publications is not easy.        White [1] is a classic, and has remained a bestseller\nIt requires understanding of style",
+              "            do not need to make modifications to the template;\nThe USENIX website includes a template for Mi-          instead, they should be able to concentrate on the\ncrosoft Word, as well as LaTeX templates. Many of       content and style. With this in mind, this template\n\f                     ",
+              "   Up       Num Lock       Caps Lock    Scroll Lock\n\n      §           !             \"             #               ¤               %               &               /             (                 )                =               ?               `                                    Print              ",
+              "                                                                       Scroll   Pause\n                                                                                                                                                                                                                      ",
+              "     [           9       ]        0       }       +               '     |                              SysRq\n\n                        Q               W             E               R               T               Y               U               I                   O            P               Å      ",
+              "                                                                                                                                                                                                               +\n                            A             S               D               F               G",
+              "                                                                                                                         _                                                                          1           2         3\n                      >             Z             X               C             ",
+              "                                                                                                                                                                                                                       0                     ,\n      Ctrl                              Alt                  ",
+              "  are added by those who compile the Proceedings.\nwe have also tried to keep this document simple\nand easy to maintain.                                                                                                                                                                  3.3 JavaScript\n   T",
+              "                                                          they appear, and a script is later used to move the\n                                                                                                                                                                                       referen",
+              "                     (This section has been added by Håkon Wium Lie)\nthe header element holds the headlines. The\n                                                                                                                                                                                           ",
+              "                                                                                      functionality for page-based formatting. For ex-\nerences.                                                                                                                                                             ",
+              "am for converting\nation of the authors.                                                                                                                                                                  HTML and XML documents into PDF by way of\n                                                         ",
+              "                                                                                     In order for Prince to process the script includ-\native language which attaches property values to                                                                                                                     ",
+              "                                  4 Tables\n•   footnotes\n•   page and column floats                                                                                                                                                             The table below lists recipients of the USENIX Life-\n•   mul",
+              "uld not be specifed by USENIX authors, these                                                                                                                                        [a] www.princexml.com\n\fYear    Recipient                                Acknowledgments\n1999    X Window System*        ",
+              "            formation (reports, etc.) may be obtained, indicate\n* Given to the Community at Large                terms and contact information.\n** Given to Jim Ellis and Tom Truscott\n                                                 References\n5 Conclusions                                    [1] STRU",
+              "LLaMA 7B                                            LLaMA*\n\n            tok_embd [32*128, n_vocab]                        tok_embd [1*128, n_vocab]\n\n                            get_rows(n_batch)                                get_rows(n_batch)\n\n            inp_embd [32*128, n_batch]                 "
+            ]
+          }
+        },
+        {
+          "table": "book_chunks_fts_config",
+          "row_count": 1,
+          "columns": [
+            {
+              "cid": 0,
+              "name": "k",
+              "declared_type": "",
+              "not_null": true,
+              "primary_key": true
+            },
+            {
+              "cid": 1,
+              "name": "v",
+              "declared_type": "",
+              "not_null": false,
+              "primary_key": false
+            }
+          ],
+          "text_columns": [],
+          "hint_columns": [],
+          "fts": false,
+          "sql": "CREATE TABLE 'book_chunks_fts_config'(k PRIMARY KEY, v) WITHOUT ROWID",
+          "samples": {}
+        },
+        {
+          "table": "book_chunks_fts_content",
+          "row_count": 2387,
+          "columns": [
+            {
+              "cid": 0,
+              "name": "id",
+              "declared_type": "INTEGER",
+              "not_null": false,
+              "primary_key": true
+            },
+            {
+              "cid": 1,
+              "name": "c0",
+              "declared_type": "",
+              "not_null": false,
+              "primary_key": false
+            },
+            {
+              "cid": 2,
+              "name": "c1",
+              "declared_type": "",
+              "not_null": false,
+              "primary_key": false
+            },
+            {
+              "cid": 3,
+              "name": "c2",
+              "declared_type": "",
+              "not_null": false,
+              "primary_key": false
+            }
+          ],
+          "text_columns": [],
+          "hint_columns": [],
+          "fts": false,
+          "sql": "CREATE TABLE 'book_chunks_fts_content'(id INTEGER PRIMARY KEY, c0, c1, c2)",
+          "samples": {}
+        },
+        {
+          "table": "book_chunks_fts_data",
+          "row_count": 836,
+          "columns": [
+            {
+              "cid": 0,
+              "name": "id",
+              "declared_type": "INTEGER",
+              "not_null": false,
+              "primary_key": true
+            },
+            {
+              "cid": 1,
+              "name": "block",
+              "declared_type": "BLOB",
+              "not_null": false,
+              "primary_key": false
+            }
+          ],
+          "text_columns": [],
+          "hint_columns": [],
+          "fts": false,
+          "sql": "CREATE TABLE 'book_chunks_fts_data'(id INTEGER PRIMARY KEY, block BLOB)",
+          "samples": {}
+        },
+        {
+          "table": "book_chunks_fts_docsize",
+          "row_count": 2387,
+          "columns": [
+            {
+              "cid": 0,
+              "name": "id",
+              "declared_type": "INTEGER",
+              "not_null": false,
+              "primary_key": true
+            },
+            {
+              "cid": 1,
+              "name": "sz",
+              "declared_type": "BLOB",
+              "not_null": false,
+              "primary_key": false
+            }
+          ],
+          "text_columns": [],
+          "hint_columns": [],
+          "fts": false,
+          "sql": "CREATE TABLE 'book_chunks_fts_docsize'(id INTEGER PRIMARY KEY, sz BLOB)",
+          "samples": {}
+        },
+        {
+          "table": "book_chunks_fts_idx",
+          "row_count": 651,
+          "columns": [
+            {
+              "cid": 0,
+              "name": "segid",
+              "declared_type": "",
+              "not_null": true,
+              "primary_key": true
+            },
+            {
+              "cid": 1,
+              "name": "term",
+              "declared_type": "",
+              "not_null": true,
+              "primary_key": true
+            },
+            {
+              "cid": 2,
+              "name": "pgno",
+              "declared_type": "",
+              "not_null": false,
+              "primary_key": false
+            }
+          ],
+          "text_columns": [],
+          "hint_columns": [],
+          "fts": false,
+          "sql": "CREATE TABLE 'book_chunks_fts_idx'(segid, term, pgno, PRIMARY KEY(segid, term)) WITHOUT ROWID",
+          "samples": {}
+        },
+        {
+          "table": "concepts",
+          "row_count": 30,
+          "columns": [
+            {
+              "cid": 0,
+              "name": "id",
+              "declared_type": "INTEGER",
+              "not_null": false,
+              "primary_key": true
+            },
+            {
+              "cid": 1,
+              "name": "keywords",
+              "declared_type": "TEXT",
+              "not_null": false,
+              "primary_key": false
+            },
+            {
+              "cid": 2,
+              "name": "explanation",
+              "declared_type": "TEXT",
+              "not_null": false,
+              "primary_key": false
+            },
+            {
+              "cid": 3,
+              "name": "size",
+              "declared_type": "INTEGER",
+              "not_null": false,
+              "primary_key": false
+            }
+          ],
+          "text_columns": [
+            "keywords",
+            "explanation"
+          ],
+          "hint_columns": [],
+          "fts": false,
+          "sql": "CREATE TABLE concepts (id INTEGER PRIMARY KEY AUTOINCREMENT, keywords TEXT, explanation TEXT, size INTEGER)",
+          "samples": {}
+        },
+        {
+          "table": "documents",
+          "row_count": 5,
+          "columns": [
+            {
+              "cid": 0,
+              "name": "id",
+              "declared_type": "INTEGER",
+              "not_null": false,
+              "primary_key": true
+            },
+            {
+              "cid": 1,
+              "name": "name",
+              "declared_type": "TEXT",
+              "not_null": false,
+              "primary_key": false
+            },
+            {
+              "cid": 2,
+              "name": "content",
+              "declared_type": "TEXT",
+              "not_null": false,
+              "primary_key": false
+            },
+            {
+              "cid": 3,
+              "name": "created_at",
+              "declared_type": "TIMESTAMP",
+              "not_null": false,
+              "primary_key": false
+            },
+            {
+              "cid": 4,
+              "name": "path",
+              "declared_type": "TEXT",
+              "not_null": false,
+              "primary_key": false
+            },
+            {
+              "cid": 5,
+              "name": "category",
+              "declared_type": "TEXT",
+              "not_null": false,
+              "primary_key": false
+            }
+          ],
+          "text_columns": [
+            "name",
+            "content",
+            "path",
+            "category"
+          ],
+          "hint_columns": [
+            "name",
+            "category"
+          ],
+          "fts": false,
+          "sql": "CREATE TABLE documents (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT UNIQUE, content TEXT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, path TEXT, category TEXT)",
+          "samples": {
+            "name": [
+              "ARCHITECTURE_MAP",
+              "Saaghar-Manual.pdf",
+              "example.pdf",
+              "idea-arch.pdf",
+              "onboarding.pdf"
+            ],
+            "category": [
+              "عمومی",
+              "فنی/برنامه‌نویسی"
+            ]
+          }
+        },
+        {
+          "table": "events",
+          "row_count": 11,
+          "columns": [
+            {
+              "cid": 0,
+              "name": "id",
+              "declared_type": "INTEGER",
+              "not_null": false,
+              "primary_key": true
+            },
+            {
+              "cid": 1,
+              "name": "entity_name",
+              "declared_type": "TEXT",
+              "not_null": false,
+              "primary_key": false
+            },
+            {
+              "cid": 2,
+              "name": "event_type",
+              "declared_type": "TEXT",
+              "not_null": false,
+              "primary_key": false
+            },
+            {
+              "cid": 3,
+              "name": "payload",
+              "declared_type": "TEXT",
+              "not_null": false,
+              "primary_key": false
+            },
+            {
+              "cid": 4,
+              "name": "timestamp",
+              "declared_type": "TIMESTAMP",
+              "not_null": false,
+              "primary_key": false
+            }
+          ],
+          "text_columns": [
+            "entity_name",
+            "event_type",
+            "payload"
+          ],
+          "hint_columns": [
+            "entity_name"
+          ],
+          "fts": false,
+          "sql": "CREATE TABLE events (\n    id INTEGER PRIMARY KEY AUTOINCREMENT,\n    entity_name TEXT,\n    event_type TEXT,\n    payload TEXT,\n    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP\n)",
+          "samples": {
+            "entity_name": [
+              "system"
+            ]
+          }
+        },
+        {
+          "table": "memory_fts",
+          "row_count": 0,
+          "columns": [
+            {
+              "cid": 0,
+              "name": "node_id",
+              "declared_type": "",
+              "not_null": false,
+              "primary_key": false
+            },
+            {
+              "cid": 1,
+              "name": "content",
+              "declared_type": "",
+              "not_null": false,
+              "primary_key": false
+            }
+          ],
+          "text_columns": [],
+          "hint_columns": [],
+          "fts": true,
+          "sql": "CREATE VIRTUAL TABLE memory_fts USING fts5(node_id, content, tokenize='unicode61')",
+          "samples": {}
+        },
+        {
+          "table": "memory_fts_config",
+          "row_count": 1,
+          "columns": [
+            {
+              "cid": 0,
+              "name": "k",
+              "declared_type": "",
+              "not_null": true,
+              "primary_key": true
+            },
+            {
+              "cid": 1,
+              "name": "v",
+              "declared_type": "",
+              "not_null": false,
+              "primary_key": false
+            }
+          ],
+          "text_columns": [],
+          "hint_columns": [],
+          "fts": false,
+          "sql": "CREATE TABLE 'memory_fts_config'(k PRIMARY KEY, v) WITHOUT ROWID",
+          "samples": {}
+        },
+        {
+          "table": "memory_fts_content",
+          "row_count": 0,
+          "columns": [
+            {
+              "cid": 0,
+              "name": "id",
+              "declared_type": "INTEGER",
+              "not_null": false,
+              "primary_key": true
+            },
+            {
+              "cid": 1,
+              "name": "c0",
+              "declared_type": "",
+              "not_null": false,
+              "primary_key": false
+            },
+            {
+              "cid": 2,
+              "name": "c1",
+              "declared_type": "",
+              "not_null": false,
+              "primary_key": false
+            }
+          ],
+          "text_columns": [],
+          "hint_columns": [],
+          "fts": false,
+          "sql": "CREATE TABLE 'memory_fts_content'(id INTEGER PRIMARY KEY, c0, c1)",
+          "samples": {}
+        },
+        {
+          "table": "memory_fts_data",
+          "row_count": 2,
+          "columns": [
+            {
+              "cid": 0,
+              "name": "id",
+              "declared_type": "INTEGER",
+              "not_null": false,
+              "primary_key": true
+            },
+            {
+              "cid": 1,
+              "name": "block",
+              "declared_type": "BLOB",
+              "not_null": false,
+              "primary_key": false
+            }
+          ],
+          "text_columns": [],
+          "hint_columns": [],
+          "fts": false,
+          "sql": "CREATE TABLE 'memory_fts_data'(id INTEGER PRIMARY KEY, block BLOB)",
+          "samples": {}
+        },
+        {
+          "table": "memory_fts_docsize",
+          "row_count": 0,
+          "columns": [
+            {
+              "cid": 0,
+              "name": "id",
+              "declared_type": "INTEGER",
+              "not_null": false,
+              "primary_key": true
+            },
+            {
+              "cid": 1,
+              "name": "sz",
+              "declared_type": "BLOB",
+              "not_null": false,
+              "primary_key": false
+            }
+          ],
+          "text_columns": [],
+          "hint_columns": [],
+          "fts": false,
+          "sql": "CREATE TABLE 'memory_fts_docsize'(id INTEGER PRIMARY KEY, sz BLOB)",
+          "samples": {}
+        },
+        {
+          "table": "memory_fts_idx",
+          "row_count": 0,
+          "columns": [
+            {
+              "cid": 0,
+              "name": "segid",
+              "declared_type": "",
+              "not_null": true,
+              "primary_key": true
+            },
+            {
+              "cid": 1,
+              "name": "term",
+              "declared_type": "",
+              "not_null": true,
+              "primary_key": true
+            },
+            {
+              "cid": 2,
+              "name": "pgno",
+              "declared_type": "",
+              "not_null": false,
+              "primary_key": false
+            }
+          ],
+          "text_columns": [],
+          "hint_columns": [],
+          "fts": false,
+          "sql": "CREATE TABLE 'memory_fts_idx'(segid, term, pgno, PRIMARY KEY(segid, term)) WITHOUT ROWID",
+          "samples": {}
+        },
+        {
+          "table": "nodes",
+          "row_count": 0,
+          "columns": [
+            {
+              "cid": 0,
+              "name": "id",
+              "declared_type": "INTEGER",
+              "not_null": false,
+              "primary_key": true
+            },
+            {
+              "cid": 1,
+              "name": "type",
+              "declared_type": "TEXT",
+              "not_null": true,
+              "primary_key": false
+            },
+            {
+              "cid": 2,
+              "name": "name",
+              "declared_type": "TEXT",
+              "not_null": true,
+              "primary_key": false
+            },
+            {
+              "cid": 3,
+              "name": "properties",
+              "declared_type": "TEXT",
+              "not_null": false,
+              "primary_key": false
+            },
+            {
+              "cid": 4,
+              "name": "created_at",
+              "declared_type": "TIMESTAMP",
+              "not_null": false,
+              "primary_key": false
+            }
+          ],
+          "text_columns": [
+            "type",
+            "name",
+            "properties"
+          ],
+          "hint_columns": [
+            "name"
+          ],
+          "fts": false,
+          "sql": "CREATE TABLE nodes (\n    id INTEGER PRIMARY KEY AUTOINCREMENT,\n    type TEXT NOT NULL,\n    name TEXT NOT NULL,\n    properties TEXT DEFAULT '{}',\n    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP\n)",
+          "samples": {
+            "name": []
+          }
+        },
+        {
+          "table": "poems",
+          "row_count": 135319,
+          "columns": [
+            {
+              "cid": 0,
+              "name": "id",
+              "declared_type": "INTEGER",
+              "not_null": false,
+              "primary_key": true
+            },
+            {
+              "cid": 1,
+              "name": "poet",
+              "declared_type": "TEXT",
+              "not_null": false,
+              "primary_key": false
+            },
+            {
+              "cid": 2,
+              "name": "title",
+              "declared_type": "TEXT",
+              "not_null": false,
+              "primary_key": false
+            },
+            {
+              "cid": 3,
+              "name": "text",
+              "declared_type": "TEXT",
+              "not_null": false,
+              "primary_key": false
+            },
+            {
+              "cid": 4,
+              "name": "source",
+              "declared_type": "TEXT",
+              "not_null": false,
+              "primary_key": false
+            }
+          ],
+          "text_columns": [
+            "poet",
+            "title",
+            "text",
+            "source"
+          ],
+          "hint_columns": [
+            "title",
+            "text",
+            "source"
+          ],
+          "fts": false,
+          "sql": "CREATE TABLE poems (id INTEGER PRIMARY KEY AUTOINCREMENT, poet TEXT, title TEXT, text TEXT, source TEXT)",
+          "samples": {
+            "title": [
+              "مطلب دوم - در اسامئی که میان عاشق و معشوق مشترک و دایر است و در اسمی اطلاق خصوصیت ندارد ولیکن از روی معانی گاهی خصوصیت گیرند و گاه نگیرند",
+              "بِسْمِ‌اللّٰهِ الرَّحْمٰنِ الرَّحیم و به نستعین",
+              "مطلب اول  - در کلماتی که اکثرش مخصوص به محبوب است و بعضی از آن متعلق به محبّ",
+              "مطلب سوم - در کلماتی چند که مخصوص به عاشق و احوال او است و اگرچه بعضی در نوعی به معشوق تعلق گیرد",
+              "بخش ۵ - غزل",
+              "بخش ۳ - غزل",
+              "بخش ۱ - سر آغاز",
+              "بخش ۶ - مثنوی",
+              "بخش ۲ - حکایت",
+              "بخش ۴ - مثنوی",
+              "بخش ۵ - مثنوی",
+              "بخش ۳ - مثنوی",
+              "بخش ۲ - غزل",
+              "بخش ۴ - غزل",
+              "بخش ۵ - در نعت خلفای راشدین",
+              "بخش ۱۱ - اندر ابتدای کتاب",
+              "بخش ۹ - در نصیحت ملوک",
+              "بخش ۳ - در تصفیهٔ نهاد گوید",
+              "بخش ۸ - در مدح صاحب دیوان",
+              "بخش ۷ - سبب نظم کتاب"
+            ],
+            "text": [
+              "مجلس: آیات و اوقات حضور را گویند، با حق‌تعالی.\nعشرت: لذت انس است، با حق‌تعالی و شعور و آگاهی از لذت.\nطرب: انس است با حق‌تعالی و سرور دل در آن.\nعیش: دوام حضور است و فراغت آن به تمامی.\nشراب: غلبات عشق را گویند، با وجود اعمال، که مستوجب ملامت باشد و آن اهل کمال را باشد، که اخص‌اند، در نهایات سلوک.\nشراب",
+              "شکر و سپاس موجودی را که اعیان اشیاء را به ظهور نور خویش بنواخت، که «اللّٰه نور السموات والارض» و علم عشق در کشور عاشقی برافروخت و به معشوقی درتاخت، که «یحبهم و یحبونه» و نقش و اثر غیر از بسیط مملکت هستی بپرداخت که «لااله مع‌اللّٰه».\nو صلوات غیرمتناهی بر حضرت افضل‌الرسل و اکمل‌الکمل، محمدالمصطفی - صل",
+              "میل: رجوع را گویند به اصل خود، بی‌شعور و آگاهی از اصل و مقصد، همچون رجوع طبیعی، چون جمادات به طبایع اربعه، که بی‌اختیار مایل اصلند، و همچون رجوع عناصر به اصل خود، بی‌اختیاری.\nآرزو: میل است به اصل خود، با اندک آگاهی و علم به بعضی از اصل و مقصد.\nمهر: میل به اصل خود است با وجود علم و آگاهی از یافت لذت ",
+              "وصال: مقام وحدت را گویند، مع‌اللّٰه، در سرا و ضرا.\nکنار: دریافت اسرار و دوام مراقبت را گویند.\nبوس: استعداد قبول کیفیت کلام را گویند، علمی و عملی، صوری و معنوی.\nفراق: غیبت را گویند، از مقام وحدت.\nهجران: التفات به غیرحق را گویند درونی و بیرونی.\nغم: بند اهتمام طلب معشوق را گویند.\nاندوه: حیرت را گویند، ",
+              "تیری، ای دوست، برکش از ترکش\nپس به آبروی چون کمان درکش\nهان! دلم گر نشانه می‌خواهی\nزدن از توست و از من آهی خوش\nکی ز تیرت الم رسد؟ که مرا\nدیده در حیرت است و دل در غش\nیابم از دیدن تو آب حیات\nور بسوزانیم تو در آتش\nخواه نوش است و خواه زهرآلود\nشربت از دست دوست خوش درکش\nور دهد غیر شربت نوشت\nنیش دان و به خاک",
+              "در هوای تو جان و تن بارست\nجان فدا کرد عاشق و وارست\nصید خود را چرا زنی تو به تیر؟\nکو به دام تو خود گرفتار است\nدر هلاک دلم چه می‌کوشی؟\nچون که بیچاره خود درین کار است\nدل بسی در غمت به خون غلتید\nلیکن این بار خود سبکبار است\nای شبم روز با تو، بی‌رخ تو\nروز روشن مرا شب تار است\nعاشقان پیش چون تو صیادی\nجان فد",
+              "مطربا، نغمهٔ حزین بر دار\nیک زمانم دماغ جان تر دار\nاز نه آهنگ خردهٔ عشاق\nنغمه‌ای گو، ز پردهٔ عشاق\nمردم از هجر دوست، یک دمه‌ای\nدل من زنده کن به زمزمه‌ای\nتا من اندر سماع عشق آیم\nمجلس عاشقان بیارایم\nنفسی بگذرم ازین پس و پیش\nساعتی بنگرم به هستی خویش\nچون که پی گم کنم ازین هستی\nراه یابم به عالم مستی\nهمچو م",
+              "هر که را نیست عیش خوش بی‌دوست\nاین مناجات می‌کند: کاری دوست\nجان ما گوهری است بیش بها\nکالبدهای ما چو مزبل‌ها\nاندرین مزبله چه می‌پاییم؟\nروی بنمای، تا برون آییم\nگرچه از تو به بوی خرسندیم\nهم به دیدارت آرزومندیم\nعاشقا، راز عاشقان بشنو\nهم ز بی‌دل حدیث جان بشنو\nگوش کن سر این فسانه ز من\nگلخنی جان توست و گلخن",
+              "بود مردی همیشه در گلخن\nگلخنش بود سال و مه گلشن\nگرد حمام نفس می‌گردید\nگلخن جسم را همی تابید\nزان مقامش ملال پیدا شد\nبه تفرج به سوی صحرا شد\nیک دم از گلخن بدن بپرید\nگرد صحرای روح می گردید\nدید آب روان و سبزه و گل\nمرده در پای حسن گل، بلبل\nگرد آن مرغزار می‌گردید\nباز دانست پاک را ز پلید\nگفت با خویشتن که: ای",
+              "آن پری، بعد از آنکه تیر انداخت\nگلخنی زخم خورده را بشناخت\nاندر آمد ز اسب پیشش شد\nمرهم اندورن ریشش شد\nنفسی راه لطف پیش گرفت\nسر او برکنار خویش گرفت\nعاشقان را به لطف بنوازند\nدلبران، بعد از آنکه اندازند\nتا خدنگی ندوختش بر جان\nنگرفتش به ناز بر سر ران\nتاب وصلش نداشت آن پر درد\nجان بداد و وداع جانان کرد\nگر ت",
+              "آن غزال این غزل چو زیبا دید\nبه کرشمه به سوی من نگرید\nزد چو طوطی یکی شکرخنده\nگفت: ذوقت مزید و پاینده\nکاندر آماج نطق معنی جوی\nتیر فکر تو می‌شکافد موی\nگرچه بسیار می‌نواختمت\nبه حقیقت کنون شناختمت\nانعم‌الله نعمت عشقت\nبه چنین شعر و حکمت عشقت\nزین صفت درها که طبع تو سفت\nخوب گفتی و نیک خواهی گفت\nگفتمش: مثل ا",
+              "چون بدید این غزل بدین سان خوب\nملتفت شد به طالب آن مطلوب\nدست یازید و بر گرفت و بخواند\nدر بد و نیک این سخن می‌راند\nچون به آخر رسید خوش بگریست\nگفت: بیچاره این عراقی کیست؟\nگفتم: ای جان جان، من مسکین\nدر بیابان عشق گفته‌ام این\nگفت: آنگه شود مرا باور\nکه بدین قافیت یکی دیگر\nبر بدیهه بگویی اندر حال\nباشد این ",
+              "بود در کنج خانه صبح دمی\nخاطر من بخود فتاده دمی\nغزلی دلپذیر می‌گفتم\nدرر از عشق دوست می‌سفتم\nنفسی وصف یار می‌راندم\nساعتی لوح دوست می‌خواندم\nدل ز احوال نیک و بد آزاد\nهر زمانم نتیجه‌ای می‌داد\nعقل گردون نورد گردنکش\nجمع کرده دل از چهار وز شش\nفکر عالم نمای معنی خوان\nدر دماغ خیال سرگردان\nذوق لذت شناس شاهد ب",
+              "ای ملامت کنان بی‌حاصل\nسعی کمتر کنید در باطل\nهستم آشفته بر رخی، که برو\nشد پری واله و ملک مایل\nهست وصف جمال و نعت لبش\nبرتر از فکر سامع و قایل\nدل دیوانه در سر زلفش\nکی به زنجیرها شود عاقل؟\nهرکه یک‌بار در همه عمرش\nالتفاتی کند، شود مقبل\nاز خیالش چه شاکرم! کو نیز\nنیست از حال عاشقان غافل\nای صبا، ای صبا، غلا",
+              "ای ز روی تو آفتاب خجل\nوز لبت آب زندگی حاصل\nعاشقان را خیال عارض تو\nدر شب تیره نور دیده و دل\nزانکه روی تو را ز غایت لطف\nبرگ گل شرمسار و لاله خجل\nز آرزوی قد تو سرو سهی\nخشک بر جای مانده پا در گل\nای لبت را اسیر آب حیات\nوی رخت را غلام شمع چگل\nاز برای کمند گیسویت\nرشتهٔ جان عاشقان مگسل\nرمقی بود باقی از جانم",
+              "چار یارش، که مرشد دینند\nهمه اندر مقام تحسینند\nدوستان پیمبرند همه\nخلفای مطهرند همه\nای فضولی، چرا ز نادانی\nیار اینی و دشمن آنی؟\nدو هوایی اگر نورزی به\nسه طلاق خیال فاسد ده\nتو چه دانی درین میانه چه بود ؟\nکین چرا پیش ازان خلیفه نبود ؟\nتو چه دانی مصالح این کار؟\nچه به خود راه می‌دهی انکار؟\nهمه را نیک دان، ",
+              "صاحبا، راز اندرون ز نهفت\nتا نپرسی ز من، نخواهم گفت\nبنده را خاطری است ناخرسند\nعاشق هجر یار، لیک به بند\nکه پسندد چو من هنرمندی\nلب ببسته، اسیر دربندی؟\nبنده را شاعری نپنداری\nزین گدایان خام نشماری\nچون در گنج دوست وا کردند\nبه من این شیوه را عطا کردند\nروز و شب درد درد می‌نوشم\nدر خروشم، اگر چه خاموشم\nاز تلط",
+              "گفت استاد عالم عاقل:\nاز دو حال است آدمی کامل\nاولین اکتساب علم خدا\nکه حیات است نفس ناطقه را\nزنده کردن روان خود به علوم\nبه زدودن ز روح زنک ظلوم\nاز مناهی دین حذر کردن\nمیوهٔ شاخ «واتقوا» خوردن\nدوم از ملک ناشدن غافل\nهم نشینان صالح و عاقل\nکامران بودن از طریق عدول\nلطف و قهری بجای هر معمول\nخاطر اهل دل طلب ک",
+              "سر او در سر یقین و گمان\nمایهٔ کفر دان و هم ایمان\nحسن او راست آینه عالم\nروی او شد وجود و پشت عدم\nروی آیینه را چه داری تار؟\nنیست آیینه را بهر آینه‌دار\nآهن خویش را به آینه ساز\nروی آیینه را نگر ز آغاز\nزنگ از آیینهٔ درون بزدای\nپس به ایوان شاه حسن درآی\nهمچو آیینه دیده شو همه تن\nتا کنی چشم جان بدو روشن\nپشت",
+              "هر که جان دارد و روان دارد\nواجب است آنکه درد جان دارد\nحمد بی‌حد کردگار احد\nصمد لم یلد و لم یولد\nآنکه ذاتش بری است از آهو\nالذی لا اله الا هو\nمالک الملک قادر بی‌عیب\nصانع عالم شهادت و غیب\nربنا جل قدره و علا\nآنکه از بدو فطرت اولی\nخلق در دست قدرت او بود\nقدرتش دستبرد صنع نمود\nصانعی، کز مطالع ابداع\nاو برآر"
+            ],
+            "source": [
+              "ganjoor-data@a64968e78425b2e8c7904fbdf5289fba8251a757#89515::poets/eraghi/estelahat/sh3.json",
+              "ganjoor-data@a64968e78425b2e8c7904fbdf5289fba8251a757#89513::poets/eraghi/estelahat/sh1.json",
+              "ganjoor-data@a64968e78425b2e8c7904fbdf5289fba8251a757#89514::poets/eraghi/estelahat/sh2.json",
+              "ganjoor-data@a64968e78425b2e8c7904fbdf5289fba8251a757#89516::poets/eraghi/estelahat/sh4.json",
+              "ganjoor-data@a64968e78425b2e8c7904fbdf5289fba8251a757#19760::poets/eraghi/oshaghname/fasl5/sh5.json",
+              "ganjoor-data@a64968e78425b2e8c7904fbdf5289fba8251a757#19758::poets/eraghi/oshaghname/fasl5/sh3.json",
+              "ganjoor-data@a64968e78425b2e8c7904fbdf5289fba8251a757#19756::poets/eraghi/oshaghname/fasl5/sh1.json",
+              "ganjoor-data@a64968e78425b2e8c7904fbdf5289fba8251a757#19761::poets/eraghi/oshaghname/fasl5/sh6.json",
+              "ganjoor-data@a64968e78425b2e8c7904fbdf5289fba8251a757#19757::poets/eraghi/oshaghname/fasl5/sh2.json",
+              "ganjoor-data@a64968e78425b2e8c7904fbdf5289fba8251a757#19759::poets/eraghi/oshaghname/fasl5/sh4.json",
+              "ganjoor-data@a64968e78425b2e8c7904fbdf5289fba8251a757#19747::poets/eraghi/oshaghname/fasl2/sh5.json",
+              "ganjoor-data@a64968e78425b2e8c7904fbdf5289fba8251a757#19745::poets/eraghi/oshaghname/fasl2/sh3.json",
+              "ganjoor-data@a64968e78425b2e8c7904fbdf5289fba8251a757#19743::poets/eraghi/oshaghname/fasl2/sh1.json",
+              "ganjoor-data@a64968e78425b2e8c7904fbdf5289fba8251a757#19744::poets/eraghi/oshaghname/fasl2/sh2.json",
+              "ganjoor-data@a64968e78425b2e8c7904fbdf5289fba8251a757#19746::poets/eraghi/oshaghname/fasl2/sh4.json",
+              "ganjoor-data@a64968e78425b2e8c7904fbdf5289fba8251a757#19730::poets/eraghi/oshaghname/aghazo/sh5.json",
+              "ganjoor-data@a64968e78425b2e8c7904fbdf5289fba8251a757#19736::poets/eraghi/oshaghname/aghazo/sh11.json",
+              "ganjoor-data@a64968e78425b2e8c7904fbdf5289fba8251a757#19734::poets/eraghi/oshaghname/aghazo/sh9.json",
+              "ganjoor-data@a64968e78425b2e8c7904fbdf5289fba8251a757#19728::poets/eraghi/oshaghname/aghazo/sh3.json",
+              "ganjoor-data@a64968e78425b2e8c7904fbdf5289fba8251a757#19726::poets/eraghi/oshaghname/aghazo/sh1.json"
+            ]
+          }
+        },
+        {
+          "table": "poems_fts",
+          "row_count": 135319,
+          "columns": [
+            {
+              "cid": 0,
+              "name": "poet",
+              "declared_type": "",
+              "not_null": false,
+              "primary_key": false
+            },
+            {
+              "cid": 1,
+              "name": "title",
+              "declared_type": "",
+              "not_null": false,
+              "primary_key": false
+            },
+            {
+              "cid": 2,
+              "name": "text",
+              "declared_type": "",
+              "not_null": false,
+              "primary_key": false
+            }
+          ],
+          "text_columns": [],
+          "hint_columns": [
+            "title",
+            "text"
+          ],
+          "fts": true,
+          "sql": "CREATE VIRTUAL TABLE poems_fts USING fts5(poet, title, text, content=poems)",
+          "samples": {
+            "title": [
+              "مطلب دوم - در اسامئی که میان عاشق و معشوق مشترک و دایر است و در اسمی اطلاق خصوصیت ندارد ولیکن از روی معانی گاهی خصوصیت گیرند و گاه نگیرند",
+              "بِسْمِ‌اللّٰهِ الرَّحْمٰنِ الرَّحیم و به نستعین",
+              "مطلب اول  - در کلماتی که اکثرش مخصوص به محبوب است و بعضی از آن متعلق به محبّ",
+              "مطلب سوم - در کلماتی چند که مخصوص به عاشق و احوال او است و اگرچه بعضی در نوعی به معشوق تعلق گیرد",
+              "بخش ۵ - غزل",
+              "بخش ۳ - غزل",
+              "بخش ۱ - سر آغاز",
+              "بخش ۶ - مثنوی",
+              "بخش ۲ - حکایت",
+              "بخش ۴ - مثنوی",
+              "بخش ۵ - مثنوی",
+              "بخش ۳ - مثنوی",
+              "بخش ۲ - غزل",
+              "بخش ۴ - غزل",
+              "بخش ۵ - در نعت خلفای راشدین",
+              "بخش ۱۱ - اندر ابتدای کتاب",
+              "بخش ۹ - در نصیحت ملوک",
+              "بخش ۳ - در تصفیهٔ نهاد گوید",
+              "بخش ۸ - در مدح صاحب دیوان",
+              "بخش ۷ - سبب نظم کتاب"
+            ],
+            "text": [
+              "مجلس: آیات و اوقات حضور را گویند، با حق‌تعالی.\nعشرت: لذت انس است، با حق‌تعالی و شعور و آگاهی از لذت.\nطرب: انس است با حق‌تعالی و سرور دل در آن.\nعیش: دوام حضور است و فراغت آن به تمامی.\nشراب: غلبات عشق را گویند، با وجود اعمال، که مستوجب ملامت باشد و آن اهل کمال را باشد، که اخص‌اند، در نهایات سلوک.\nشراب",
+              "شکر و سپاس موجودی را که اعیان اشیاء را به ظهور نور خویش بنواخت، که «اللّٰه نور السموات والارض» و علم عشق در کشور عاشقی برافروخت و به معشوقی درتاخت، که «یحبهم و یحبونه» و نقش و اثر غیر از بسیط مملکت هستی بپرداخت که «لااله مع‌اللّٰه».\nو صلوات غیرمتناهی بر حضرت افضل‌الرسل و اکمل‌الکمل، محمدالمصطفی - صل",
+              "میل: رجوع را گویند به اصل خود، بی‌شعور و آگاهی از اصل و مقصد، همچون رجوع طبیعی، چون جمادات به طبایع اربعه، که بی‌اختیار مایل اصلند، و همچون رجوع عناصر به اصل خود، بی‌اختیاری.\nآرزو: میل است به اصل خود، با اندک آگاهی و علم به بعضی از اصل و مقصد.\nمهر: میل به اصل خود است با وجود علم و آگاهی از یافت لذت ",
+              "وصال: مقام وحدت را گویند، مع‌اللّٰه، در سرا و ضرا.\nکنار: دریافت اسرار و دوام مراقبت را گویند.\nبوس: استعداد قبول کیفیت کلام را گویند، علمی و عملی، صوری و معنوی.\nفراق: غیبت را گویند، از مقام وحدت.\nهجران: التفات به غیرحق را گویند درونی و بیرونی.\nغم: بند اهتمام طلب معشوق را گویند.\nاندوه: حیرت را گویند، ",
+              "تیری، ای دوست، برکش از ترکش\nپس به آبروی چون کمان درکش\nهان! دلم گر نشانه می‌خواهی\nزدن از توست و از من آهی خوش\nکی ز تیرت الم رسد؟ که مرا\nدیده در حیرت است و دل در غش\nیابم از دیدن تو آب حیات\nور بسوزانیم تو در آتش\nخواه نوش است و خواه زهرآلود\nشربت از دست دوست خوش درکش\nور دهد غیر شربت نوشت\nنیش دان و به خاک",
+              "در هوای تو جان و تن بارست\nجان فدا کرد عاشق و وارست\nصید خود را چرا زنی تو به تیر؟\nکو به دام تو خود گرفتار است\nدر هلاک دلم چه می‌کوشی؟\nچون که بیچاره خود درین کار است\nدل بسی در غمت به خون غلتید\nلیکن این بار خود سبکبار است\nای شبم روز با تو، بی‌رخ تو\nروز روشن مرا شب تار است\nعاشقان پیش چون تو صیادی\nجان فد",
+              "مطربا، نغمهٔ حزین بر دار\nیک زمانم دماغ جان تر دار\nاز نه آهنگ خردهٔ عشاق\nنغمه‌ای گو، ز پردهٔ عشاق\nمردم از هجر دوست، یک دمه‌ای\nدل من زنده کن به زمزمه‌ای\nتا من اندر سماع عشق آیم\nمجلس عاشقان بیارایم\nنفسی بگذرم ازین پس و پیش\nساعتی بنگرم به هستی خویش\nچون که پی گم کنم ازین هستی\nراه یابم به عالم مستی\nهمچو م",
+              "هر که را نیست عیش خوش بی‌دوست\nاین مناجات می‌کند: کاری دوست\nجان ما گوهری است بیش بها\nکالبدهای ما چو مزبل‌ها\nاندرین مزبله چه می‌پاییم؟\nروی بنمای، تا برون آییم\nگرچه از تو به بوی خرسندیم\nهم به دیدارت آرزومندیم\nعاشقا، راز عاشقان بشنو\nهم ز بی‌دل حدیث جان بشنو\nگوش کن سر این فسانه ز من\nگلخنی جان توست و گلخن",
+              "بود مردی همیشه در گلخن\nگلخنش بود سال و مه گلشن\nگرد حمام نفس می‌گردید\nگلخن جسم را همی تابید\nزان مقامش ملال پیدا شد\nبه تفرج به سوی صحرا شد\nیک دم از گلخن بدن بپرید\nگرد صحرای روح می گردید\nدید آب روان و سبزه و گل\nمرده در پای حسن گل، بلبل\nگرد آن مرغزار می‌گردید\nباز دانست پاک را ز پلید\nگفت با خویشتن که: ای",
+              "آن پری، بعد از آنکه تیر انداخت\nگلخنی زخم خورده را بشناخت\nاندر آمد ز اسب پیشش شد\nمرهم اندورن ریشش شد\nنفسی راه لطف پیش گرفت\nسر او برکنار خویش گرفت\nعاشقان را به لطف بنوازند\nدلبران، بعد از آنکه اندازند\nتا خدنگی ندوختش بر جان\nنگرفتش به ناز بر سر ران\nتاب وصلش نداشت آن پر درد\nجان بداد و وداع جانان کرد\nگر ت",
+              "آن غزال این غزل چو زیبا دید\nبه کرشمه به سوی من نگرید\nزد چو طوطی یکی شکرخنده\nگفت: ذوقت مزید و پاینده\nکاندر آماج نطق معنی جوی\nتیر فکر تو می‌شکافد موی\nگرچه بسیار می‌نواختمت\nبه حقیقت کنون شناختمت\nانعم‌الله نعمت عشقت\nبه چنین شعر و حکمت عشقت\nزین صفت درها که طبع تو سفت\nخوب گفتی و نیک خواهی گفت\nگفتمش: مثل ا",
+              "چون بدید این غزل بدین سان خوب\nملتفت شد به طالب آن مطلوب\nدست یازید و بر گرفت و بخواند\nدر بد و نیک این سخن می‌راند\nچون به آخر رسید خوش بگریست\nگفت: بیچاره این عراقی کیست؟\nگفتم: ای جان جان، من مسکین\nدر بیابان عشق گفته‌ام این\nگفت: آنگه شود مرا باور\nکه بدین قافیت یکی دیگر\nبر بدیهه بگویی اندر حال\nباشد این ",
+              "بود در کنج خانه صبح دمی\nخاطر من بخود فتاده دمی\nغزلی دلپذیر می‌گفتم\nدرر از عشق دوست می‌سفتم\nنفسی وصف یار می‌راندم\nساعتی لوح دوست می‌خواندم\nدل ز احوال نیک و بد آزاد\nهر زمانم نتیجه‌ای می‌داد\nعقل گردون نورد گردنکش\nجمع کرده دل از چهار وز شش\nفکر عالم نمای معنی خوان\nدر دماغ خیال سرگردان\nذوق لذت شناس شاهد ب",
+              "ای ملامت کنان بی‌حاصل\nسعی کمتر کنید در باطل\nهستم آشفته بر رخی، که برو\nشد پری واله و ملک مایل\nهست وصف جمال و نعت لبش\nبرتر از فکر سامع و قایل\nدل دیوانه در سر زلفش\nکی به زنجیرها شود عاقل؟\nهرکه یک‌بار در همه عمرش\nالتفاتی کند، شود مقبل\nاز خیالش چه شاکرم! کو نیز\nنیست از حال عاشقان غافل\nای صبا، ای صبا، غلا",
+              "ای ز روی تو آفتاب خجل\nوز لبت آب زندگی حاصل\nعاشقان را خیال عارض تو\nدر شب تیره نور دیده و دل\nزانکه روی تو را ز غایت لطف\nبرگ گل شرمسار و لاله خجل\nز آرزوی قد تو سرو سهی\nخشک بر جای مانده پا در گل\nای لبت را اسیر آب حیات\nوی رخت را غلام شمع چگل\nاز برای کمند گیسویت\nرشتهٔ جان عاشقان مگسل\nرمقی بود باقی از جانم",
+              "چار یارش، که مرشد دینند\nهمه اندر مقام تحسینند\nدوستان پیمبرند همه\nخلفای مطهرند همه\nای فضولی، چرا ز نادانی\nیار اینی و دشمن آنی؟\nدو هوایی اگر نورزی به\nسه طلاق خیال فاسد ده\nتو چه دانی درین میانه چه بود ؟\nکین چرا پیش ازان خلیفه نبود ؟\nتو چه دانی مصالح این کار؟\nچه به خود راه می‌دهی انکار؟\nهمه را نیک دان، ",
+              "صاحبا، راز اندرون ز نهفت\nتا نپرسی ز من، نخواهم گفت\nبنده را خاطری است ناخرسند\nعاشق هجر یار، لیک به بند\nکه پسندد چو من هنرمندی\nلب ببسته، اسیر دربندی؟\nبنده را شاعری نپنداری\nزین گدایان خام نشماری\nچون در گنج دوست وا کردند\nبه من این شیوه را عطا کردند\nروز و شب درد درد می‌نوشم\nدر خروشم، اگر چه خاموشم\nاز تلط",
+              "گفت استاد عالم عاقل:\nاز دو حال است آدمی کامل\nاولین اکتساب علم خدا\nکه حیات است نفس ناطقه را\nزنده کردن روان خود به علوم\nبه زدودن ز روح زنک ظلوم\nاز مناهی دین حذر کردن\nمیوهٔ شاخ «واتقوا» خوردن\nدوم از ملک ناشدن غافل\nهم نشینان صالح و عاقل\nکامران بودن از طریق عدول\nلطف و قهری بجای هر معمول\nخاطر اهل دل طلب ک",
+              "سر او در سر یقین و گمان\nمایهٔ کفر دان و هم ایمان\nحسن او راست آینه عالم\nروی او شد وجود و پشت عدم\nروی آیینه را چه داری تار؟\nنیست آیینه را بهر آینه‌دار\nآهن خویش را به آینه ساز\nروی آیینه را نگر ز آغاز\nزنگ از آیینهٔ درون بزدای\nپس به ایوان شاه حسن درآی\nهمچو آیینه دیده شو همه تن\nتا کنی چشم جان بدو روشن\nپشت",
+              "هر که جان دارد و روان دارد\nواجب است آنکه درد جان دارد\nحمد بی‌حد کردگار احد\nصمد لم یلد و لم یولد\nآنکه ذاتش بری است از آهو\nالذی لا اله الا هو\nمالک الملک قادر بی‌عیب\nصانع عالم شهادت و غیب\nربنا جل قدره و علا\nآنکه از بدو فطرت اولی\nخلق در دست قدرت او بود\nقدرتش دستبرد صنع نمود\nصانعی، کز مطالع ابداع\nاو برآر"
+            ]
+          }
+        },
+        {
+          "table": "poems_fts_config",
+          "row_count": 1,
+          "columns": [
+            {
+              "cid": 0,
+              "name": "k",
+              "declared_type": "",
+              "not_null": true,
+              "primary_key": true
+            },
+            {
+              "cid": 1,
+              "name": "v",
+              "declared_type": "",
+              "not_null": false,
+              "primary_key": false
+            }
+          ],
+          "text_columns": [],
+          "hint_columns": [],
+          "fts": false,
+          "sql": "CREATE TABLE 'poems_fts_config'(k PRIMARY KEY, v) WITHOUT ROWID",
+          "samples": {}
+        },
+        {
+          "table": "poems_fts_data",
+          "row_count": 27522,
+          "columns": [
+            {
+              "cid": 0,
+              "name": "id",
+              "declared_type": "INTEGER",
+              "not_null": false,
+              "primary_key": true
+            },
+            {
+              "cid": 1,
+              "name": "block",
+              "declared_type": "BLOB",
+              "not_null": false,
+              "primary_key": false
+            }
+          ],
+          "text_columns": [],
+          "hint_columns": [],
+          "fts": false,
+          "sql": "CREATE TABLE 'poems_fts_data'(id INTEGER PRIMARY KEY, block BLOB)",
+          "samples": {}
+        },
+        {
+          "table": "poems_fts_docsize",
+          "row_count": 135319,
+          "columns": [
+            {
+              "cid": 0,
+              "name": "id",
+              "declared_type": "INTEGER",
+              "not_null": false,
+              "primary_key": true
+            },
+            {
+              "cid": 1,
+              "name": "sz",
+              "declared_type": "BLOB",
+              "not_null": false,
+              "primary_key": false
+            }
+          ],
+          "text_columns": [],
+          "hint_columns": [],
+          "fts": false,
+          "sql": "CREATE TABLE 'poems_fts_docsize'(id INTEGER PRIMARY KEY, sz BLOB)",
+          "samples": {}
+        },
+        {
+          "table": "poems_fts_idx",
+          "row_count": 17360,
+          "columns": [
+            {
+              "cid": 0,
+              "name": "segid",
+              "declared_type": "",
+              "not_null": true,
+              "primary_key": true
+            },
+            {
+              "cid": 1,
+              "name": "term",
+              "declared_type": "",
+              "not_null": true,
+              "primary_key": true
+            },
+            {
+              "cid": 2,
+              "name": "pgno",
+              "declared_type": "",
+              "not_null": false,
+              "primary_key": false
+            }
+          ],
+          "text_columns": [],
+          "hint_columns": [],
+          "fts": false,
+          "sql": "CREATE TABLE 'poems_fts_idx'(segid, term, pgno, PRIMARY KEY(segid, term)) WITHOUT ROWID",
+          "samples": {}
+        }
+      ],
+      "errors": []
+    },
+    {
+      "path": "data/simorgh_knowledge_v2_baseline_run1.db",
+      "size_bytes": 144740352,
+      "sha256": "01c5da9f863adbb7e62021fbe0b871d4ac84bb8cc45c106550b004e6927dfa7b",
+      "integrity_check": "ok",
+      "tables": [
+        {
+          "table": "audit_issues",
+          "row_count": 2582,
+          "columns": [
+            {
+              "cid": 0,
+              "name": "issue_id",
+              "declared_type": "INTEGER",
+              "not_null": false,
+              "primary_key": true
+            },
+            {
+              "cid": 1,
+              "name": "run_id",
+              "declared_type": "INTEGER",
+              "not_null": true,
+              "primary_key": false
+            },
+            {
+              "cid": 2,
+              "name": "severity",
+              "declared_type": "TEXT",
+              "not_null": true,
+              "primary_key": false
+            },
+            {
+              "cid": 3,
+              "name": "issue_type",
+              "declared_type": "TEXT",
+              "not_null": true,
+              "primary_key": false
+            },
+            {
+              "cid": 4,
+              "name": "source_db",
+              "declared_type": "TEXT",
+              "not_null": true,
+              "primary_key": false
+            },
+            {
+              "cid": 5,
+              "name": "source_table",
+              "declared_type": "TEXT",
+              "not_null": true,
+              "primary_key": false
+            },
+            {
+              "cid": 6,
+              "name": "source_column",
+              "declared_type": "TEXT",
+              "not_null": false,
+              "primary_key": false
+            },
+            {
+              "cid": 7,
+              "name": "source_rowid",
+              "declared_type": "INTEGER",
+              "not_null": false,
+              "primary_key": false
+            },
+            {
+              "cid": 8,
+              "name": "source_locator",
+              "declared_type": "TEXT",
+              "not_null": false,
+              "primary_key": false
+            },
+            {
+              "cid": 9,
+              "name": "source_doc",
+              "declared_type": "TEXT",
+              "not_null": false,
+              "primary_key": false
+            },
+            {
+              "cid": 10,
+              "name": "details",
+              "declared_type": "TEXT",
+              "not_null": true,
+              "primary_key": false
+            }
+          ],
+          "text_columns": [
+            "severity",
+            "issue_type",
+            "source_db",
+            "source_table",
+            "source_column",
+            "source_locator",
+            "source_doc",
+            "details"
+          ],
+          "hint_columns": [
+            "source_db",
+            "source_table",
+            "source_column",
+            "source_rowid",
+            "source_locator",
+            "source_doc"
+          ],
+          "fts": false,
+          "sql": "CREATE TABLE audit_issues (\n    issue_id INTEGER PRIMARY KEY,\n    run_id INTEGER NOT NULL REFERENCES audit_runs(run_id) ON DELETE CASCADE,\n    severity TEXT NOT NULL,\n    issue_type TEXT NOT NULL,\n    source_db TEXT NOT NULL,\n    source_table TEXT NOT NULL,\n    source_column TEXT,\n    source_rowid INTEGER,\n    source_locator TEXT,\n    source_doc TEXT,\n    details TEXT NOT NULL\n)",
+          "samples": {
+            "source_db": [
+              "/home/mahdi/simorgh/data/simorgh_full.db"
+            ],
+            "source_table": [
+              "book_chunks_fts",
+              "concepts",
+              "poems",
+              "poems_fts"
+            ],
+            "source_column": [
+              "chunk_text",
+              "doc_name",
+              "category",
+              "explanation",
+              "text"
+            ],
+            "source_rowid": [
+              "960",
+              "961",
+              "966",
+              "967",
+              "968",
+              "969",
+              "970",
+              "972",
+              "973",
+              "974",
+              "975",
+              "976",
+              "977",
+              "978",
+              "979",
+              "980",
+              "981",
+              "982",
+              "983",
+              "984"
+            ],
+            "source_locator": [
+              "rowid:960",
+              "rowid:961",
+              "rowid:966",
+              "rowid:967",
+              "rowid:968",
+              "rowid:969",
+              "rowid:970",
+              "rowid:972",
+              "rowid:973",
+              "rowid:974",
+              "rowid:975",
+              "rowid:976",
+              "rowid:977",
+              "rowid:978",
+              "rowid:979",
+              "rowid:980",
+              "rowid:981",
+              "rowid:982",
+              "rowid:983",
+              "rowid:984"
+            ],
+            "source_doc": [
+              "اصول_کافی_گزیده",
+              "معرفی_سیمرغ",
+              "معماری_سیمرغ",
+              "قرآن_مکارم",
+              "اسرار التوحید (مقامات شیخ ابوسعید)",
+              "بوستان سعدی",
+              "تاریخ بیهقی",
+              "ترجمه قرآن (گزیده)",
+              "دیوان حافظ",
+              "رباعیات خیام",
+              "سیاست نامه خواجه نظام‌الملک",
+              "شاهنامه فردوسی",
+              "قابوس نامه",
+              "مثنوی معنوی مولانا",
+              "منطق الطیر عطار",
+              "چهار مقاله نظامی عروضی",
+              "کلیله و دمنه",
+              "گلستان سعدی",
+              "Shahname ba mani Book",
+              "ebook10907[www.takbook.com]"
+            ]
+          }
+        },
+        {
+          "table": "audit_runs",
+          "row_count": 1,
+          "columns": [
+            {
+              "cid": 0,
+              "name": "run_id",
+              "declared_type": "INTEGER",
+              "not_null": false,
+              "primary_key": true
+            },
+            {
+              "cid": 1,
+              "name": "started_at",
+              "declared_type": "TEXT",
+              "not_null": true,
+              "primary_key": false
+            },
+            {
+              "cid": 2,
+              "name": "finished_at",
+              "declared_type": "TEXT",
+              "not_null": false,
+              "primary_key": false
+            },
+            {
+              "cid": 3,
+              "name": "scanned_databases",
+              "declared_type": "INTEGER",
+              "not_null": true,
+              "primary_key": false
+            },
+            {
+              "cid": 4,
+              "name": "scanned_tables",
+              "declared_type": "INTEGER",
+              "not_null": true,
+              "primary_key": false
+            },
+            {
+              "cid": 5,
+              "name": "scanned_rows",
+              "declared_type": "INTEGER",
+              "not_null": true,
+              "primary_key": false
+            },
+            {
+              "cid": 6,
+              "name": "scanned_text_cells",
+              "declared_type": "INTEGER",
+              "not_null": true,
+              "primary_key": false
+            },
+            {
+              "cid": 7,
+              "name": "relation_candidates",
+              "declared_type": "INTEGER",
+              "not_null": true,
+              "primary_key": false
+            },
+            {
+              "cid": 8,
+              "name": "issues_found",
+              "declared_type": "INTEGER",
+              "not_null": true,
+              "primary_key": false
+            }
+          ],
+          "text_columns": [
+            "started_at",
+            "finished_at"
+          ],
+          "hint_columns": [
+            "scanned_text_cells"
+          ],
+          "fts": false,
+          "sql": "CREATE TABLE audit_runs (\n    run_id INTEGER PRIMARY KEY,\n    started_at TEXT NOT NULL,\n    finished_at TEXT,\n    scanned_databases INTEGER NOT NULL DEFAULT 0,\n    scanned_tables INTEGER NOT NULL DEFAULT 0,\n    scanned_rows INTEGER NOT NULL DEFAULT 0,\n    scanned_text_cells INTEGER NOT NULL DEFAULT 0,\n    relation_candidates INTEGER NOT NULL DEFAULT 0,\n    issues_found INTEGER NOT NULL DEFAULT 0\n)",
+          "samples": {
+            "scanned_text_cells": [
+              "974262"
+            ]
+          }
+        },
+        {
+          "table": "entities",
+          "row_count": 5,
+          "columns": [
+            {
+              "cid": 0,
+              "name": "entity_id",
+              "declared_type": "INTEGER",
+              "not_null": false,
+              "primary_key": true
+            },
+            {
+              "cid": 1,
+              "name": "canonical_name",
+              "declared_type": "TEXT",
+              "not_null": true,
+              "primary_key": false
+            },
+            {
+              "cid": 2,
+              "name": "entity_type",
+              "declared_type": "TEXT",
+              "not_null": false,
+              "primary_key": false
+            },
+            {
+              "cid": 3,
+              "name": "gender",
+              "declared_type": "TEXT",
+              "not_null": false,
+              "primary_key": false
+            },
+            {
+              "cid": 4,
+              "name": "status",
+              "declared_type": "TEXT",
+              "not_null": true,
+              "primary_key": false
+            },
+            {
+              "cid": 5,
+              "name": "provenance_note",
+              "declared_type": "TEXT",
+              "not_null": false,
+              "primary_key": false
+            }
+          ],
+          "text_columns": [
+            "canonical_name",
+            "entity_type",
+            "gender",
+            "status",
+            "provenance_note"
+          ],
+          "hint_columns": [
+            "canonical_name"
+          ],
+          "fts": false,
+          "sql": "CREATE TABLE entities (\n    entity_id INTEGER PRIMARY KEY,\n    canonical_name TEXT NOT NULL UNIQUE,\n    entity_type TEXT,\n    gender TEXT,\n    status TEXT NOT NULL DEFAULT 'CANDIDATE',\n    provenance_note TEXT\n)",
+          "samples": {
+            "canonical_name": [
+              "رستم",
+              "رودابه",
+              "زال",
+              "سام",
+              "سیمرغ"
+            ]
+          }
+        },
+        {
+          "table": "entity_aliases",
+          "row_count": 8,
+          "columns": [
+            {
+              "cid": 0,
+              "name": "alias",
+              "declared_type": "TEXT",
+              "not_null": false,
+              "primary_key": true
+            },
+            {
+              "cid": 1,
+              "name": "entity_id",
+              "declared_type": "INTEGER",
+              "not_null": true,
+              "primary_key": false
+            }
+          ],
+          "text_columns": [
+            "alias"
+          ],
+          "hint_columns": [],
+          "fts": false,
+          "sql": "CREATE TABLE entity_aliases (\n    alias TEXT PRIMARY KEY,\n    entity_id INTEGER NOT NULL REFERENCES entities(entity_id) ON DELETE CASCADE\n)",
+          "samples": {}
+        },
+        {
+          "table": "knowledge_relations",
+          "row_count": 3,
+          "columns": [
+            {
+              "cid": 0,
+              "name": "relation_id",
+              "declared_type": "INTEGER",
+              "not_null": false,
+              "primary_key": true
+            },
+            {
+              "cid": 1,
+              "name": "subject_id",
+              "declared_type": "INTEGER",
+              "not_null": true,
+              "primary_key": false
+            },
+            {
+              "cid": 2,
+              "name": "relation_key",
+              "declared_type": "TEXT",
+              "not_null": true,
+              "primary_key": false
+            },
+            {
+              "cid": 3,
+              "name": "object_id",
+              "declared_type": "INTEGER",
+              "not_null": true,
+              "primary_key": false
+            },
+            {
+              "cid": 4,
+              "name": "status",
+              "declared_type": "TEXT",
+              "not_null": true,
+              "primary_key": false
+            },
+            {
+              "cid": 5,
+              "name": "polarity",
+              "declared_type": "TEXT",
+              "not_null": true,
+              "primary_key": false
+            },
+            {
+              "cid": 6,
+              "name": "evidence_grade",
+              "declared_type": "TEXT",
+              "not_null": false,
+              "primary_key": false
+            },
+            {
+              "cid": 7,
+              "name": "extraction_method",
+              "declared_type": "TEXT",
+              "not_null": true,
+              "primary_key": false
+            },
+            {
+              "cid": 8,
+              "name": "created_by",
+              "declared_type": "TEXT",
+              "not_null": true,
+              "primary_key": false
+            }
+          ],
+          "text_columns": [
+            "relation_key",
+            "status",
+            "polarity",
+            "evidence_grade",
+            "extraction_method",
+            "created_by"
+          ],
+          "hint_columns": [],
+          "fts": false,
+          "sql": "CREATE TABLE knowledge_relations (\n    relation_id INTEGER PRIMARY KEY,\n    subject_id INTEGER NOT NULL REFERENCES entities(entity_id),\n    relation_key TEXT NOT NULL REFERENCES relation_types(relation_key),\n    object_id INTEGER NOT NULL REFERENCES entities(entity_id),\n    status TEXT NOT NULL,\n    polarity TEXT NOT NULL DEFAULT 'ASSERTED'\n        CHECK (polarity IN ('ASSERTED','NEGATED')),\n    evidence_grade TEXT,\n    extraction_method TEXT NOT NULL,\n    created_by TEXT NOT NULL,\n    UNIQUE(subject_id, relation_key, object_id, polarity)\n)",
+          "samples": {}
+        },
+        {
+          "table": "relation_candidates",
+          "row_count": 157451,
+          "columns": [
+            {
+              "cid": 0,
+              "name": "candidate_id",
+              "declared_type": "INTEGER",
+              "not_null": false,
+              "primary_key": true
+            },
+            {
+              "cid": 1,
+              "name": "relation_hint",
+              "declared_type": "TEXT",
+              "not_null": true,
+              "primary_key": false
+            },
+            {
+              "cid": 2,
+              "name": "trigger",
+              "declared_type": "TEXT",
+              "not_null": true,
+              "primary_key": false
+            },
+            {
+              "cid": 3,
+              "name": "source_db",
+              "declared_type": "TEXT",
+              "not_null": true,
+              "primary_key": false
+            },
+            {
+              "cid": 4,
+              "name": "source_table",
+              "declared_type": "TEXT",
+              "not_null": true,
+              "primary_key": false
+            },
+            {
+              "cid": 5,
+              "name": "source_column",
+              "declared_type": "TEXT",
+              "not_null": false,
+              "primary_key": false
+            },
+            {
+              "cid": 6,
+              "name": "source_rowid",
+              "declared_type": "INTEGER",
+              "not_null": false,
+              "primary_key": false
+            },
+            {
+              "cid": 7,
+              "name": "source_locator",
+              "declared_type": "TEXT",
+              "not_null": false,
+              "primary_key": false
+            },
+            {
+              "cid": 8,
+              "name": "source_doc",
+              "declared_type": "TEXT",
+              "not_null": false,
+              "primary_key": false
+            },
+            {
+              "cid": 9,
+              "name": "snippet",
+              "declared_type": "TEXT",
+              "not_null": true,
+              "primary_key": false
+            },
+            {
+              "cid": 10,
+              "name": "status",
+              "declared_type": "TEXT",
+              "not_null": true,
+              "primary_key": false
+            }
+          ],
+          "text_columns": [
+            "relation_hint",
+            "trigger",
+            "source_db",
+            "source_table",
+            "source_column",
+            "source_locator",
+            "source_doc",
+            "snippet",
+            "status"
+          ],
+          "hint_columns": [
+            "source_db",
+            "source_table",
+            "source_column",
+            "source_rowid",
+            "source_locator",
+            "source_doc"
+          ],
+          "fts": false,
+          "sql": "CREATE TABLE relation_candidates (\n    candidate_id INTEGER PRIMARY KEY,\n    relation_hint TEXT NOT NULL,\n    trigger TEXT NOT NULL,\n    source_db TEXT NOT NULL,\n    source_table TEXT NOT NULL,\n    source_column TEXT,\n    source_rowid INTEGER,\n    source_locator TEXT,\n    source_doc TEXT,\n    snippet TEXT NOT NULL,\n    status TEXT NOT NULL DEFAULT 'UNREVIEWED'\n        CHECK (status IN ('UNREVIEWED','REVIEWED','ACCEPTED','REJECTED')),\n    UNIQUE(relation_hint, source_db, source_table, source_column, source_rowid, source_locator, trigger)\n)",
+          "samples": {
+            "source_db": [
+              "/home/mahdi/simorgh/data/grid/quran.db",
+              "/home/mahdi/simorgh/data/simorgh_full.db",
+              "/home/mahdi/simorgh/data/simorgh.db"
+            ],
+            "source_table": [
+              "knowledge_fts",
+              "book_chunks_fts",
+              "documents",
+              "poems",
+              "poems_fts",
+              "fast_cache",
+              "memory_fts",
+              "edges"
+            ],
+            "source_column": [
+              "content",
+              "chunk_text",
+              "text",
+              "title",
+              "response",
+              "poet",
+              "explanation"
+            ],
+            "source_rowid": [
+              "6",
+              "220",
+              "239",
+              "519",
+              "559",
+              "561",
+              "668",
+              "682",
+              "683",
+              "685",
+              "1118",
+              "1373",
+              "1570",
+              "2022",
+              "2031",
+              "2164",
+              "2197",
+              "2293",
+              "2358",
+              "2388"
+            ],
+            "source_locator": [
+              "rowid:6",
+              "rowid:220",
+              "rowid:239",
+              "rowid:519",
+              "rowid:559",
+              "rowid:561",
+              "rowid:668",
+              "rowid:682",
+              "rowid:683",
+              "rowid:685",
+              "rowid:1118",
+              "rowid:1373",
+              "rowid:1570",
+              "rowid:2022",
+              "rowid:2031",
+              "rowid:2164",
+              "rowid:2197",
+              "rowid:2293",
+              "rowid:2358",
+              "rowid:2388"
+            ],
+            "source_doc": [
+              "معنوی",
+              "onboarding.pdf",
+              "Saaghar-Manual.pdf",
+              "اصول_کافی_گزیده",
+              "books",
+              "books_and_talks",
+              "معماری_سیمرغ",
+              "صحیفه_سجادیه",
+              "قرآن_مکارم",
+              "نهج_البلاغه_دشتی",
+              "اسرار التوحید (مقامات شیخ ابوسعید)",
+              "بوستان سعدی",
+              "تاریخ بیهقی",
+              "ترجمه قرآن (گزیده)",
+              "دیوان حافظ",
+              "رباعیات خیام",
+              "سیاست نامه خواجه نظام‌الملک",
+              "شاهنامه فردوسی",
+              "قابوس نامه",
+              "مثنوی معنوی مولانا"
+            ]
+          }
+        },
+        {
+          "table": "relation_evidence",
+          "row_count": 3,
+          "columns": [
+            {
+              "cid": 0,
+              "name": "evidence_id",
+              "declared_type": "INTEGER",
+              "not_null": false,
+              "primary_key": true
+            },
+            {
+              "cid": 1,
+              "name": "relation_id",
+              "declared_type": "INTEGER",
+              "not_null": true,
+              "primary_key": false
+            },
+            {
+              "cid": 2,
+              "name": "source_db",
+              "declared_type": "TEXT",
+              "not_null": true,
+              "primary_key": false
+            },
+            {
+              "cid": 3,
+              "name": "source_table",
+              "declared_type": "TEXT",
+              "not_null": true,
+              "primary_key": false
+            },
+            {
+              "cid": 4,
+              "name": "source_column",
+              "declared_type": "TEXT",
+              "not_null": false,
+              "primary_key": false
+            },
+            {
+              "cid": 5,
+              "name": "source_rowid",
+              "declared_type": "INTEGER",
+              "not_null": false,
+              "primary_key": false
+            },
+            {
+              "cid": 6,
+              "name": "source_locator",
+              "declared_type": "TEXT",
+              "not_null": false,
+              "primary_key": false
+            },
+            {
+              "cid": 7,
+              "name": "source_doc",
+              "declared_type": "TEXT",
+              "not_null": false,
+              "primary_key": false
+            },
+            {
+              "cid": 8,
+              "name": "source_category",
+              "declared_type": "TEXT",
+              "not_null": false,
+              "primary_key": false
+            },
+            {
+              "cid": 9,
+              "name": "evidence_text",
+              "declared_type": "TEXT",
+              "not_null": true,
+              "primary_key": false
+            },
+            {
+              "cid": 10,
+              "name": "evidence_hash",
+              "declared_type": "TEXT",
+              "not_null": false,
+              "primary_key": false
+            },
+            {
+              "cid": 11,
+              "name": "evidence_grade",
+              "declared_type": "TEXT",
+              "not_null": false,
+              "primary_key": false
+            },
+            {
+              "cid": 12,
+              "name": "extraction_method",
+              "declared_type": "TEXT",
+              "not_null": true,
+              "primary_key": false
+            },
+            {
+              "cid": 13,
+              "name": "notes",
+              "declared_type": "TEXT",
+              "not_null": false,
+              "primary_key": false
+            }
+          ],
+          "text_columns": [
+            "source_db",
+            "source_table",
+            "source_column",
+            "source_locator",
+            "source_doc",
+            "source_category",
+            "evidence_text",
+            "evidence_hash",
+            "evidence_grade",
+            "extraction_method",
+            "notes"
+          ],
+          "hint_columns": [
+            "source_db",
+            "source_table",
+            "source_column",
+            "source_rowid",
+            "source_locator",
+            "source_doc",
+            "source_category",
+            "evidence_text"
+          ],
+          "fts": false,
+          "sql": "CREATE TABLE relation_evidence (\n    evidence_id INTEGER PRIMARY KEY,\n    relation_id INTEGER NOT NULL REFERENCES knowledge_relations(relation_id) ON DELETE CASCADE,\n    source_db TEXT NOT NULL,\n    source_table TEXT NOT NULL,\n    source_column TEXT,\n    source_rowid INTEGER,\n    source_locator TEXT,\n    source_doc TEXT,\n    source_category TEXT,\n    evidence_text TEXT NOT NULL,\n    evidence_hash TEXT,\n    evidence_grade TEXT,\n    extraction_method TEXT NOT NULL,\n    notes TEXT\n)",
+          "samples": {
+            "source_db": [
+              "data/simorgh_full.db"
+            ],
+            "source_table": [
+              "book_chunks_fts"
+            ],
+            "source_column": [
+              "chunk_text"
+            ],
+            "source_rowid": [
+              "2444",
+              "2452",
+              "2457"
+            ],
+            "source_locator": [
+              "rowid:2444",
+              "rowid:2452",
+              "rowid:2457"
+            ],
+            "source_doc": [],
+            "source_category": [],
+            "evidence_text": [
+              "سام همراه فرزندش دستان زال",
+              "یزدان را سپاس که فرزند من رستم یگانه است",
+              "رودابه مادر رستم"
+            ]
+          }
+        },
+        {
+          "table": "relation_types",
+          "row_count": 26,
+          "columns": [
+            {
+              "cid": 0,
+              "name": "relation_key",
+              "declared_type": "TEXT",
+              "not_null": false,
+              "primary_key": true
+            },
+            {
+              "cid": 1,
+              "name": "label_fa",
+              "declared_type": "TEXT",
+              "not_null": true,
+              "primary_key": false
+            },
+            {
+              "cid": 2,
+              "name": "inverse_key",
+              "declared_type": "TEXT",
+              "not_null": false,
+              "primary_key": false
+            },
+            {
+              "cid": 3,
+              "name": "broader_key",
+              "declared_type": "TEXT",
+              "not_null": false,
+              "primary_key": false
+            },
+            {
+              "cid": 4,
+              "name": "symmetric",
+              "declared_type": "INTEGER",
+              "not_null": true,
+              "primary_key": false
+            },
+            {
+              "cid": 5,
+              "name": "description",
+              "declared_type": "TEXT",
+              "not_null": false,
+              "primary_key": false
+            }
+          ],
+          "text_columns": [
+            "relation_key",
+            "label_fa",
+            "inverse_key",
+            "broader_key",
+            "description"
+          ],
+          "hint_columns": [],
+          "fts": false,
+          "sql": "CREATE TABLE relation_types (\n    relation_key TEXT PRIMARY KEY,\n    label_fa TEXT NOT NULL,\n    inverse_key TEXT,\n    broader_key TEXT,\n    symmetric INTEGER NOT NULL DEFAULT 0,\n    description TEXT\n)",
+          "samples": {}
+        }
+      ],
+      "errors": []
+    },
+    {
+      "path": "data/simorgh_knowledge_v3.db",
+      "size_bytes": 94208,
+      "sha256": "41f1e97091627d2cb5de1d5adf1f11429316fa9cf40006b0dbc7e2f1f31420c0",
+      "integrity_check": "ok",
+      "tables": [
+        {
+          "table": "audit_issues",
+          "row_count": 0,
+          "columns": [
+            {
+              "cid": 0,
+              "name": "issue_id",
+              "declared_type": "INTEGER",
+              "not_null": false,
+              "primary_key": true
+            },
+            {
+              "cid": 1,
+              "name": "run_id",
+              "declared_type": "INTEGER",
+              "not_null": true,
+              "primary_key": false
+            },
+            {
+              "cid": 2,
+              "name": "severity",
+              "declared_type": "TEXT",
+              "not_null": true,
+              "primary_key": false
+            },
+            {
+              "cid": 3,
+              "name": "issue_type",
+              "declared_type": "TEXT",
+              "not_null": true,
+              "primary_key": false
+            },
+            {
+              "cid": 4,
+              "name": "source_db",
+              "declared_type": "TEXT",
+              "not_null": true,
+              "primary_key": false
+            },
+            {
+              "cid": 5,
+              "name": "source_table",
+              "declared_type": "TEXT",
+              "not_null": true,
+              "primary_key": false
+            },
+            {
+              "cid": 6,
+              "name": "source_column",
+              "declared_type": "TEXT",
+              "not_null": false,
+              "primary_key": false
+            },
+            {
+              "cid": 7,
+              "name": "source_rowid",
+              "declared_type": "INTEGER",
+              "not_null": false,
+              "primary_key": false
+            },
+            {
+              "cid": 8,
+              "name": "source_locator",
+              "declared_type": "TEXT",
+              "not_null": false,
+              "primary_key": false
+            },
+            {
+              "cid": 9,
+              "name": "source_doc",
+              "declared_type": "TEXT",
+              "not_null": false,
+              "primary_key": false
+            },
+            {
+              "cid": 10,
+              "name": "details",
+              "declared_type": "TEXT",
+              "not_null": true,
+              "primary_key": false
+            }
+          ],
+          "text_columns": [
+            "severity",
+            "issue_type",
+            "source_db",
+            "source_table",
+            "source_column",
+            "source_locator",
+            "source_doc",
+            "details"
+          ],
+          "hint_columns": [
+            "source_db",
+            "source_table",
+            "source_column",
+            "source_rowid",
+            "source_locator",
+            "source_doc"
+          ],
+          "fts": false,
+          "sql": "CREATE TABLE audit_issues (\n    issue_id INTEGER PRIMARY KEY,\n    run_id INTEGER NOT NULL REFERENCES audit_runs(run_id) ON DELETE CASCADE,\n    severity TEXT NOT NULL,\n    issue_type TEXT NOT NULL,\n    source_db TEXT NOT NULL,\n    source_table TEXT NOT NULL,\n    source_column TEXT,\n    source_rowid INTEGER,\n    source_locator TEXT,\n    source_doc TEXT,\n    details TEXT NOT NULL\n)",
+          "samples": {
+            "source_db": [],
+            "source_table": [],
+            "source_column": [],
+            "source_rowid": [],
+            "source_locator": [],
+            "source_doc": []
+          }
+        },
+        {
+          "table": "audit_runs",
+          "row_count": 0,
+          "columns": [
+            {
+              "cid": 0,
+              "name": "run_id",
+              "declared_type": "INTEGER",
+              "not_null": false,
+              "primary_key": true
+            },
+            {
+              "cid": 1,
+              "name": "started_at",
+              "declared_type": "TEXT",
+              "not_null": true,
+              "primary_key": false
+            },
+            {
+              "cid": 2,
+              "name": "finished_at",
+              "declared_type": "TEXT",
+              "not_null": false,
+              "primary_key": false
+            },
+            {
+              "cid": 3,
+              "name": "scanned_databases",
+              "declared_type": "INTEGER",
+              "not_null": true,
+              "primary_key": false
+            },
+            {
+              "cid": 4,
+              "name": "scanned_tables",
+              "declared_type": "INTEGER",
+              "not_null": true,
+              "primary_key": false
+            },
+            {
+              "cid": 5,
+              "name": "scanned_rows",
+              "declared_type": "INTEGER",
+              "not_null": true,
+              "primary_key": false
+            },
+            {
+              "cid": 6,
+              "name": "scanned_text_cells",
+              "declared_type": "INTEGER",
+              "not_null": true,
+              "primary_key": false
+            },
+            {
+              "cid": 7,
+              "name": "relation_candidates",
+              "declared_type": "INTEGER",
+              "not_null": true,
+              "primary_key": false
+            },
+            {
+              "cid": 8,
+              "name": "issues_found",
+              "declared_type": "INTEGER",
+              "not_null": true,
+              "primary_key": false
+            }
+          ],
+          "text_columns": [
+            "started_at",
+            "finished_at"
+          ],
+          "hint_columns": [
+            "scanned_text_cells"
+          ],
+          "fts": false,
+          "sql": "CREATE TABLE audit_runs (\n    run_id INTEGER PRIMARY KEY,\n    started_at TEXT NOT NULL,\n    finished_at TEXT,\n    scanned_databases INTEGER NOT NULL DEFAULT 0,\n    scanned_tables INTEGER NOT NULL DEFAULT 0,\n    scanned_rows INTEGER NOT NULL DEFAULT 0,\n    scanned_text_cells INTEGER NOT NULL DEFAULT 0,\n    relation_candidates INTEGER NOT NULL DEFAULT 0,\n    issues_found INTEGER NOT NULL DEFAULT 0\n)",
+          "samples": {
+            "scanned_text_cells": []
+          }
+        },
+        {
+          "table": "entities",
+          "row_count": 5,
+          "columns": [
+            {
+              "cid": 0,
+              "name": "entity_id",
+              "declared_type": "INTEGER",
+              "not_null": false,
+              "primary_key": true
+            },
+            {
+              "cid": 1,
+              "name": "canonical_name",
+              "declared_type": "TEXT",
+              "not_null": true,
+              "primary_key": false
+            },
+            {
+              "cid": 2,
+              "name": "entity_type",
+              "declared_type": "TEXT",
+              "not_null": false,
+              "primary_key": false
+            },
+            {
+              "cid": 3,
+              "name": "gender",
+              "declared_type": "TEXT",
+              "not_null": false,
+              "primary_key": false
+            },
+            {
+              "cid": 4,
+              "name": "status",
+              "declared_type": "TEXT",
+              "not_null": true,
+              "primary_key": false
+            },
+            {
+              "cid": 5,
+              "name": "provenance_note",
+              "declared_type": "TEXT",
+              "not_null": false,
+              "primary_key": false
+            }
+          ],
+          "text_columns": [
+            "canonical_name",
+            "entity_type",
+            "gender",
+            "status",
+            "provenance_note"
+          ],
+          "hint_columns": [
+            "canonical_name"
+          ],
+          "fts": false,
+          "sql": "CREATE TABLE entities (\n    entity_id INTEGER PRIMARY KEY,\n    canonical_name TEXT NOT NULL UNIQUE,\n    entity_type TEXT,\n    gender TEXT,\n    status TEXT NOT NULL DEFAULT 'CANDIDATE',\n    provenance_note TEXT\n)",
+          "samples": {
+            "canonical_name": [
+              "رستم",
+              "رودابه",
+              "زال",
+              "سام",
+              "سیمرغ"
+            ]
+          }
+        },
+        {
+          "table": "entity_aliases",
+          "row_count": 8,
+          "columns": [
+            {
+              "cid": 0,
+              "name": "alias",
+              "declared_type": "TEXT",
+              "not_null": false,
+              "primary_key": true
+            },
+            {
+              "cid": 1,
+              "name": "entity_id",
+              "declared_type": "INTEGER",
+              "not_null": true,
+              "primary_key": false
+            }
+          ],
+          "text_columns": [
+            "alias"
+          ],
+          "hint_columns": [],
+          "fts": false,
+          "sql": "CREATE TABLE entity_aliases (\n    alias TEXT PRIMARY KEY,\n    entity_id INTEGER NOT NULL REFERENCES entities(entity_id) ON DELETE CASCADE\n)",
+          "samples": {}
+        },
+        {
+          "table": "knowledge_relations",
+          "row_count": 3,
+          "columns": [
+            {
+              "cid": 0,
+              "name": "relation_id",
+              "declared_type": "INTEGER",
+              "not_null": false,
+              "primary_key": true
+            },
+            {
+              "cid": 1,
+              "name": "subject_id",
+              "declared_type": "INTEGER",
+              "not_null": true,
+              "primary_key": false
+            },
+            {
+              "cid": 2,
+              "name": "relation_key",
+              "declared_type": "TEXT",
+              "not_null": true,
+              "primary_key": false
+            },
+            {
+              "cid": 3,
+              "name": "object_id",
+              "declared_type": "INTEGER",
+              "not_null": true,
+              "primary_key": false
+            },
+            {
+              "cid": 4,
+              "name": "status",
+              "declared_type": "TEXT",
+              "not_null": true,
+              "primary_key": false
+            },
+            {
+              "cid": 5,
+              "name": "polarity",
+              "declared_type": "TEXT",
+              "not_null": true,
+              "primary_key": false
+            },
+            {
+              "cid": 6,
+              "name": "evidence_grade",
+              "declared_type": "TEXT",
+              "not_null": false,
+              "primary_key": false
+            },
+            {
+              "cid": 7,
+              "name": "extraction_method",
+              "declared_type": "TEXT",
+              "not_null": true,
+              "primary_key": false
+            },
+            {
+              "cid": 8,
+              "name": "created_by",
+              "declared_type": "TEXT",
+              "not_null": true,
+              "primary_key": false
+            }
+          ],
+          "text_columns": [
+            "relation_key",
+            "status",
+            "polarity",
+            "evidence_grade",
+            "extraction_method",
+            "created_by"
+          ],
+          "hint_columns": [],
+          "fts": false,
+          "sql": "CREATE TABLE knowledge_relations (\n    relation_id INTEGER PRIMARY KEY,\n    subject_id INTEGER NOT NULL REFERENCES entities(entity_id),\n    relation_key TEXT NOT NULL REFERENCES relation_types(relation_key),\n    object_id INTEGER NOT NULL REFERENCES entities(entity_id),\n    status TEXT NOT NULL,\n    polarity TEXT NOT NULL DEFAULT 'ASSERTED'\n        CHECK (polarity IN ('ASSERTED','NEGATED')),\n    evidence_grade TEXT,\n    extraction_method TEXT NOT NULL,\n    created_by TEXT NOT NULL,\n    UNIQUE(subject_id, relation_key, object_id, polarity)\n)",
+          "samples": {}
+        },
+        {
+          "table": "relation_candidates",
+          "row_count": 0,
+          "columns": [
+            {
+              "cid": 0,
+              "name": "candidate_id",
+              "declared_type": "INTEGER",
+              "not_null": false,
+              "primary_key": true
+            },
+            {
+              "cid": 1,
+              "name": "relation_hint",
+              "declared_type": "TEXT",
+              "not_null": true,
+              "primary_key": false
+            },
+            {
+              "cid": 2,
+              "name": "trigger",
+              "declared_type": "TEXT",
+              "not_null": true,
+              "primary_key": false
+            },
+            {
+              "cid": 3,
+              "name": "source_db",
+              "declared_type": "TEXT",
+              "not_null": true,
+              "primary_key": false
+            },
+            {
+              "cid": 4,
+              "name": "source_table",
+              "declared_type": "TEXT",
+              "not_null": true,
+              "primary_key": false
+            },
+            {
+              "cid": 5,
+              "name": "source_column",
+              "declared_type": "TEXT",
+              "not_null": false,
+              "primary_key": false
+            },
+            {
+              "cid": 6,
+              "name": "source_rowid",
+              "declared_type": "INTEGER",
+              "not_null": false,
+              "primary_key": false
+            },
+            {
+              "cid": 7,
+              "name": "source_locator",
+              "declared_type": "TEXT",
+              "not_null": false,
+              "primary_key": false
+            },
+            {
+              "cid": 8,
+              "name": "source_doc",
+              "declared_type": "TEXT",
+              "not_null": false,
+              "primary_key": false
+            },
+            {
+              "cid": 9,
+              "name": "snippet",
+              "declared_type": "TEXT",
+              "not_null": true,
+              "primary_key": false
+            },
+            {
+              "cid": 10,
+              "name": "status",
+              "declared_type": "TEXT",
+              "not_null": true,
+              "primary_key": false
+            }
+          ],
+          "text_columns": [
+            "relation_hint",
+            "trigger",
+            "source_db",
+            "source_table",
+            "source_column",
+            "source_locator",
+            "source_doc",
+            "snippet",
+            "status"
+          ],
+          "hint_columns": [
+            "source_db",
+            "source_table",
+            "source_column",
+            "source_rowid",
+            "source_locator",
+            "source_doc"
+          ],
+          "fts": false,
+          "sql": "CREATE TABLE relation_candidates (\n    candidate_id INTEGER PRIMARY KEY,\n    relation_hint TEXT NOT NULL,\n    trigger TEXT NOT NULL,\n    source_db TEXT NOT NULL,\n    source_table TEXT NOT NULL,\n    source_column TEXT,\n    source_rowid INTEGER,\n    source_locator TEXT,\n    source_doc TEXT,\n    snippet TEXT NOT NULL,\n    status TEXT NOT NULL DEFAULT 'UNREVIEWED'\n        CHECK (status IN ('UNREVIEWED','REVIEWED','ACCEPTED','REJECTED')),\n    UNIQUE(relation_hint, source_db, source_table, source_column, source_rowid, source_locator, trigger)\n)",
+          "samples": {
+            "source_db": [],
+            "source_table": [],
+            "source_column": [],
+            "source_rowid": [],
+            "source_locator": [],
+            "source_doc": []
+          }
+        },
+        {
+          "table": "relation_evidence",
+          "row_count": 3,
+          "columns": [
+            {
+              "cid": 0,
+              "name": "evidence_id",
+              "declared_type": "INTEGER",
+              "not_null": false,
+              "primary_key": true
+            },
+            {
+              "cid": 1,
+              "name": "relation_id",
+              "declared_type": "INTEGER",
+              "not_null": true,
+              "primary_key": false
+            },
+            {
+              "cid": 2,
+              "name": "source_db",
+              "declared_type": "TEXT",
+              "not_null": true,
+              "primary_key": false
+            },
+            {
+              "cid": 3,
+              "name": "source_table",
+              "declared_type": "TEXT",
+              "not_null": true,
+              "primary_key": false
+            },
+            {
+              "cid": 4,
+              "name": "source_column",
+              "declared_type": "TEXT",
+              "not_null": false,
+              "primary_key": false
+            },
+            {
+              "cid": 5,
+              "name": "source_rowid",
+              "declared_type": "INTEGER",
+              "not_null": false,
+              "primary_key": false
+            },
+            {
+              "cid": 6,
+              "name": "source_locator",
+              "declared_type": "TEXT",
+              "not_null": false,
+              "primary_key": false
+            },
+            {
+              "cid": 7,
+              "name": "source_doc",
+              "declared_type": "TEXT",
+              "not_null": false,
+              "primary_key": false
+            },
+            {
+              "cid": 8,
+              "name": "source_category",
+              "declared_type": "TEXT",
+              "not_null": false,
+              "primary_key": false
+            },
+            {
+              "cid": 9,
+              "name": "evidence_text",
+              "declared_type": "TEXT",
+              "not_null": true,
+              "primary_key": false
+            },
+            {
+              "cid": 10,
+              "name": "evidence_hash",
+              "declared_type": "TEXT",
+              "not_null": false,
+              "primary_key": false
+            },
+            {
+              "cid": 11,
+              "name": "evidence_grade",
+              "declared_type": "TEXT",
+              "not_null": false,
+              "primary_key": false
+            },
+            {
+              "cid": 12,
+              "name": "extraction_method",
+              "declared_type": "TEXT",
+              "not_null": true,
+              "primary_key": false
+            },
+            {
+              "cid": 13,
+              "name": "notes",
+              "declared_type": "TEXT",
+              "not_null": false,
+              "primary_key": false
+            }
+          ],
+          "text_columns": [
+            "source_db",
+            "source_table",
+            "source_column",
+            "source_locator",
+            "source_doc",
+            "source_category",
+            "evidence_text",
+            "evidence_hash",
+            "evidence_grade",
+            "extraction_method",
+            "notes"
+          ],
+          "hint_columns": [
+            "source_db",
+            "source_table",
+            "source_column",
+            "source_rowid",
+            "source_locator",
+            "source_doc",
+            "source_category",
+            "evidence_text"
+          ],
+          "fts": false,
+          "sql": "CREATE TABLE relation_evidence (\n    evidence_id INTEGER PRIMARY KEY,\n    relation_id INTEGER NOT NULL REFERENCES knowledge_relations(relation_id) ON DELETE CASCADE,\n    source_db TEXT NOT NULL,\n    source_table TEXT NOT NULL,\n    source_column TEXT,\n    source_rowid INTEGER,\n    source_locator TEXT,\n    source_doc TEXT,\n    source_category TEXT,\n    evidence_text TEXT NOT NULL,\n    evidence_hash TEXT,\n    evidence_grade TEXT,\n    extraction_method TEXT NOT NULL,\n    notes TEXT\n)",
+          "samples": {
+            "source_db": [
+              "data/simorgh_full.db"
+            ],
+            "source_table": [
+              "book_chunks_fts"
+            ],
+            "source_column": [
+              "chunk_text"
+            ],
+            "source_rowid": [
+              "2444",
+              "2452",
+              "2457"
+            ],
+            "source_locator": [
+              "rowid:2444",
+              "rowid:2452",
+              "rowid:2457"
+            ],
+            "source_doc": [],
+            "source_category": [],
+            "evidence_text": [
+              "سام همراه فرزندش دستان زال",
+              "یزدان را سپاس که فرزند من رستم یگانه است",
+              "رودابه مادر رستم"
+            ]
+          }
+        },
+        {
+          "table": "relation_types",
+          "row_count": 26,
+          "columns": [
+            {
+              "cid": 0,
+              "name": "relation_key",
+              "declared_type": "TEXT",
+              "not_null": false,
+              "primary_key": true
+            },
+            {
+              "cid": 1,
+              "name": "label_fa",
+              "declared_type": "TEXT",
+              "not_null": true,
+              "primary_key": false
+            },
+            {
+              "cid": 2,
+              "name": "inverse_key",
+              "declared_type": "TEXT",
+              "not_null": false,
+              "primary_key": false
+            },
+            {
+              "cid": 3,
+              "name": "broader_key",
+              "declared_type": "TEXT",
+              "not_null": false,
+              "primary_key": false
+            },
+            {
+              "cid": 4,
+              "name": "symmetric",
+              "declared_type": "INTEGER",
+              "not_null": true,
+              "primary_key": false
+            },
+            {
+              "cid": 5,
+              "name": "description",
+              "declared_type": "TEXT",
+              "not_null": false,
+              "primary_key": false
+            }
+          ],
+          "text_columns": [
+            "relation_key",
+            "label_fa",
+            "inverse_key",
+            "broader_key",
+            "description"
+          ],
+          "hint_columns": [],
+          "fts": false,
+          "sql": "CREATE TABLE relation_types (\n    relation_key TEXT PRIMARY KEY,\n    label_fa TEXT NOT NULL,\n    inverse_key TEXT,\n    broader_key TEXT,\n    symmetric INTEGER NOT NULL DEFAULT 0,\n    description TEXT\n)",
+          "samples": {}
+        }
+      ],
+      "errors": []
+    }
+  ]
+}

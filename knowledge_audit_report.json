@@ -1,0 +1,10 @@
+{
+  "run_id": 1,
+  "knowledge_db": "/home/mahdi/simorgh/data/simorgh_knowledge.db",
+  "scanned_databases": 4,
+  "scanned_tables": 24,
+  "scanned_rows": 279731,
+  "scanned_text_cells": 974262,
+  "relation_candidates": 157451,
+  "issues_found": 2582
+}

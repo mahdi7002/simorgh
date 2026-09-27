@@ -71,3 +71,9 @@ Thumbs.db
 core/voice_endpoint_OLD_backup.py
 SimorghCore
 data/quarantined_poems_backup.json
+rebuild_staging/
+
+# Large knowledge baseline DBs — not source, regenerable, too big for plain git
+data/simorgh_knowledge.db
+data/simorgh_knowledge_v2_baseline_run1.db
+data/simorgh_knowledge_v3.db
