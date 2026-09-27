@@ -136,6 +136,30 @@ PERSONAS = {
 
 QUALITY_PERSONAS = {"hakim", "hafez", "moalem", "motamal"}
 
+# Built-in retrieval is opt-in by semantic/source hints, not by default
+# for every question. This prevents irrelevant local material from
+# overwhelming small CPU-hosted models.
+RETRIEVAL_HINTS = {
+    "quran": (
+        "قرآن", "قرانی", "آیه", "آیات", "سوره", "تفسیر", "وحی",
+    ),
+    "poetry": (
+        "شعر", "شاعر", "غزل", "مثنوی", "بیت", "رباعی", "قصیده",
+        "حافظ", "مولانا", "سعدی", "فردوسی", "خیام", "عطار",
+    ),
+    "books": (
+        "کتاب", "شاهنامه", "رمان", "فصل", "صفحه", "اثر", "نویسنده",
+    ),
+}
+
+def _retrieval_plan(question: str) -> dict[str, bool]:
+    text = question.strip().lower()
+    return {
+        source: any(hint in text for hint in hints)
+        for source, hints in RETRIEVAL_HINTS.items()
+    }
+
+
 FIDELITY_RULE = (
     "\n\nقانون جدی: اگر متنی از قرآن یا شعر فارسی در ادامه آمده، آن را دقیقاً "
     "همان‌طور که هست نقل کن یا کامل حذفش کن — هرگز کلمه‌ای از آن را عوض، خلاصه، "
@@ -207,15 +231,23 @@ def ask(
     poetry: list = []
     books: list = []
 
+    retrieval = _retrieval_plan(question)
+
     if use_builtin_tools:
-        quran = get_quran_wisdom(question, limit=1)
-        poetry = get_poetic_wisdom(question)
-        books = get_book_wisdom(question, limit=2)
-        extra_parts.extend([
-            format_quran(quran),
-            format_poetry(poetry),
-            format_books(books),
-        ])
+        if retrieval["quran"]:
+            quran = get_quran_wisdom(question, limit=1)
+            if quran:
+                extra_parts.append(format_quran(quran))
+
+        if retrieval["poetry"]:
+            poetry = get_poetic_wisdom(question)
+            if poetry:
+                extra_parts.append(format_poetry(poetry))
+
+        if retrieval["books"]:
+            books = get_book_wisdom(question, limit=2)
+            if books:
+                extra_parts.append(format_books(books))
 
     if tool_context:
         extra_parts.append(tool_context)

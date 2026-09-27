@@ -1,4 +1,5 @@
 from pathlib import Path
+from contextlib import asynccontextmanager
 import hashlib
 import logging
 import os
@@ -84,7 +85,40 @@ def _session_id(request: Request) -> str:
     return hashlib.sha256(raw.encode("utf-8")).hexdigest()
 
 
-app = FastAPI(title="SIMORGH", version=os.getenv("SIMORGH_VERSION", "0.1.0"))
+@asynccontextmanager
+async def lifespan(app):
+    """Restore the configured local model backend without making it required for Core."""
+    if os.getenv("SIMORGH_AUTO_START_BACKEND", "1") == "1":
+        try:
+            from core.local_backend import autostart_configured_backend
+
+            result = autostart_configured_backend()
+            if result is None:
+                logger.info("no configured local model; Core starts in database-first mode")
+            elif result.get("started"):
+                logger.info(
+                    "managed local backend ready: %s",
+                    result.get("endpoint"),
+                )
+            else:
+                logger.warning(
+                    "managed local backend unavailable: %s",
+                    result.get("note", "unknown reason"),
+                )
+        except Exception:
+            # AI backend failure must never take down the offline Core.
+            logger.exception("local backend auto-start failed; continuing without AI")
+    else:
+        logger.info("local backend auto-start disabled by configuration")
+
+    yield
+
+
+app = FastAPI(
+    title="SIMORGH",
+    version=os.getenv("SIMORGH_VERSION", "0.1.0"),
+    lifespan=lifespan,
+)
 app.add_middleware(RequestBodyLimitMiddleware, max_body_size=MAX_REQUEST_BYTES)
 from core.voice_docs import router as voice_docs_router
 from core.dashboard_api import router as dashboard_api_router
