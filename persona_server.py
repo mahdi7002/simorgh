@@ -2,7 +2,7 @@ import os, re
 from fastapi import FastAPI, Form
 import uvicorn
 
-ROOT = "/home/mahdi/SimorghCore/personas"
+ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "personas")
 
 def find_text_dir(name):
     # حذف فاصله، زیرخط و نیم‌فاصله برای تطبیق
