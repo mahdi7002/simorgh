@@ -48,4 +48,4 @@ async def ask(channel_name: str = Form(...), question: str = Form(...)):
     return {"channel": channel_name, "response": search(text, question)}
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=8001)
+    uvicorn.run(app, host=os.environ.get("SIMORGH_BIND", "127.0.0.1"), port=8001)
