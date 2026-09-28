@@ -22,3 +22,6 @@ data/*.log
 data/snapshots/
 data/reports/
 data/quarantined_poems_backup.json
+
+# binary DBs never tracked
+*.db
