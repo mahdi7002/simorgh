@@ -1,79 +1,24 @@
-# Virtual environments
-venv/
-.venv/
-.venv-*/
-env/
-SimorghCore/venv/
-
-# Python cache & build
-__pycache__/
-*.py[cod]
-*$py.class
-*.so
-.Python
-*.egg-info/
-dist/
-build/
-
-# Speech models & large binaries (NEVER commit)
-vosk-model-fa/
-models/vosk-model-fa/
-models/piper/
-models/vosk-model-small-fa-0.5.zip
-vosk-model-small-fa-0.5/
-vosk-model-small-fa-0.5.zip
-*.zip
-*.bin
-*.pt
-*.onnx
-*.gguf
-*.fst
-*.mdl
-
-# Backups & temporary
-*.bak
-*.bak2
-*.bak3
-*.tmp
-*.pre_upgrade_backup
-*.OLD_backup
-*~
-
-# Runtime logs & temporary data
 .env
-logs/
+backend/venv/
+frontend/node_modules/
+*.pyc
+__pycache__/
+
+# Stray dev virtualenvs (audit sessions)
+.venv-compliance/
+.venv-final-audit/
+
+# Backup file patterns (broader than the specific ones already listed)
+*.pre-fast-scan
+*.pre-fast-audit
+data/*.pre_ganjoor_*.bak
+
+# Runtime/log clutter
 audio_in/
 audio_out/
-data/reports/
-data/snapshots/
-data/*.log
-data/import*.log
-data/reflection.log
-data/reports.log
-imports/
-transcripts/
 memory/*.db
 data/activity.db
-data/terminal.log
-
-# Generated compliance artifacts
-*.spdx.json
-compliance/generated/
-
-# IDE / OS
-.idea/
-.vscode/
-*.swp
-.DS_Store
-Thumbs.db
-
-# Old specific files
-core/voice_endpoint_OLD_backup.py
-SimorghCore
+data/*.log
+data/snapshots/
+data/reports/
 data/quarantined_poems_backup.json
-rebuild_staging/
-
-# Large knowledge baseline DBs — not source, regenerable, too big for plain git
-data/simorgh_knowledge.db
-data/simorgh_knowledge_v2_baseline_run1.db
-data/simorgh_knowledge_v3.db
