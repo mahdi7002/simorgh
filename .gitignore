@@ -44,3 +44,4 @@ data/*.log
 data/snapshots/
 data/reports/
 data/quarantined_poems_backup.json
+data/simorgh.db
