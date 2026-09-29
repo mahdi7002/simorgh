@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "root": "/home/mahdi/simorgh/data",
+  "root": "<repo>/data",
   "databases_found": 6,
   "databases": [
     {
@@ -2234,7 +2234,7 @@
           "sql": "CREATE TABLE audit_issues (\n    issue_id INTEGER PRIMARY KEY,\n    run_id INTEGER NOT NULL REFERENCES audit_runs(run_id) ON DELETE CASCADE,\n    severity TEXT NOT NULL,\n    issue_type TEXT NOT NULL,\n    source_db TEXT NOT NULL,\n    source_table TEXT NOT NULL,\n    source_column TEXT,\n    source_rowid INTEGER,\n    source_locator TEXT,\n    source_doc TEXT,\n    details TEXT NOT NULL\n)",
           "samples": {
             "source_db": [
-              "/home/mahdi/simorgh/data/simorgh_full.db"
+              "<repo>/data/simorgh_full.db"
             ],
             "source_table": [
               "book_chunks_fts",
@@ -2682,9 +2682,9 @@
           "sql": "CREATE TABLE relation_candidates (\n    candidate_id INTEGER PRIMARY KEY,\n    relation_hint TEXT NOT NULL,\n    trigger TEXT NOT NULL,\n    source_db TEXT NOT NULL,\n    source_table TEXT NOT NULL,\n    source_column TEXT,\n    source_rowid INTEGER,\n    source_locator TEXT,\n    source_doc TEXT,\n    snippet TEXT NOT NULL,\n    status TEXT NOT NULL DEFAULT 'UNREVIEWED'\n        CHECK (status IN ('UNREVIEWED','REVIEWED','ACCEPTED','REJECTED')),\n    UNIQUE(relation_hint, source_db, source_table, source_column, source_rowid, source_locator, trigger)\n)",
           "samples": {
             "source_db": [
-              "/home/mahdi/simorgh/data/grid/quran.db",
-              "/home/mahdi/simorgh/data/simorgh_full.db",
-              "/home/mahdi/simorgh/data/simorgh.db"
+              "<repo>/data/grid/quran.db",
+              "<repo>/data/simorgh_full.db",
+              "<repo>/data/simorgh.db"
             ],
             "source_table": [
               "knowledge_fts",

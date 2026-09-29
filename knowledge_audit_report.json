@@ -1,6 +1,6 @@
 {
   "run_id": 1,
-  "knowledge_db": "/home/mahdi/simorgh/data/simorgh_knowledge.db",
+  "knowledge_db": "<repo>/data/simorgh_knowledge.db",
   "scanned_databases": 4,
   "scanned_tables": 24,
   "scanned_rows": 279731,
