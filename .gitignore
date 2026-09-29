@@ -25,3 +25,22 @@ data/quarantined_poems_backup.json
 
 # binary DBs never tracked
 *.db
+
+# Stray dev virtualenvs (audit sessions)
+.venv-compliance/
+.venv-final-audit/
+
+# Backup file patterns (broader than the specific ones already listed)
+*.pre-fast-scan
+*.pre-fast-audit
+data/*.pre_ganjoor_*.bak
+
+# Runtime/log clutter
+audio_in/
+audio_out/
+memory/*.db
+data/activity.db
+data/*.log
+data/snapshots/
+data/reports/
+data/quarantined_poems_backup.json
