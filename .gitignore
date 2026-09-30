@@ -53,3 +53,11 @@ data/simorgh.db
 data/corpus_census.json
 data/simorgh_knowledge_v3.db
 knowledge_audit_report.json
+
+# Runtime/personal data — never public
+data/simorgh.db
+
+# Generated audit/report artifacts — regenerate on demand, contain local paths
+data/corpus_census.json
+data/simorgh_knowledge_v3.db
+knowledge_audit_report.json
