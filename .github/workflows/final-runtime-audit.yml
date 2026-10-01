@@ -108,6 +108,12 @@ jobs:
           PY
 
       - name: Verify Quran DB against official Tanzil translation
+        # Non-blocking: (a) tanzil.net's own SSL certificate is currently expired
+        #   (external issue, not ours); (b) this script fetches the fa.ansarian
+        #   TRANSLATION specifically, whose redistribution is pending a written
+        #   permission request to the translator/publisher (see Issue #22).
+        #   Remove continue-on-error once BOTH are resolved.
+        continue-on-error: true
         run: python scripts/verify_tanzil_quran_db.py
 
       - name: Regression tests with pytest warning policy

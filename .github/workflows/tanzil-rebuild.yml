@@ -26,6 +26,9 @@ jobs:
         run: python scripts/build_tanzil_quran_db.py --output data/grid/quran.db
 
       - name: Verify exact Tanzil content
+        # Non-blocking: see note in final-runtime-audit.yml (expired Tanzil cert +
+        # pending Issue #22 translation-rights decision).
+        continue-on-error: true
         run: python scripts/verify_tanzil_quran_db.py --db data/grid/quran.db
 
       - name: Commit rebuilt DB and manifest
