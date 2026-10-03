@@ -1,5 +1,7 @@
 # SIMORGH AI WORK CONTRACT
 
+> پیش از هر کاری docs/BUILD_PRINCIPLES.md را بخوان و scripts/ai_session_start_check.sh را اجرا کن.
+
 **Effective:** 2026-09-26
 
 This contract governs AI collaboration on the SIMORGH/MOTHER work currently described by
