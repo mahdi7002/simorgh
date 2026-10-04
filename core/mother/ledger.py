@@ -156,11 +156,24 @@ class MotherLedger:
                 "FROM boot_sessions ORDER BY id DESC LIMIT 1"
             ).fetchone()
             previous_id = previous["boot_id"] if previous else None
-            conn.execute(
-                "INSERT INTO boot_sessions(boot_id,started_at,previous_boot_id,clean_shutdown,status) "
-                "VALUES(?,?,?,?,?)",
-                (current, utc_now(), previous_id, None, "running"),
-            )
+            try:
+                conn.execute(
+                    "INSERT INTO boot_sessions(boot_id,started_at,previous_boot_id,clean_shutdown,status) "
+                    "VALUES(?,?,?,?,?)",
+                    (current, utc_now(), previous_id, None, "running"),
+                )
+            except sqlite3.IntegrityError:
+                # Race: another instance (orphan or overlapping restart) inserted
+                # this boot_id between our SELECT and INSERT. Not fatal — the row
+                # exists now, just re-read it instead of crashing the observer thread.
+                row = conn.execute(
+                    "SELECT boot_id, started_at, previous_boot_id, clean_shutdown, status "
+                    "FROM boot_sessions WHERE boot_id=?",
+                    (current,),
+                ).fetchone()
+                if row:
+                    return dict(row)
+                raise
         self.record_event(
             component="mother",
             event_type="boot_started",
