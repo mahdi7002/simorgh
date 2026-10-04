@@ -11,7 +11,15 @@ from typing import Dict, List
 logger = logging.getLogger(__name__)
 DEFAULT_DB_PATH = Path(__file__).resolve().parents[1] / "data" / "simorgh_full.db"
 DB_PATH = Path(os.environ.get("SIMORGH_POETRY_DB", str(DEFAULT_DB_PATH))).expanduser().resolve()
-STOPWORDS = {"من", "تو", "او", "ما", "شما", "این", "که", "را", "به", "از", "با", "در", "و", "چیکار", "کنم"}
+STOPWORDS = {"من", "تو", "او", "ما", "شما", "این", "که", "را", "به", "از", "با", "در", "و", "چیکار", "کنم", "چیست", "چیه", "کدام", "چرا", "چگونه", "چطور", "توضیح", "بده", "درباره", "معنی", "یعنی", "آیا", "کجا", "چه"}
+
+
+def _is_lfs_pointer(path: Path) -> bool:
+    try:
+        with open(path, "rb") as fh:
+            return fh.read(40).startswith(b"version https://git-lfs")
+    except OSError:
+        return False
 
 
 def _extract_keywords(text: str, max_words: int = 5) -> List[str]:
@@ -21,6 +29,9 @@ def _extract_keywords(text: str, max_words: int = 5) -> List[str]:
 
 def get_poetic_wisdom(query: str, limit: int = 2) -> List[Dict]:
     if not DB_PATH.is_file():
+        return []
+    if _is_lfs_pointer(DB_PATH):
+        logger.warning("پایگاه شعر فقط اشاره‌گر Git LFS است؛ اجرا کنید: git lfs pull (یا scripts/check_poetry_db.py)")
         return []
     keywords = _extract_keywords(query)
     if not keywords:

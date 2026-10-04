@@ -11,7 +11,7 @@ from typing import Dict, List
 logger = logging.getLogger(__name__)
 DEFAULT_DB_PATH = Path(__file__).resolve().parents[1] / "data" / "grid" / "quran.db"
 DB_PATH = Path(os.environ.get("SIMORGH_QURAN_DB", str(DEFAULT_DB_PATH))).expanduser().resolve()
-STOPWORDS = {"من", "تو", "او", "ما", "شما", "این", "که", "را", "به", "از", "با", "در", "و", "چیکار", "کنم", "بگو", "است", "شد", "کرد", "هست", "بود", "کن", "شود", "برای", "همه", "هیچ", "قصه", "داستان"}
+STOPWORDS = {"من", "تو", "او", "ما", "شما", "این", "که", "را", "به", "از", "با", "در", "و", "چیکار", "کنم", "بگو", "است", "شد", "کرد", "هست", "بود", "کن", "شود", "برای", "همه", "هیچ", "قصه", "داستان", "چیست", "چیه", "کدام", "چرا", "چگونه", "چطور", "توضیح", "بده", "درباره", "معنی", "یعنی", "آیا", "کجا", "چه"}
 
 
 def _extract_keywords(text: str, max_words: int = 5) -> List[str]:
@@ -25,14 +25,19 @@ def get_quran_wisdom(query: str, limit: int = 3) -> List[Dict]:
     keywords = _extract_keywords(query)
     if not keywords:
         return []
-    match_query = " AND ".join(keywords)
+    rows = []
     try:
         with closing(sqlite3.connect(DB_PATH)) as conn:
             with conn:
-                rows = conn.execute(
-                    "SELECT category, content FROM knowledge_fts WHERE knowledge_fts MATCH ? AND category = 'معنوی' ORDER BY rank LIMIT ?",
-                    (match_query, limit),
-                ).fetchall()
+                # AND of all keywords first; if nothing matches, relax by dropping the last keyword
+                for n in range(len(keywords), 0, -1):
+                    match_query = " AND ".join(keywords[:n])
+                    rows = conn.execute(
+                        "SELECT category, content FROM knowledge_fts WHERE knowledge_fts MATCH ? AND category = 'معنوی' ORDER BY rank LIMIT ?",
+                        (match_query, limit),
+                    ).fetchall()
+                    if rows:
+                        break
     except Exception as exc:
         logger.warning("جستجوی قرآن شکست خورد: %s", exc)
         return []

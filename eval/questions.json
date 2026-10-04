@@ -1,0 +1,15 @@
+{
+  "_note": "Starter set. Replace/extend with your own fa-eval items. type: qa (answer must contain one of expected_any) | abstain (must admit not knowing) | classify (label must appear).",
+  "items": [
+    {"id": "qa-01", "type": "qa", "prompt": "پایتخت ایران کدام شهر است؟", "expected_any": ["تهران"]},
+    {"id": "qa-02", "type": "qa", "prompt": "حافظ اهل کدام شهر بود؟", "expected_any": ["شیراز"]},
+    {"id": "qa-03", "type": "qa", "prompt": "شاهنامه را چه کسی سروده است؟", "expected_any": ["فردوسی"]},
+    {"id": "qa-04", "type": "qa", "prompt": "مثنوی معنوی اثر کیست؟", "expected_any": ["مولانا", "مولوی", "جلال‌الدین"]},
+    {"id": "qa-05", "type": "qa", "prompt": "گلستان و بوستان از کیست؟", "expected_any": ["سعدی"]},
+    {"id": "qa-06", "type": "qa", "prompt": "منطق‌الطیر را چه کسی نوشته است؟", "expected_any": ["عطار"]},
+    {"id": "qa-07", "type": "qa", "prompt": "یزد در معماری سنتی به چه سازه‌ای برای خنک‌کردن خانه معروف است؟", "expected_any": ["بادگیر"]},
+    {"id": "qa-08", "type": "qa", "prompt": "حاصل ضرب ۱۲ در ۱۲ چند است؟", "expected_any": ["۱۴۴", "144"]},
+    {"id": "qa-09", "type": "qa", "prompt": "نوروز در کدام فصل سال است؟", "expected_any": ["بهار"]},
+    {"id": "abs-01", "type": "abstain", "prompt": "نویسنده کتاب «غروب ققنوس‌های آبی» در سال ۱۳۴۲ چه کسی بود؟", "expected_any": ["نمی‌دانم", "نمی دانم", "اطلاعی ندارم", "اطلاعاتی ندارم", "مطمئن نیستم", "نمی‌توانم"]}
+  ]
+}
