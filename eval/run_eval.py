@@ -44,13 +44,25 @@ POETRY_TOPICS = ["عشق", "صبر", "وطن", "مرگ", "باده", "امید",
 ABSTAIN_PHRASES = ("نمی‌دانم", "نمی دانم", "اطلاعی ندارم", "اطلاعاتی ندارم", "مطمئن نیستم", "نمی‌توانم")
 
 
+def wilson(k: int, n: int, z: float = 1.96) -> tuple[float, float]:
+    """95% Wilson score interval for k successes out of n, as percentages."""
+    if n == 0:
+        return (0.0, 0.0)
+    p = k / n
+    d = 1 + z * z / n
+    c = p + z * z / (2 * n)
+    a = z * (p * (1 - p) / n + z * z / (4 * n * n)) ** 0.5
+    return round(100 * (c - a) / d, 1), round(100 * (c + a) / d, 1)
+
+
 def env_info() -> dict:
     cpu = platform.processor() or ""
     try:
-        for line in open("/proc/cpuinfo", encoding="utf-8"):
-            if line.startswith("model name"):
-                cpu = line.split(":", 1)[1].strip()
-                break
+        with open("/proc/cpuinfo", encoding="utf-8") as fh:
+            for line in fh:
+                if line.startswith("model name"):
+                    cpu = line.split(":", 1)[1].strip()
+                    break
     except OSError:
         pass
     try:
@@ -143,10 +155,32 @@ def section_attribution(n: int, seed: int, lookup_file: str | None) -> dict:
                 break
         return out
 
+    def drop_middle_letter(ws):
+        out = list(ws[:6])
+        for i in (2, 3, 1, 0):
+            if i < len(out) and len(out[i]) >= 4:
+                m = len(out[i]) // 2
+                out[i] = out[i][:m] + out[i][m + 1:]
+                break
+        return out
+
+    def swap_adjacent(ws):
+        out = list(ws[:6])
+        for i in (2, 3, 1, 0):
+            if i < len(out) and len(out[i]) >= 4:
+                m = len(out[i]) // 2 - 1
+                w = list(out[i])
+                w[m], w[m + 1] = w[m + 1], w[m]
+                out[i] = "".join(w)
+                break
+        return out
+
     queries = {
         "prefix6": lambda ws: ws[:6],
         "middle4": lambda ws: ws[2:6],
         "typo": lambda ws: drop_last_letter(ws[:6]),
+        "typo_mid": drop_middle_letter,
+        "swap": swap_adjacent,
     }
     scored = {}
     for name, make in queries.items():
@@ -160,6 +194,9 @@ def section_attribution(n: int, seed: int, lookup_file: str | None) -> dict:
                 abstained += 1
                 in_cands += pid in r["cand_pids"]
         scored[name] = (answered, correct, abstained, in_cands)
+    raw_counts = {name: {"answered": a, "correct": c, "abstained": ab, "in_candidates": ic, "n": len(sample)}
+                  for name, (a, c, ab, ic) in scored.items()}
+    raw_counts["chimera"] = None  # filled below
     answered, correct, abstained, in_cands = scored["prefix6"]
     chim_n = chim_acc = 0
     for (pa, ta), (pb, tb) in zip(sample[::2], sample[1::2]):
@@ -174,6 +211,7 @@ def section_attribution(n: int, seed: int, lookup_file: str | None) -> dict:
             "answered_accuracy": f"{correct}/{answered}" if answered else "n/a",
             "abstained_poet_in_candidates": f"{in_cands}/{abstained}" if abstained else "n/a",
             "chimera_false_accept": f"{chim_acc}/{chim_n}",
+            "counts": {**{k: v for k, v in raw_counts.items() if v}, "chimera": {"accepted": chim_acc, "n": chim_n}},
             "harder_variants": {
                 name: {"answered": f"{a}/{total}", "answered_accuracy": f"{c}/{a}" if a else "n/a",
                        "abstained_poet_in_candidates": f"{ic}/{ab}" if ab else "n/a"}
@@ -248,10 +286,10 @@ def to_markdown(report: dict) -> str:
         lines.append(f"| E. Verse attribution | {a2['reason']} | SKIPPED |")
     elif a2:
         lines.append(f"| E. Verse attribution | {a2['setting']} | answered {a2['coverage_answered']}, answered-accuracy {a2['answered_accuracy']}, abstained-with-poet-in-candidates {a2['abstained_poet_in_candidates']}, chimera false-accepts {a2['chimera_false_accept']} |")
-    for name, label in (("middle4", "middle 4 words (no prefix)"), ("typo", "prefix with one letter dropped")):
-        v = a2.get("harder_variants", {}).get(name) if a2 else None
-        if v:
-            lines.append(f"| E+. Verse attribution, {label} | same sample, same lookup | answered {v['answered']}, answered-accuracy {v['answered_accuracy']}, abstained-with-poet-in-candidates {v['abstained_poet_in_candidates']} |")
+    labels = {"middle4": "middle 4 words (no prefix)", "typo": "prefix, last letter of a word dropped",
+              "typo_mid": "prefix, a middle letter dropped", "swap": "prefix, two adjacent letters swapped"}
+    for name, v in (a2.get("harder_variants", {}) if a2 else {}).items():
+        lines.append(f"| E+. Verse attribution, {labels.get(name, name)} | same sample, same lookup | answered {v['answered']}, answered-accuracy {v['answered_accuracy']}, abstained-with-poet-in-candidates {v['abstained_poet_in_candidates']} |")
     l = s["llm_qa"]
     if l.get("status") == "SKIPPED":
         lines.append(f"| D. LLM QA | {l['reason']} | SKIPPED |")
