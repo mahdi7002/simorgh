@@ -36,18 +36,18 @@ def pooled(runs: list[dict]) -> dict:
     out = {}
     for v in VARIANTS:
         rows = [r["counts"][v] for r in runs]
-        out[v] = {key: sum(x[key] for x in rows) for key in ("answered", "correct", "abstained", "in_candidates", "n")}
+        out[v] = {key: sum(x[key] for x in rows) for key in ("answered", "correct", "abstained", "in_candidates", "dup_ok", "n")}
     out["chimera"] = {key: sum(r["counts"]["chimera"][key] for r in runs) for key in ("accepted", "n")}
     return out
 
 
 def table(c: dict) -> list[str]:
-    rows = ["| Variant | Coverage (answered) | Answered-accuracy | Abstained, true poet among candidates |", "|---|---|---|---|"]
+    rows = ["| Variant | Coverage (answered) | Answered-accuracy | of which: returned poet also holds the identical verse | Abstained, true poet among candidates |", "|---|---|---|---|---|"]
     for v in VARIANTS:
         x = c[v]
-        rows.append(f"| {TITLES[v]} | {fmt(x['answered'], x['n'])} | {fmt(x['correct'], x['answered'])} | {fmt(x['in_candidates'], x['abstained'])} |")
+        rows.append(f"| {TITLES[v]} | {fmt(x['answered'], x['n'])} | {fmt(x['correct'] + x['dup_ok'], x['answered'])} | {x['dup_ok']} | {fmt(x['in_candidates'], x['abstained'])} |")
     ch = c["chimera"]
-    rows.append(f"| chimera verses wrongly accepted | {fmt(ch['accepted'], ch['n'])} | | |")
+    rows.append(f"| chimera verses wrongly accepted | {fmt(ch['accepted'], ch['n'])} | | | |")
     return rows
 
 
@@ -80,14 +80,18 @@ def main() -> int:
     lines += ["", "## Per-seed held-out coverage / answered-accuracy (stability check)", "", "| Seed | " + " | ".join(TITLES[v] for v in VARIANTS) + " |",
               "|---|" + "---|" * len(VARIANTS)]
     for sd, r in zip(args.heldout_seeds, held):
-        cells = [f"{r['counts'][v]['answered']}/{r['counts'][v]['n']} · {r['counts'][v]['correct']}/{r['counts'][v]['answered']}" for v in VARIANTS]
+        cells = [f"{r['counts'][v]['answered']}/{r['counts'][v]['n']} · {r['counts'][v]['correct'] + r['counts'][v]['dup_ok']}/{r['counts'][v]['answered']}" for v in VARIANTS]
         lines.append(f"| {sd} | " + " | ".join(cells) + " |")
-    lines += ["", "## Error analysis (every wrong answer and accepted chimera in the held-out runs)", ""]
+    lines += ["", "## Error analysis (held-out runs)", "",
+              "Metric note: the database lists some verses under several poets (e.g. a quotation). If the returned poet also holds the",
+              "identical verse, the answer counts as correct and is listed as *duplicate*. This refinement was made after inspecting the",
+              "first run's errors, which were all of this kind; strict (single-poet) counts are in `eval/results/*.json` (`correct` vs `dup_ok`).", ""]
     errs = [(sd, e) for sd, r in zip(args.heldout_seeds, held) for e in r.get("errors", [])]
     if not errs:
-        lines.append("None.")
+        lines.append("No wrong answers, duplicates or accepted chimeras.")
     for sd, e in errs:
-        lines += [f"- seed {sd} · **{e['variant']}** · query: `{e['query']}`",
+        extra = f" · returned poet is one of the two source poets: {'yes' if e.get('got_poet_is_source') else 'no'}" if e["kind"] == "chimera" else ""
+        lines += [f"- seed {sd} · **{e['kind']}** · {e['variant']}{extra} · query: `{e['query']}`",
                   f"  - true: {e['true_poet']} — {e['true_verse']}",
                   f"  - got: {e['got_poet']} — {e['got_verse']}"]
     lines += ["", "Queries are derived from the database itself, so this measures retrieval and abstention behaviour, not accuracy on arbitrary",

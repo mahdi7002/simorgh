@@ -132,6 +132,22 @@ def _load_lookup(path: str | None):
     return mod
 
 
+def same_text_poets(mod, text: str) -> set:
+    """All poets holding this verse (same normalised words). The DB lists some verses under several poets
+    (e.g. a quotation), so the ground truth for such a verse is a set, not a single poet."""
+    ws = mod.words(text)
+    try:
+        rows = mod.fts('"' + " ".join(ws[:12]) + '"', 25)
+    except Exception:
+        return set()
+    out = set()
+    for (rid,) in rows:
+        h = mod.info(rid)
+        if h and mod.words(h[5]) == ws:
+            out.add(h[1])
+    return out
+
+
 def section_attribution(n: int, seed: int, lookup_file: str | None) -> dict:
     """Who wrote this verse? Deterministic lookup, no LLM. EASY setting: query = first words of an indexed verse."""
     try:
@@ -189,25 +205,30 @@ def section_attribution(n: int, seed: int, lookup_file: str | None) -> dict:
     errors = []  # error analysis: every wrong answer and every accepted chimera, for the evidence file
     scored = {}
     for name, make in queries.items():
-        answered = correct = in_cands = abstained = 0
+        answered = correct = in_cands = abstained = dup_ok = 0
         for pid, text in sample:
             query = " ".join(make(mod.words(text)))
             r = mod.lookup(query)
             if r["status"] == "answer":
                 answered += 1
-                ok = r["pid"] == pid
-                correct += ok
-                if not ok and len(errors) < 50:
-                    errors.append({"variant": name, "query": query, "true_poet": poet_name(pid), "true_verse": text,
+                if r["pid"] == pid:
+                    correct += 1
+                elif r["pid"] in same_text_poets(mod, text):
+                    dup_ok += 1
+                    if len(errors) < 50:
+                        errors.append({"variant": name, "kind": "duplicate", "query": query, "true_poet": poet_name(pid),
+                                       "true_verse": text, "got_poet": r["poet"], "got_verse": r["verse"]})
+                elif len(errors) < 50:
+                    errors.append({"variant": name, "kind": "wrong", "query": query, "true_poet": poet_name(pid), "true_verse": text,
                                    "got_poet": r["poet"], "got_verse": r["verse"]})
             else:
                 abstained += 1
                 in_cands += pid in r["cand_pids"]
-        scored[name] = (answered, correct, abstained, in_cands)
-    raw_counts = {name: {"answered": a, "correct": c, "abstained": ab, "in_candidates": ic, "n": len(sample)}
-                  for name, (a, c, ab, ic) in scored.items()}
+        scored[name] = (answered, correct, abstained, in_cands, dup_ok)
+    raw_counts = {name: {"answered": a, "correct": c, "abstained": ab, "in_candidates": ic, "dup_ok": d, "n": len(sample)}
+                  for name, (a, c, ab, ic, d) in scored.items()}
     raw_counts["chimera"] = None  # filled below
-    answered, correct, abstained, in_cands = scored["prefix6"]
+    answered, correct, abstained, in_cands, _dup = scored["prefix6"]
     chim_n = chim_acc = 0
     for (pa, ta), (pb, tb) in zip(sample[::2], sample[1::2]):
         if pa == pb:
@@ -218,20 +239,20 @@ def section_attribution(n: int, seed: int, lookup_file: str | None) -> dict:
         if r["status"] == "answer":
             chim_acc += 1
             if len(errors) < 50:
-                errors.append({"variant": "chimera", "query": chim_query, "true_poet": f"{poet_name(pa)} + {poet_name(pb)}",
+                errors.append({"variant": "chimera", "kind": "chimera", "got_poet_is_source": r["pid"] in (pa, pb), "query": chim_query, "true_poet": f"{poet_name(pa)} + {poet_name(pb)}",
                                "true_verse": f"{ta} + {tb}", "got_poet": r["poet"], "got_verse": r["verse"]})
     total = len(sample)
     return {"setting": f"EASY: query = first 6 words of a random indexed verse, seed={seed}, n={total}; lookup={lookup_file or 'app.knowledge.poetry_lookup'}",
             "coverage_answered": f"{answered}/{total}",
-            "answered_accuracy": f"{correct}/{answered}" if answered else "n/a",
+            "answered_accuracy": f"{correct + _dup}/{answered}" if answered else "n/a",
             "abstained_poet_in_candidates": f"{in_cands}/{abstained}" if abstained else "n/a",
             "chimera_false_accept": f"{chim_acc}/{chim_n}",
             "errors": errors,
             "counts": {**{k: v for k, v in raw_counts.items() if v}, "chimera": {"accepted": chim_acc, "n": chim_n}},
             "harder_variants": {
-                name: {"answered": f"{a}/{total}", "answered_accuracy": f"{c}/{a}" if a else "n/a",
+                name: {"answered": f"{a}/{total}", "answered_accuracy": f"{c + d}/{a}" if a else "n/a",
                        "abstained_poet_in_candidates": f"{ic}/{ab}" if ab else "n/a"}
-                for name, (a, c, ab, ic) in scored.items() if name != "prefix6"}}
+                for name, (a, c, ab, ic, d) in scored.items() if name != "prefix6"}}
 
 
 def llm_chat(url: str, prompt: str, timeout: int) -> dict:

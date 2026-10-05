@@ -68,3 +68,27 @@ def test_finalize_evidence_writes_report_from_real_counts(tmp_path, monkeypatch)
     assert "pooled n=60" in text
     assert "## Error analysis" in text
     pl.close()
+
+
+def test_same_text_poets_sees_quoted_duplicate_under_other_poet(tmp_path, monkeypatch):
+    from app.knowledge import poetry_lookup as pl
+
+    db = tmp_path / "v.db"
+    conn = sqlite3.connect(db)
+    conn.execute("create table poets(id integer primary key, name text)")
+    conn.execute("create table verses(id integer primary key, poet_id int, poem_id int, bait_number int, text text)")
+    conn.execute("create virtual table verses_fts using fts5(text)")
+    for pid in (1, 2, 3):
+        conn.execute("insert into poets values (?,?)", (pid, f"شاعر{pid}"))
+    rows = [(1, "چه معنی دارد اندر خود سفر کن یگانه"), (2, "چه معنی دارد «اندر خود سفر کن» یگانه"), (3, "چه معنی دارد اندر دل سفر کن یگانه")]
+    for vid, (pid, text) in enumerate(rows, 1):
+        conn.execute("insert into verses values (?,?,?,?,?)", (vid, pid, vid, 1, text))
+        conn.execute("insert into verses_fts(rowid, text) values (?,?)", (vid, text))
+    conn.commit()
+    conn.close()
+    pl.close()
+    monkeypatch.setattr(pl, "DB", str(db))
+    run_eval = _load("run_eval")
+    assert run_eval.same_text_poets(pl, rows[0][1]) == {1, 2}   # punctuation-insensitive, other poet found
+    assert run_eval.same_text_poets(pl, rows[2][1]) == {3}      # a near-duplicate with a different word is not a duplicate
+    pl.close()
