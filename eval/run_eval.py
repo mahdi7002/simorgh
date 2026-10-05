@@ -135,15 +135,32 @@ def section_attribution(n: int, seed: int, lookup_file: str | None) -> dict:
         row = db.execute("select v.poet_id, v.text from verses v where v.id=?", (rng.randint(lo, hi),)).fetchone()
         if row and len(mod.words(row[1])) >= 6:
             sample.append(row)
-    answered = correct = in_cands = abstained = 0
-    for pid, text in sample:
-        r = mod.lookup(" ".join(mod.words(text)[:6]))
-        if r["status"] == "answer":
-            answered += 1
-            correct += r["pid"] == pid
-        else:
-            abstained += 1
-            in_cands += pid in r["cand_pids"]
+    def drop_last_letter(ws):
+        out = list(ws)
+        for i in (2, 3, 1, 0):
+            if i < len(out) and len(out[i]) >= 4:
+                out[i] = out[i][:-1]
+                break
+        return out
+
+    queries = {
+        "prefix6": lambda ws: ws[:6],
+        "middle4": lambda ws: ws[2:6],
+        "typo": lambda ws: drop_last_letter(ws[:6]),
+    }
+    scored = {}
+    for name, make in queries.items():
+        answered = correct = in_cands = abstained = 0
+        for pid, text in sample:
+            r = mod.lookup(" ".join(make(mod.words(text))))
+            if r["status"] == "answer":
+                answered += 1
+                correct += r["pid"] == pid
+            else:
+                abstained += 1
+                in_cands += pid in r["cand_pids"]
+        scored[name] = (answered, correct, abstained, in_cands)
+    answered, correct, abstained, in_cands = scored["prefix6"]
     chim_n = chim_acc = 0
     for (pa, ta), (pb, tb) in zip(sample[::2], sample[1::2]):
         if pa == pb:
@@ -156,7 +173,11 @@ def section_attribution(n: int, seed: int, lookup_file: str | None) -> dict:
             "coverage_answered": f"{answered}/{total}",
             "answered_accuracy": f"{correct}/{answered}" if answered else "n/a",
             "abstained_poet_in_candidates": f"{in_cands}/{abstained}" if abstained else "n/a",
-            "chimera_false_accept": f"{chim_acc}/{chim_n}"}
+            "chimera_false_accept": f"{chim_acc}/{chim_n}",
+            "harder_variants": {
+                name: {"answered": f"{a}/{total}", "answered_accuracy": f"{c}/{a}" if a else "n/a",
+                       "abstained_poet_in_candidates": f"{ic}/{ab}" if ab else "n/a"}
+                for name, (a, c, ab, ic) in scored.items() if name != "prefix6"}}
 
 
 def llm_chat(url: str, prompt: str, timeout: int) -> dict:
@@ -227,6 +248,10 @@ def to_markdown(report: dict) -> str:
         lines.append(f"| E. Verse attribution | {a2['reason']} | SKIPPED |")
     elif a2:
         lines.append(f"| E. Verse attribution | {a2['setting']} | answered {a2['coverage_answered']}, answered-accuracy {a2['answered_accuracy']}, abstained-with-poet-in-candidates {a2['abstained_poet_in_candidates']}, chimera false-accepts {a2['chimera_false_accept']} |")
+    for name, label in (("middle4", "middle 4 words (no prefix)"), ("typo", "prefix with one letter dropped")):
+        v = a2.get("harder_variants", {}).get(name) if a2 else None
+        if v:
+            lines.append(f"| E+. Verse attribution, {label} | same sample, same lookup | answered {v['answered']}, answered-accuracy {v['answered_accuracy']}, abstained-with-poet-in-candidates {v['abstained_poet_in_candidates']} |")
     l = s["llm_qa"]
     if l.get("status") == "SKIPPED":
         lines.append(f"| D. LLM QA | {l['reason']} | SKIPPED |")
