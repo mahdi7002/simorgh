@@ -92,3 +92,19 @@ def test_chat_survives_missing_verse_db(tmp_path, monkeypatch):
     monkeypatch.setattr(pl, "DB", str(tmp_path / "nope.db"))
     monkeypatch.setattr(chat, "generate", lambda *a, **k: "پاسخ مدل")
     assert chat.ask("این بیت از کیست؟", return_metadata=True) == ("پاسخ مدل", True)
+
+
+def test_common_phrase_with_many_hits_is_not_certified_to_one_poet(verse_db):
+    conn = sqlite3.connect(verse_db)
+    for i in range(10):  # 10 verses by one poet sharing a stock phrase, plus one by another poet beyond the k=8 window
+        vid = 100 + i
+        text = f"خردمند و روشن دل و یادگیر شماره {i}"
+        conn.execute("insert into verses values (?,?,?,?,?)", (vid, 3, vid, 1, text))
+        conn.execute("insert into verses_fts(rowid, text) values (?,?)", (vid, text))
+    conn.execute("insert into verses values (200,2,200,1,'قوی رای و روشن دل و سرفراز')")
+    conn.execute("insert into verses_fts(rowid, text) values (200,'قوی رای و روشن دل و سرفراز')")
+    conn.commit(); conn.close()
+    pl.close()
+    r = pl.lookup("و روشن دل و")
+    assert r["status"] != "answer"
+    assert "مطمئن نیستم" in pl.attribution("و روشن دل و از کیست")

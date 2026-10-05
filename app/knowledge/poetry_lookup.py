@@ -49,17 +49,21 @@ def fts(q, k):
 def info(rid):
     return get_db().execute("SELECT v.id,v.poet_id,p.name,v.poem_id,v.bait_number,v.text FROM verses v JOIN poets p ON p.id=v.poet_id WHERE v.id=?", (rid,)).fetchone()
 def retrieve(ws, k=8):
-    rows = fts('"' + " ".join(ws[:6]) + '"', k) if len(ws) >= 2 else []
+    """Return (stage, hits, truncated). We fetch k+1 rows so a full result set reveals that the phrase is common
+    and that the hits we see are only a sample of its occurrences."""
+    rows = fts('"' + " ".join(ws[:6]) + '"', k + 1) if len(ws) >= 2 else []
     stage = "phrase" if rows else "or"
     if not rows:
         f = keep(ws)[:8]
-        rows = fts(" OR ".join(f'"{w}"' for w in f), k) if f else []
-    return stage, [h for h in (info(r[0]) for r in rows) if h]
+        rows = fts(" OR ".join(f'"{w}"' for w in f), k + 1) if f else []
+    truncated = len(rows) > k
+    return stage, [h for h in (info(r[0]) for r in rows[:k]) if h], truncated
+
 
 def lookup(text):
     ws = words(text); nw = len(ws)
     if nw < 2: return {"status": "too_short", "cand_pids": set(), "candidates": []}
-    stage, hits = retrieve(ws)
+    stage, hits, truncated = retrieve(ws)
     if not hits: return {"status": "none", "cand_pids": set(), "candidates": []}
     top = hits[0]
     kw = keep(ws)[:8]
@@ -67,7 +71,9 @@ def lookup(text):
     overlap = sum(w in tw for w in kw) / max(len(kw), 1)
     poets = {h[1] for h in hits}
     if stage == "phrase":
-        st = "ambiguous" if len(poets) > 1 else ("answer" if nw >= 4 else "uncertain")
+        # A phrase with more than k occurrences is too common to certify as belonging to a single poet:
+        # the unseen occurrences may belong to someone else (found on real data: «و روشن دل و»).
+        st = "ambiguous" if len(poets) > 1 else ("answer" if nw >= 4 and not truncated else "uncertain")
     else:
         agree = sum(h[1] == top[1] for h in hits[:3])
         st = "answer" if (overlap >= 0.8 and len(kw) >= 4 and agree >= 2) else "uncertain"
