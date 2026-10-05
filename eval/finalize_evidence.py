@@ -82,6 +82,14 @@ def main() -> int:
     for sd, r in zip(args.heldout_seeds, held):
         cells = [f"{r['counts'][v]['answered']}/{r['counts'][v]['n']} · {r['counts'][v]['correct']}/{r['counts'][v]['answered']}" for v in VARIANTS]
         lines.append(f"| {sd} | " + " | ".join(cells) + " |")
+    lines += ["", "## Error analysis (every wrong answer and accepted chimera in the held-out runs)", ""]
+    errs = [(sd, e) for sd, r in zip(args.heldout_seeds, held) for e in r.get("errors", [])]
+    if not errs:
+        lines.append("None.")
+    for sd, e in errs:
+        lines += [f"- seed {sd} · **{e['variant']}** · query: `{e['query']}`",
+                  f"  - true: {e['true_poet']} — {e['true_verse']}",
+                  f"  - got: {e['got_poet']} — {e['got_verse']}"]
     lines += ["", "Queries are derived from the database itself, so this measures retrieval and abstention behaviour, not accuracy on arbitrary",
               "user input; correctness is relative to the database's own attributions.", ""]
     args.out.parent.mkdir(parents=True, exist_ok=True)

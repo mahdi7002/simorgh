@@ -66,4 +66,5 @@ def test_finalize_evidence_writes_report_from_real_counts(tmp_path, monkeypatch)
     text = out.read_text(encoding="utf-8")
     assert "Held-out" in text and "two adjacent letters swapped" in text
     assert "pooled n=60" in text
+    assert "## Error analysis" in text
     pl.close()

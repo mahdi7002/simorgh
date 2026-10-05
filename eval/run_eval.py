@@ -182,14 +182,24 @@ def section_attribution(n: int, seed: int, lookup_file: str | None) -> dict:
         "typo_mid": drop_middle_letter,
         "swap": swap_adjacent,
     }
+    def poet_name(pid):
+        row = db.execute("select name from poets where id=?", (pid,)).fetchone()
+        return row[0] if row else str(pid)
+
+    errors = []  # error analysis: every wrong answer and every accepted chimera, for the evidence file
     scored = {}
     for name, make in queries.items():
         answered = correct = in_cands = abstained = 0
         for pid, text in sample:
-            r = mod.lookup(" ".join(make(mod.words(text))))
+            query = " ".join(make(mod.words(text)))
+            r = mod.lookup(query)
             if r["status"] == "answer":
                 answered += 1
-                correct += r["pid"] == pid
+                ok = r["pid"] == pid
+                correct += ok
+                if not ok and len(errors) < 50:
+                    errors.append({"variant": name, "query": query, "true_poet": poet_name(pid), "true_verse": text,
+                                   "got_poet": r["poet"], "got_verse": r["verse"]})
             else:
                 abstained += 1
                 in_cands += pid in r["cand_pids"]
@@ -203,14 +213,20 @@ def section_attribution(n: int, seed: int, lookup_file: str | None) -> dict:
         if pa == pb:
             continue
         chim_n += 1
-        r = mod.lookup(" ".join(mod.words(ta)[:3] + mod.words(tb)[-3:]))
-        chim_acc += r["status"] == "answer"
+        chim_query = " ".join(mod.words(ta)[:3] + mod.words(tb)[-3:])
+        r = mod.lookup(chim_query)
+        if r["status"] == "answer":
+            chim_acc += 1
+            if len(errors) < 50:
+                errors.append({"variant": "chimera", "query": chim_query, "true_poet": f"{poet_name(pa)} + {poet_name(pb)}",
+                               "true_verse": f"{ta} + {tb}", "got_poet": r["poet"], "got_verse": r["verse"]})
     total = len(sample)
     return {"setting": f"EASY: query = first 6 words of a random indexed verse, seed={seed}, n={total}; lookup={lookup_file or 'app.knowledge.poetry_lookup'}",
             "coverage_answered": f"{answered}/{total}",
             "answered_accuracy": f"{correct}/{answered}" if answered else "n/a",
             "abstained_poet_in_candidates": f"{in_cands}/{abstained}" if abstained else "n/a",
             "chimera_false_accept": f"{chim_acc}/{chim_n}",
+            "errors": errors,
             "counts": {**{k: v for k, v in raw_counts.items() if v}, "chimera": {"accepted": chim_acc, "n": chim_n}},
             "harder_variants": {
                 name: {"answered": f"{a}/{total}", "answered_accuracy": f"{c}/{a}" if a else "n/a",
