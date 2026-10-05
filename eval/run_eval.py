@@ -115,7 +115,7 @@ def llm_chat(url: str, prompt: str, timeout: int) -> dict:
     data = r.json()
     text = data["choices"][0]["message"]["content"]
     toks = (data.get("usage") or {}).get("completion_tokens")
-    return {"text": text, "seconds": dt, "tokens": toks, "model": data.get("model")}
+    return {"text": text, "seconds": dt, "tokens": toks, "model": data.get("model"), "tps": (data.get("timings") or {}).get("predicted_per_second")}
 
 
 def section_llm(url: str, questions_path: Path, timeout: int) -> dict:
@@ -139,8 +139,8 @@ def section_llm(url: str, questions_path: Path, timeout: int) -> dict:
         per.append({"id": it["id"], "type": it["type"], "pass": any(x in ans for x in needles),
                     "answer": out["text"][:160], "seconds": round(out["seconds"], 1)})
         lat.append(out["seconds"])
-        if out["tokens"]:
-            tps.append(out["tokens"] / out["seconds"])
+        if out.get("tps"):
+            tps.append(out["tps"])
     by_type = {}
     for p in per:
         a = by_type.setdefault(p["type"], [0, 0])
