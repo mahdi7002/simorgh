@@ -9,6 +9,7 @@ Sections
   A. smalltalk guard      greetings must not trigger retrieval (deterministic)
   B. quran retrieval      EASY setting: query = verse text from the DB itself, seeded sample
   C. poetry availability  real DB vs Git-LFS pointer, topical hit rate
+  E. verse attribution    who wrote this verse? deterministic lookup, coverage / accuracy / chimera false-accept
   D. LLM QA               qa / abstain / classify items, latency + tokens/sec (needs endpoint)
 Every number is tagged with its setting; nothing is estimated.
 """
@@ -38,6 +39,9 @@ from core import poetry_search  # noqa: E402
 GREETING_CASES = ["سلام", "درود", "سلام ممنون", "ممنون", "خداحافظ", "چطوری", "hi", "صبح بخیر", "درود، خوبی؟", "مرسی"]
 TOPIC_CASES = ["صبر چیست", "عدالت چیست", "سلام عدالت چیست", "درباره توکل بگو", "معنی رحمت", "سلام، صبر را توضیح بده"]
 POETRY_TOPICS = ["عشق", "صبر", "وطن", "مرگ", "باده", "امید", "دوست", "جهان", "عدالت", "خرد"]
+
+
+ABSTAIN_PHRASES = ("نمی‌دانم", "نمی دانم", "اطلاعی ندارم", "اطلاعاتی ندارم", "مطمئن نیستم", "نمی‌توانم")
 
 
 def env_info() -> dict:
@@ -104,6 +108,57 @@ def section_poetry() -> dict:
     return {"setting": "topical keyword retrieval, non-empty rate only (not correctness)", "nonempty": f"{hit}/{len(POETRY_TOPICS)}"}
 
 
+
+def _load_lookup(path: str | None):
+    import importlib
+    import importlib.util
+    if not path:
+        return importlib.import_module("app.knowledge.poetry_lookup")
+    spec = importlib.util.spec_from_file_location("alt_poetry_lookup", path)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+def section_attribution(n: int, seed: int, lookup_file: str | None) -> dict:
+    """Who wrote this verse? Deterministic lookup, no LLM. EASY setting: query = first words of an indexed verse."""
+    try:
+        mod = _load_lookup(lookup_file)
+        db = mod.get_db() if hasattr(mod, "get_db") else mod.db
+    except Exception as exc:
+        return {"status": "SKIPPED", "reason": f"{type(exc).__name__}: {exc}"}
+    lo, hi = db.execute("select min(id), max(id) from verses").fetchone()
+    rng = random.Random(seed)
+    sample, tries = [], 0
+    while len(sample) < n and tries < n * 50:
+        tries += 1
+        row = db.execute("select v.poet_id, v.text from verses v where v.id=?", (rng.randint(lo, hi),)).fetchone()
+        if row and len(mod.words(row[1])) >= 6:
+            sample.append(row)
+    answered = correct = in_cands = abstained = 0
+    for pid, text in sample:
+        r = mod.lookup(" ".join(mod.words(text)[:6]))
+        if r["status"] == "answer":
+            answered += 1
+            correct += r["pid"] == pid
+        else:
+            abstained += 1
+            in_cands += pid in r["cand_pids"]
+    chim_n = chim_acc = 0
+    for (pa, ta), (pb, tb) in zip(sample[::2], sample[1::2]):
+        if pa == pb:
+            continue
+        chim_n += 1
+        r = mod.lookup(" ".join(mod.words(ta)[:3] + mod.words(tb)[-3:]))
+        chim_acc += r["status"] == "answer"
+    total = len(sample)
+    return {"setting": f"EASY: query = first 6 words of a random indexed verse, seed={seed}, n={total}; lookup={lookup_file or 'app.knowledge.poetry_lookup'}",
+            "coverage_answered": f"{answered}/{total}",
+            "answered_accuracy": f"{correct}/{answered}" if answered else "n/a",
+            "abstained_poet_in_candidates": f"{in_cands}/{abstained}" if abstained else "n/a",
+            "chimera_false_accept": f"{chim_acc}/{chim_n}"}
+
+
 def llm_chat(url: str, prompt: str, timeout: int) -> dict:
     import requests
     body = {"messages": [{"role": "system", "content": "فقط فارسی و کوتاه پاسخ بده. اگر نمی‌دانی صریح بگو «نمی‌دانم»."},
@@ -136,7 +191,9 @@ def section_llm(url: str, questions_path: Path, timeout: int) -> dict:
         model = model or out["model"]
         ans = out["text"].replace("\u200c", " ")
         needles = [x.replace("\u200c", " ") for x in it["expected_any"]]
-        per.append({"id": it["id"], "type": it["type"], "pass": any(x in ans for x in needles),
+        ok = any(x in ans for x in needles)
+        outcome = "correct" if ok else ("abstained" if any(a.replace("\u200c", " ") in ans for a in ABSTAIN_PHRASES) else "wrong")
+        per.append({"id": it["id"], "type": it["type"], "pass": ok, "outcome": outcome,
                     "answer": out["text"][:160], "seconds": round(out["seconds"], 1)})
         lat.append(out["seconds"])
         if out.get("tps"):
@@ -146,8 +203,10 @@ def section_llm(url: str, questions_path: Path, timeout: int) -> dict:
         a = by_type.setdefault(p["type"], [0, 0])
         a[0] += p["pass"]
         a[1] += 1
+    qa = [x for x in per if x["type"] == "qa" and "outcome" in x]
+    breakdown = {k: sum(x["outcome"] == k for x in qa) for k in ("correct", "abstained", "wrong")}
     return {"setting": f"questions file: {questions_path.name}, temperature 0, max_tokens 120", "model": model,
-            "by_type": {k: f"{v[0]}/{v[1]}" for k, v in by_type.items()},
+            "by_type": {k: f"{v[0]}/{v[1]}" for k, v in by_type.items()}, "qa_breakdown": breakdown,
             "latency_s_median": round(statistics.median(lat), 1) if lat else None,
             "tokens_per_s_median": round(statistics.median(tps), 1) if tps else None, "items": per}
 
@@ -163,11 +222,19 @@ def to_markdown(report: dict) -> str:
     lines.append("| B. Quran retrieval | " + q.get("setting", q.get("reason", "")) + " | " + (", ".join(f"{k} {v}" for k, v in q.items() if k.startswith("top")) or q.get("status", "")) + " |")
     p = s["poetry"]
     lines.append("| C. Poetry DB | " + p.get("setting", p.get("reason", "")) + " | " + p.get("nonempty", p.get("status", "")) + " |")
+    a2 = s.get("verse_attribution", {})
+    if a2.get("status") == "SKIPPED":
+        lines.append(f"| E. Verse attribution | {a2['reason']} | SKIPPED |")
+    elif a2:
+        lines.append(f"| E. Verse attribution | {a2['setting']} | answered {a2['coverage_answered']}, answered-accuracy {a2['answered_accuracy']}, abstained-with-poet-in-candidates {a2['abstained_poet_in_candidates']}, chimera false-accepts {a2['chimera_false_accept']} |")
     l = s["llm_qa"]
     if l.get("status") == "SKIPPED":
         lines.append(f"| D. LLM QA | {l['reason']} | SKIPPED |")
     else:
         res = ", ".join(f"{k} {v}" for k, v in l["by_type"].items())
+        bd = l.get("qa_breakdown")
+        if bd:
+            res += f" (qa: {bd['correct']} correct / {bd['abstained']} abstained / {bd['wrong']} WRONG)"
         lines.append(f"| D. LLM QA | model {l['model']}; {l['setting']} | {res}; median {l['latency_s_median']} s, {l['tokens_per_s_median']} tok/s |")
     lines += ["", "Notes: B is an easy setting (self-retrieval) and measures regression, not real-world accuracy. "
               "C measures availability only. D uses a small starter question set; report its size alongside any claim.", ""]
@@ -181,6 +248,8 @@ def main() -> int:
     ap.add_argument("--url", default=os.environ.get("SIMORGH_LLM_URL", "http://127.0.0.1:8080/v1/chat/completions"))
     ap.add_argument("--quran-n", type=int, default=50)
     ap.add_argument("--seed", type=int, default=7)
+    ap.add_argument("--attr-n", type=int, default=100)
+    ap.add_argument("--lookup-file", default=None, help="evaluate an alternative poetry_lookup.py instead of the repo module")
     ap.add_argument("--timeout", type=int, default=180)
     args = ap.parse_args()
 
@@ -188,6 +257,7 @@ def main() -> int:
     report["sections"]["smalltalk_guard"] = section_smalltalk()
     report["sections"]["quran_retrieval"] = section_quran(args.quran_n, args.seed)
     report["sections"]["poetry"] = section_poetry()
+    report["sections"]["verse_attribution"] = section_attribution(args.attr_n, args.seed, args.lookup_file)
     report["sections"]["llm_qa"] = ({"status": "SKIPPED", "reason": "--no-llm"} if args.no_llm
                                     else section_llm(args.url, args.questions, args.timeout))
 

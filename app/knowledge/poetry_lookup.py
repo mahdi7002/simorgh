@@ -1,7 +1,37 @@
-import sqlite3, random, re
 import os
-DB = os.environ.get("SIMORGH_POETRY_DB", os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "data", "poetry", "persian_poetry.db"))
-db = sqlite3.connect(f"file:{DB}?mode=ro", uri=True, check_same_thread=False)
+import re
+import sqlite3
+from pathlib import Path
+
+# NOTE: deliberately NOT SIMORGH_POETRY_DB — core/poetry_search.py uses that name for a different database.
+DB = os.environ.get(
+    "SIMORGH_VERSE_DB",
+    str(Path(__file__).resolve().parents[2] / "data" / "poetry" / "persian_poetry.db"),
+)
+_db = None
+
+
+def get_db():
+    """Open the verse database lazily, read-only. Raises a clear error instead of failing at import."""
+    global _db
+    if _db is None:
+        path = Path(DB)
+        if not path.is_file():
+            raise FileNotFoundError(f"verse DB not found: {path}")
+        with open(path, "rb") as fh:
+            if fh.read(40).startswith(b"version https://git-lfs"):
+                raise RuntimeError(f"{path} is a Git LFS pointer — run: git lfs pull")
+        _db = sqlite3.connect(f"file:{path}?mode=ro", uri=True, check_same_thread=False)
+    return _db
+
+
+def close():
+    global _db
+    if _db is not None:
+        _db.close()
+        _db = None
+
+
 STOP = set("از به در را که این آن با هم تا بر و ای من تو او ما شد بود هر یا نه".split())
 
 def norm(s):
@@ -13,11 +43,11 @@ def keep(ws):
     return k if len(k) >= 2 else ws
 def fts(q, k):
     try:
-        return db.execute("SELECT rowid FROM verses_fts WHERE verses_fts MATCH ? ORDER BY bm25(verses_fts) LIMIT ?", (q, k)).fetchall()
-    except Exception:
-        return db.execute("SELECT rowid FROM verses_fts WHERE verses_fts MATCH ? LIMIT ?", (q, k)).fetchall()
+        return get_db().execute("SELECT rowid FROM verses_fts WHERE verses_fts MATCH ? ORDER BY bm25(verses_fts) LIMIT ?", (q, k)).fetchall()
+    except sqlite3.OperationalError:
+        return get_db().execute("SELECT rowid FROM verses_fts WHERE verses_fts MATCH ? LIMIT ?", (q, k)).fetchall()
 def info(rid):
-    return db.execute("SELECT v.id,v.poet_id,p.name,v.poem_id,v.bait_number,v.text FROM verses v JOIN poets p ON p.id=v.poet_id WHERE v.id=?", (rid,)).fetchone()
+    return get_db().execute("SELECT v.id,v.poet_id,p.name,v.poem_id,v.bait_number,v.text FROM verses v JOIN poets p ON p.id=v.poet_id WHERE v.id=?", (rid,)).fetchone()
 def retrieve(ws, k=8):
     rows = fts('"' + " ".join(ws[:6]) + '"', k) if len(ws) >= 2 else []
     stage = "phrase" if rows else "or"
@@ -44,3 +74,21 @@ def lookup(text):
     return {"status": st, "poet": top[2], "pid": top[1], "verse": top[5], "overlap": round(overlap, 2),
             "candidates": list(dict.fromkeys(h[2] for h in hits)), "cand_pids": poets}
 
+
+
+TRIGGERS = ("از کیست", "سروده کیست", "کدام شاعر", "شاعرش", "کی گفته", "مال کیست")
+
+
+def attribution(question: str):
+    """Deterministic 'who wrote this verse?' answer, or None if this is not an attribution request."""
+    if not any(t in question for t in TRIGGERS):
+        return None
+    q = question
+    for t in TRIGGERS:
+        q = q.replace(t, " ")
+    r = lookup(q)
+    if r["status"] == "answer":
+        return f"«{r['verse']}»\n— {r['poet']}"
+    if r["status"] in ("ambiguous", "uncertain") and r["candidates"]:
+        return "مطمئن نیستم؛ احتمالاً از: " + "، ".join(r["candidates"][:3])
+    return "این بیت را در مجموعه‌ی شعرم پیدا نکردم."

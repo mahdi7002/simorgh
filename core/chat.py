@@ -10,6 +10,8 @@ core/chat.py
 فعلی به‌هم بخورد.
 """
 
+import logging
+
 from core.identity import SIMORGH_IDENTITY
 from core.llm_local import generate, get_model_tier
 from core.poetry_search import get_poetic_wisdom, format_for_prompt as format_poetry
@@ -214,6 +216,15 @@ def ask(
 ) -> str | tuple[str, bool]:
     if not question or not question.strip():
         return "بله؟ چیزی بپرس."
+
+    try:
+        from app.knowledge.poetry_lookup import attribution
+        verse_answer = attribution(question)
+    except Exception as exc:  # missing/LFS-pointer DB must not break chat
+        logging.getLogger(__name__).warning("poetry attribution unavailable: %s", exc)
+        verse_answer = None
+    if verse_answer:
+        return (verse_answer, False) if return_metadata else verse_answer
 
     persona = PERSONAS.get(agent, PERSONAS["hakim"])
     persona_note = (

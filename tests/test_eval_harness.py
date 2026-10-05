@@ -52,3 +52,11 @@ def test_llm_section_scores_against_mock_endpoint(tmp_path):
         srv.server_close()
     assert res["model"] == "mock"
     assert res["by_type"] == {"qa": "1/2", "abstain": "1/1"}
+    assert res["qa_breakdown"] == {"correct": 1, "abstained": 1, "wrong": 0}
+
+
+def test_attribution_section_skips_cleanly_without_db(tmp_path, monkeypatch):
+    from app.knowledge import poetry_lookup as pl
+    pl.close()
+    monkeypatch.setattr(pl, "DB", str(tmp_path / "missing.db"))
+    assert run_eval.section_attribution(5, 7, None)["status"] == "SKIPPED"
