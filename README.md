@@ -52,6 +52,18 @@ SIMORGH uses a deliberately conservative capability matrix. A capability is cons
 
 Otherwise it is documented as **EXPERIMENTAL**, **PLANNED**, or **DISABLED**.
 
+## Evaluation (reproducible, with stated limits)
+
+```bash
+python eval/run_eval.py                    # smalltalk guard, Quran/poetry retrieval, verse attribution, LLM QA
+python eval/finalize_evidence.py           # verse attribution on a dev seed + pooled held-out seeds, with 95% CIs
+python eval/import_fa_eval.py bench.jsonl  # bring your own question set
+```
+
+Results and their settings live in [`docs/evidence/`](docs/evidence/). Queries derived from the databases themselves
+are labelled **EASY**: they measure retrieval and abstention behaviour, not accuracy on arbitrary user input, and
+correctness is relative to the databases' own attributions. Defects found by the evaluation are recorded there too.
+
 ## Current capability matrix
 
 | Capability | Status | Verification |

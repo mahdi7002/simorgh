@@ -1,15 +1,47 @@
 """Deterministic knowledge fallback used when no local language model is available."""
 from __future__ import annotations
 
+import re
 from typing import Any
 
 from core.book_search import get_book_wisdom
 from core.poetry_search import get_poetic_wisdom
 from core.quran_search import get_quran_wisdom
 
+_GREETINGS = {
+    "سلام", "درود", "hi", "hello", "صبح بخیر", "عصر بخیر", "شب بخیر",
+    "خداحافظ", "ممنون", "مرسی", "متشکرم", "تشکر", "سپاس", "چطوری",
+    "حالت چطوره", "خوبی", "چه خبر", "هستی", "کسی هست",
+}
+_FILLER = {"سلام", "درود", "ممنون", "مرسی", "تشکر", "خوبی", "چطوری", "ببخشید", "لطفا", "لطفاً"}
+
+SMALLTALK_REPLY = (
+    "سلام! من سیمرغ هستم. چون الان مدل زبانی محلی در دسترس نیست، فقط می‌توانم "
+    "از پایگاه دانش محلی (قرآن، شعر، کتاب‌ها) منبع پیدا کنم. یک موضوع یا کلیدواژه "
+    "بپرس، مثلاً «صبر» یا «عدالت»."
+)
+
+
+def _normalize(text: str) -> str:
+    text = text.replace("\u200c", " ").replace("ي", "ی").replace("ك", "ک")
+    return re.sub(r"[^\w\s]", " ", text, flags=re.UNICODE).strip().lower()
+
+
+def is_smalltalk(query: str) -> bool:
+    """True for greetings/thanks with no real topic, so we never retrieve noise."""
+    norm = re.sub(r"\s+", " ", _normalize(query))
+    if not norm:
+        return True
+    if norm in _GREETINGS:
+        return True
+    words = norm.split()
+    return len(words) <= 4 and all(w in _FILLER or w in _GREETINGS for w in words)
+
 
 def build_database_answer(query: str) -> tuple[str, list[dict[str, Any]]]:
     """Return a useful, provenance-labelled answer without invoking an LLM."""
+    if is_smalltalk(query):
+        return SMALLTALK_REPLY, []
     sources: list[dict[str, Any]] = []
     quran = get_quran_wisdom(query, limit=2)
     poetry = get_poetic_wisdom(query, limit=2)
@@ -49,4 +81,4 @@ def build_database_answer(query: str) -> tuple[str, list[dict[str, Any]]]:
     return "\n".join(lines), sources
 
 
-__all__ = ["build_database_answer"]
+__all__ = ["build_database_answer", "is_smalltalk", "SMALLTALK_REPLY"]
