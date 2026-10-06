@@ -148,13 +148,8 @@ def same_text_poets(mod, text: str) -> set:
     return out
 
 
-def section_attribution(n: int, seed: int, lookup_file: str | None) -> dict:
-    """Who wrote this verse? Deterministic lookup, no LLM. EASY setting: query = first words of an indexed verse."""
-    try:
-        mod = _load_lookup(lookup_file)
-        db = mod.get_db() if hasattr(mod, "get_db") else mod.db
-    except Exception as exc:
-        return {"status": "SKIPPED", "reason": f"{type(exc).__name__}: {exc}"}
+def draw_sample(mod, db, n: int, seed: int) -> list:
+    """Seeded random verses (poet_id, text) with at least 6 words. Sequential RNG, so a smaller n is a prefix of a larger n."""
     lo, hi = db.execute("select min(id), max(id) from verses").fetchone()
     rng = random.Random(seed)
     sample, tries = [], 0
@@ -163,6 +158,17 @@ def section_attribution(n: int, seed: int, lookup_file: str | None) -> dict:
         row = db.execute("select v.poet_id, v.text from verses v where v.id=?", (rng.randint(lo, hi),)).fetchone()
         if row and len(mod.words(row[1])) >= 6:
             sample.append(row)
+    return sample
+
+
+def section_attribution(n: int, seed: int, lookup_file: str | None) -> dict:
+    """Who wrote this verse? Deterministic lookup, no LLM. EASY setting: query = first words of an indexed verse."""
+    try:
+        mod = _load_lookup(lookup_file)
+        db = mod.get_db() if hasattr(mod, "get_db") else mod.db
+    except Exception as exc:
+        return {"status": "SKIPPED", "reason": f"{type(exc).__name__}: {exc}"}
+    sample = draw_sample(mod, db, n, seed)
     def drop_last_letter(ws):
         out = list(ws)
         for i in (2, 3, 1, 0):
@@ -255,10 +261,10 @@ def section_attribution(n: int, seed: int, lookup_file: str | None) -> dict:
                 for name, (a, c, ab, ic, d) in scored.items() if name != "prefix6"}}
 
 
-def llm_chat(url: str, prompt: str, timeout: int) -> dict:
+def llm_chat(url: str, prompt: str, timeout: int, max_tokens: int = 120) -> dict:
     import requests
     body = {"messages": [{"role": "system", "content": "فقط فارسی و کوتاه پاسخ بده. اگر نمی‌دانی صریح بگو «نمی‌دانم»."},
-                         {"role": "user", "content": prompt}], "max_tokens": 120, "temperature": 0}
+                         {"role": "user", "content": prompt}], "max_tokens": max_tokens, "temperature": 0}
     t0 = time.time()
     r = requests.post(url, json=body, timeout=timeout)
     dt = time.time() - t0
@@ -267,6 +273,64 @@ def llm_chat(url: str, prompt: str, timeout: int) -> dict:
     text = data["choices"][0]["message"]["content"]
     toks = (data.get("usage") or {}).get("completion_tokens")
     return {"text": text, "seconds": dt, "tokens": toks, "model": data.get("model"), "tps": (data.get("timings") or {}).get("predicted_per_second")}
+
+
+def _norm_name(text: str) -> str:
+    text = text.replace("\u200c", " ").replace("ي", "ی").replace("ك", "ک")
+    return re.sub(r"[^\w\s]", " ", text, flags=re.UNICODE).strip().lower()
+
+
+def name_match(answer: str, poet_name: str) -> bool:
+    """Lenient on purpose (favours the LLM): full name contained either way, or any name token of 4+ letters appears."""
+    a, n = _norm_name(answer), _norm_name(poet_name)
+    if not a or not n:
+        return False
+    if n in a or (len(a) >= 3 and a in n):
+        return True
+    return any(len(tok) >= 4 and tok in a for tok in n.split())
+
+
+def section_llm_baseline(n: int, seed: int, url: str, lookup_file: str | None, timeout: int) -> dict:
+    """Same sample, same 6-word query: LLM alone (no retrieval) vs the deterministic lookup."""
+    import requests
+    try:
+        mod = _load_lookup(lookup_file)
+        db = mod.get_db() if hasattr(mod, "get_db") else mod.db
+    except Exception as exc:
+        return {"status": "SKIPPED", "reason": f"{type(exc).__name__}: {exc}"}
+    try:
+        requests.get(url.rsplit("/v1/", 1)[0] + "/health", timeout=5).raise_for_status()
+    except Exception as exc:
+        return {"status": "SKIPPED", "reason": f"no reachable endpoint at {url}: {type(exc).__name__}"}
+    names = dict(db.execute("select id, name from poets").fetchall())
+    sample = draw_sample(mod, db, n, seed)
+    c = {"llm_correct": 0, "llm_abstained": 0, "llm_wrong": 0, "lookup_answered": 0, "lookup_correct": 0}
+    secs, model, examples = [], None, []
+    for pid, text in sample:
+        query = " ".join(mod.words(text)[:6])
+        holders = {pid} | same_text_poets(mod, text)
+        try:
+            out = llm_chat(url, f"این عبارت آغاز بیتی از شعر کلاسیک فارسی است: «{query}». سراینده‌اش کیست؟ فقط نام شاعر را بنویس.", timeout, 40)
+        except Exception:
+            continue
+        model = model or out["model"]
+        secs.append(out["seconds"])
+        if any(name_match(out["text"], names.get(h, "")) for h in holders):
+            c["llm_correct"] += 1
+        elif any(a.replace("\u200c", " ") in out["text"] for a in ABSTAIN_PHRASES):
+            c["llm_abstained"] += 1
+        else:
+            c["llm_wrong"] += 1
+            if len(examples) < 5:
+                examples.append({"query": query, "true": names.get(pid), "llm": out["text"][:60]})
+        r = mod.lookup(query)
+        if r["status"] == "answer":
+            c["lookup_answered"] += 1
+            c["lookup_correct"] += r["pid"] in holders
+    total = c["llm_correct"] + c["llm_abstained"] + c["llm_wrong"]
+    return {"setting": f"same sample and same 6-word query for both; n={total}, seed={seed}; LLM name matching is lenient (favours the LLM)",
+            "model": model, "n": total, **c, "latency_s_median": round(statistics.median(secs), 1) if secs else None,
+            "llm_wrong_examples": examples}
 
 
 def section_llm(url: str, questions_path: Path, timeout: int) -> dict:
@@ -327,6 +391,14 @@ def to_markdown(report: dict) -> str:
               "typo_mid": "prefix, a middle letter dropped", "swap": "prefix, two adjacent letters swapped"}
     for name, v in (a2.get("harder_variants", {}) if a2 else {}).items():
         lines.append(f"| E+. Verse attribution, {labels.get(name, name)} | same sample, same lookup | answered {v['answered']}, answered-accuracy {v['answered_accuracy']}, abstained-with-poet-in-candidates {v['abstained_poet_in_candidates']} |")
+    b = s.get("llm_baseline", {})
+    if b.get("status") == "SKIPPED":
+        lines.append(f"| F. LLM alone vs lookup | {b['reason']} | SKIPPED |")
+    elif b:
+        nn = b["n"]
+        lo1, hi1 = wilson(b["llm_correct"], nn)
+        lines.append(f"| F. LLM alone vs lookup | model {b['model']}; {b['setting']} | LLM alone: {b['llm_correct']}/{nn} correct (CI {lo1}–{hi1}), "
+                     f"{b['llm_abstained']} abstained, {b['llm_wrong']} WRONG; lookup: {b['lookup_answered']}/{nn} answered, {b['lookup_correct']}/{b['lookup_answered']} correct |")
     l = s["llm_qa"]
     if l.get("status") == "SKIPPED":
         lines.append(f"| D. LLM QA | {l['reason']} | SKIPPED |")
@@ -349,6 +421,7 @@ def main() -> int:
     ap.add_argument("--quran-n", type=int, default=50)
     ap.add_argument("--seed", type=int, default=7)
     ap.add_argument("--attr-n", type=int, default=100)
+    ap.add_argument("--baseline-n", type=int, default=100, help="LLM-alone vs lookup on the same verses (0 = skip)")
     ap.add_argument("--lookup-file", default=None, help="evaluate an alternative poetry_lookup.py instead of the repo module")
     ap.add_argument("--timeout", type=int, default=180)
     args = ap.parse_args()
@@ -358,6 +431,8 @@ def main() -> int:
     report["sections"]["quran_retrieval"] = section_quran(args.quran_n, args.seed)
     report["sections"]["poetry"] = section_poetry()
     report["sections"]["verse_attribution"] = section_attribution(args.attr_n, args.seed, args.lookup_file)
+    report["sections"]["llm_baseline"] = ({"status": "SKIPPED", "reason": "--no-llm or --baseline-n 0"} if (args.no_llm or args.baseline_n <= 0)
+                                         else section_llm_baseline(args.baseline_n, args.seed, args.url, args.lookup_file, args.timeout))
     report["sections"]["llm_qa"] = ({"status": "SKIPPED", "reason": "--no-llm"} if args.no_llm
                                     else section_llm(args.url, args.questions, args.timeout))
 

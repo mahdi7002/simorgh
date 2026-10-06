@@ -92,3 +92,74 @@ def test_same_text_poets_sees_quoted_duplicate_under_other_poet(tmp_path, monkey
     assert run_eval.same_text_poets(pl, rows[0][1]) == {1, 2}   # punctuation-insensitive, other poet found
     assert run_eval.same_text_poets(pl, rows[2][1]) == {3}      # a near-duplicate with a different word is not a duplicate
     pl.close()
+
+
+def test_importer_handles_label_pipe_text_files(tmp_path):
+    imp = _load("import_fa_eval")
+    f = tmp_path / "reports.txt"
+    f.write_text("زباله|سطل زباله پر شده\nروشنایی|چراغ خاموش است\nبدون جداکننده\n", encoding="utf-8")
+    items = imp.convert_labelled_lines(f)
+    assert [i["expected_any"] for i in items] == [["زباله"], ["روشنایی"]]
+    assert all(i["type"] == "classify" and "روشنایی" in i["prompt"] and "زباله" in i["prompt"] for i in items)
+
+
+def test_name_match_is_lenient_but_not_blind():
+    run_eval = _load("run_eval")
+    assert run_eval.name_match("حافظ", "حافظ شیرازی")
+    assert run_eval.name_match("شاعر آن سعدی شیرازی است", "سعدی")
+    assert not run_eval.name_match("فردوسی", "حافظ شیرازی")
+    assert not run_eval.name_match("", "حافظ")
+
+
+def test_llm_baseline_compares_against_lookup_on_same_items(tmp_path, monkeypatch):
+    import random
+    import threading
+    from http.server import BaseHTTPRequestHandler, HTTPServer
+
+    from app.knowledge import poetry_lookup as pl
+
+    db = tmp_path / "v.db"
+    conn = sqlite3.connect(db)
+    conn.execute("create table poets(id integer primary key, name text)")
+    conn.execute("create table verses(id integer primary key, poet_id int, poem_id int, bait_number int, text text)")
+    conn.execute("create virtual table verses_fts using fts5(text)")
+    vocab = "عشق دل جان باغ گل شب روز ماه خورشید دریا کوه راه دوست یار نور سایه باد خاک آب آتش چشم سخن راز پرده نی می ساقی بهار شمشیر کمان اسب سوار شهر دشت رود".split()
+    rng = random.Random(9)
+    for pid, name in ((1, "حافظ شیرازی"), (2, "سعدی")):
+        conn.execute("insert into poets values (?,?)", (pid, name))
+    for vid in range(1, 41):
+        text = " ".join(rng.sample(vocab, 8)) + f" {vid}x{vid}"
+        conn.execute("insert into verses values (?,?,?,?,?)", (vid, 1 if vid % 2 else 2, vid, 1, text))
+        conn.execute("insert into verses_fts(rowid, text) values (?,?)", (vid, text))
+    conn.commit()
+    conn.close()
+    pl.close()
+    monkeypatch.setattr(pl, "DB", str(db))
+
+    class Handler(BaseHTTPRequestHandler):
+        def log_message(self, *a):
+            pass
+
+        def do_GET(self):
+            self.send_response(200); self.end_headers(); self.wfile.write(b"{}")
+
+        def do_POST(self):
+            self.rfile.read(int(self.headers["Content-Length"]))
+            out = json.dumps({"model": "mock", "choices": [{"message": {"content": "حافظ"}}], "usage": {"completion_tokens": 1}})
+            self.send_response(200); self.send_header("Content-Type", "application/json"); self.end_headers()
+            self.wfile.write(out.encode())
+
+    from http.server import HTTPServer as _H
+    srv = _H(("127.0.0.1", 0), Handler)
+    threading.Thread(target=srv.serve_forever, daemon=True).start()
+    run_eval = _load("run_eval")
+    try:
+        res = run_eval.section_llm_baseline(20, 7, f"http://127.0.0.1:{srv.server_port}/v1/chat/completions", None, 10)
+    finally:
+        srv.shutdown()
+        srv.server_close()
+        pl.close()
+    assert res["n"] == 20 and res["model"] == "mock"
+    assert res["llm_correct"] + res["llm_abstained"] + res["llm_wrong"] == 20
+    assert 0 < res["llm_correct"] < 20          # the mock always says حافظ -> right only for his verses
+    assert res["lookup_answered"] == res["lookup_correct"] > 0
