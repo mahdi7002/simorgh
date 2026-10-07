@@ -40,14 +40,14 @@ Topics to cover (add sources): Persian poetry corpora and attribution; retrieval
 | chimera accepted | 1/416 (0.2%, CI 0–1.3) | | |
 
 ### 6.2 LLM alone vs lookup (same verses, same 6-word query)
-Same 100 verses (seed 7), same 6-word query; Gemma-3-4B QAT Q4_0, temperature 0; poet-name matching deliberately lenient toward the LLM.
+Gemma-3-4B QAT Q4_0, temperature 0; poet-name matching deliberately lenient toward the LLM. Held-out seeds 11, 23, 37 (n = 100 each).
 
 | System | Correct | Abstained | Wrong |
 |---|---|---|---|
-| LLM alone (no retrieval) | 14/100 (95% CI 8.5–22.1) | 0 | 86 |
-| Deterministic lookup | 100/100 of the 100 it answered | — | 0 |
+| LLM alone (no retrieval) | 29/300 = 9.7% (95% CI 6.8–13.5) | 0 | 271 |
+| Deterministic lookup | 299/299 of the 299 it answered (CI 98.7–100) | 1 | 0 |
 
-The model never abstained. *Repeat on held-out seeds 11, 23, 37 before submission (this run uses the dev seed; the LLM numbers are not tuned).* Source: `docs/evidence/EVAL_2026-10-05.md`.
+Per seed the LLM got 7, 8 and 14 of 100 right; on the dev seed 7 it got 14. It never abstained in 400 queries. Source: `docs/evidence/EVAL_2026-10-05.md`.
 
 ### 6.3 Error analysis and a defect found by held-out evaluation
 - First run: 1 wrong answer among 288 (middle-4-words): «و روشن دل و» (Nizami) attributed to Ferdowsi because the first 8 hits of a stock phrase were all Ferdowsi. Fix: window-full → *uncertain*. Held-out result after the fix: 864/864.
