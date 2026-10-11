@@ -19,6 +19,7 @@ Updated 2026-10-12. External deadline listed by the conference directory: **30 D
 | Target | Work | Completion evidence |
 |---|---|---|
 | 12 Oct onward, max ~2 hours total | Finish only the bounded Mother audit; if criteria do not pass, leave the old database untouched. Then freeze Mother. | Actual `mother_finish.sh` output, read-only diagnostics, weekly unit test and targeted pytest output. Never weaken the deletion criteria. |
+| By 16 Oct (optional, only if demo works) | Submit the DHNB 2027 poster/demo abstract (250–500 words) or works-in-progress abstract (500–1,000 words), in English. | Actual five-minute test, data-display permission check, abstract word count and submission receipt. Do not let this delay the benchmark. |
 | By 24 Oct | Test and stabilize one five-minute offline Persian scenario on the actual target machine. Fix only failures on that path. | Timestamped run note and backup recording; no number without command or observation evidence. |
 | By 26 Oct | Decide whether to pursue a separate technical workshop paper. | One explicit choice after checking AbjadNLP and SilkRoadNLP policies. Do not submit the same or substantially overlapping paper to both. |
 | By 21 Nov | Audit and run the fixed benchmark: 40 items, 4 categories, Gemma/Qwen, retrieval off/on. | Four timestamped JSON files; model and database SHA-256; temperature, latency, tokens/s, RSS; raw per-item outputs and error analysis. The dataset and references remain frozen during scored runs. |
