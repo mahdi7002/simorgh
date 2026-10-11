@@ -1,33 +1,46 @@
-# Roadmap to the national-conference deadline / نقشهٔ راه تا مهلت همایش ملی
+# Roadmap to the national conference / نقشهٔ راه تا همایش ملی
 
-Updated 2026-10-07 (15 Mehr 1405) · Deadline: **30 Dey 1405 = 20 Jan 2027** (≈ 15 weeks) · Optional: AbjadNLP, paper deadline **15 Dec 2026**, decide by **26 Oct** (4 Aban)
+Updated 2026-10-12. External deadline listed by the conference directory: **30 Dey 1405 / 20 Jan 2027**. Internal target: **13 Jan 2027**.
 
-## 1. Where things stand / وضعیت فعلی
-| Item / مورد | Status / وضعیت |
-|---|---|
-| Evaluation harness, held-out evidence, defect found and fixed / ارزیابی و شواهد مستقل | ✅ done, in `main` |
-| Persian abstract + full paper draft / چکیده و پیش‌نویس کامل فارسی | ✅ draft; **citations, venue template, author block open** |
-| English technical draft (AbjadNLP) / پیش‌نویس فنی انگلیسی | 🟡 structure only; **no citations** |
-| EarthOS unified copy, 28 tests, waste pilot, bilingual `/pilot` dashboard / نسخهٔ یکپارچه، پایلوت، داشبورد دوزبانه | ✅ software; ❌ **no real bin has reported yet** |
-| Municipality letter (annex from tests) / نامهٔ شهرداری | ✅ draft; placeholders `[ ]` open |
+## 1. Evidence boundary today
 
-## 2. Plan / برنامه
-| When / زمان | Do / کار | Done when / ملاک پایان |
+| Work | Current status | What this does not prove |
 |---|---|---|
-| By 31 Oct (۹ آبان) | **One real bin**: build the ESP32 reporter, calibrate, leave it running 72 h | 72 h of readings visible at `/pilot` (history chart) |
-| By 26 Oct (۴ آبان) | **Decide** AbjadNLP yes/no | one-line answer |
-| Oct–mid Nov | Persian paper: fill citations, apply the venue template, add author block; read it aloud once | no `[ارجاع]` left, template applied |
-| Nov | Municipality: send the letter with a 5-minute demo (live `/pilot` + alerts) | meeting date set |
-| 15 Nov – 15 Dec (only if AbjadNLP = yes) | English paper: related work (**real, read** sources), anonymise repo, submit | submitted by 12 Dec |
-| 15 Dec – 10 Jan | Persian paper final edit; re-run `python eval/finalize_evidence.py`, update numbers if code changed | numbers match `docs/evidence` |
-| **By 14 Jan (۲۴ دی)** | **Submit the national paper** (6 days before the deadline) | submission receipt |
+| Existing evaluation harness and held-out poetry-attribution results | Existing code and historical evidence files are in the public repository | They do not satisfy the new 40-item, two-model, four-condition benchmark |
+| Persian paper and abstract drafts | Drafts exist in `docs/paper/` | They are not submission-ready; references, data-rights gate, venue template, author block and fresh benchmark outputs remain open |
+| Fixed 40-item paper benchmark | Prepared on branch `paper/b2-benchmark-2026-10-12` | Not yet run; Quran gold phrases and poetry labels must be audited against the exact local databases first |
+| Clean-clone data reproducibility | **Blocked / NOT VERIFIED** | Current public tree lacks the default `data/poetry/persian_poetry.db` path expected by `app/knowledge/poetry_lookup.py`; the corresponding evidence file is also not tracked |
+| Quran data source and rights | Source identified as Tanzil `fa.ansarian`; non-commercial terms are recorded | Exact database match and redistribution permission remain NOT VERIFIED |
+| New benchmark with Gemma and Qwen, each with and without retrieval | **Not measured** | No model-score, latency, token-rate or RSS numbers may be reported until the runs produce raw JSON |
+| Five-minute offline showcase | Planned | Do not claim the whole scenario works offline until a timed test is run on the actual machine |
 
-## 3. Freeze until after submission / فریز تا بعد از ارسال
-Persona-prompt rewrites, per-persona memory, sqlite-vec, Mother merge, Hodhod rebrand, coding agent, new EarthOS modules beyond waste, typo-robust matching (report it as a limitation). Each of these is real work and none changes what the papers can claim.
+## 2. Critical path
 
-## 4. Proposals / پیشنهادها
-1. **Backups.** Everything lives on one desktop (7.7 GB RAM, unstable tether). Weekly copy of `~/simorgh`, `~/EarthOS-unified` (**exclude `.env`**) and `~/Desktop/fa-eval` to an external disk; keep the poetry DB hash in `docs/evidence`.
-2. **One demo scenario, offline, 5 minutes** (for exhibitions and the municipality): greeting → "who wrote this verse?" → Quran search → honest "I don't know" → `/pilot` with live bin data. Record a backup video.
-3. **Real-world test set.** The next strongest improvement to the paper is a small set of verse queries typed by *other people* (30–50), not derived from the database. It tests the thing the current evaluation cannot.
-4. **After 20 Jan**, in this order: typo-robust matching with before/after numbers → persona prompts (charter) → Mother observing the repos → Hodhod.
-5. **Clean public copy of EarthOS** (fresh `git init`, no history, rotated keys) only when the municipality asks for code.
+| Target | Work | Completion evidence |
+|---|---|---|
+| 12 Oct onward, max ~2 hours total | Finish only the bounded Mother audit; if criteria do not pass, leave the old database untouched. Then freeze Mother. | Actual `mother_finish.sh` output, read-only diagnostics, weekly unit test and targeted pytest output. Never weaken the deletion criteria. |
+| By 24 Oct | Test and stabilize one five-minute offline Persian scenario on the actual target machine. Fix only failures on that path. | Timestamped run note and backup recording; no number without command or observation evidence. |
+| By 26 Oct | Decide whether to pursue a separate technical workshop paper. | One explicit choice after checking AbjadNLP and SilkRoadNLP policies. Do not submit the same or substantially overlapping paper to both. |
+| By 21 Nov | Audit and run the fixed benchmark: 40 items, 4 categories, Gemma/Qwen, retrieval off/on. | Four timestamped JSON files; model and database SHA-256; temperature, latency, tokens/s, RSS; raw per-item outputs and error analysis. The dataset and references remain frozen during scored runs. |
+| By 21 Nov | Optional, distinct DH2027 poster/demo proposal. | 500–750-word English proposal with references actually read; working demo and legal clearance for every displayed dataset. Do not let this block benchmark work. |
+| By 5 Dec | Reproduce from a fresh checkout without deleting or overwriting the owner's active work. | Exact checkout instructions, tests, database hashes, model hashes and complete setup log. If the poetry database is unavailable or licensing is unresolved, document the blocker rather than claim full reproduction. |
+| By 19 Dec | Revise the Persian abstract and main paper using measured results only; cite sources read by the author. | No placeholders; all tables trace to raw JSON; limitations and data-rights boundary explicit. |
+| By 9 Jan | Final edit, template verification, originality/policy check and submission package. | Checklist complete; no unmeasured numbers; no unverified license claims. |
+| By 13 Jan | Send the national paper, leaving the listed 30 Dey deadline as contingency. | Submission receipt and exact uploaded PDF/archive. |
+
+## 3. Writing principles
+
+- Primary framing: infrastructure, technology and technological independence; SIMORGH is a case study, not a product pitch.
+- Do not state that the system is fully reproducible from a clean clone until the exact data path and licensing gap are resolved.
+- Preserve older attribution results with their easy-setting caveat. New benchmark results must be reported separately and must not replace them without an explicit explanation.
+- Report the one-machine, two-model scope; the small sample; any mismatches in source retrieval; and every relevant abstention/failure.
+- The charter (`docs/CHARTER.md`) can appear as a short governance design section, not as evidence of effectiveness.
+- Policy recommendations must be traceable to measured results and clearly identified as recommendations, not experimental findings.
+
+## 4. Freeze list through paper submission
+
+No Hodhod rebrand, new Mother subsystems, agent expansion, new city display modules, new mesh layers, robotics/ESP32 work, or unrelated feature development. Only fix issues necessary to make the frozen demo/evaluation path work and to make the paper reproducible.
+
+## 5. After the national submission
+
+First assemble a source-backed tracker of additional calls/showcases using `docs/CONFERENCES.md`. Keep separate framings for policy research, reproducible Persian NLP and digital-cultural-heritage demonstration; verify overlap and archiving rules before any submission.
