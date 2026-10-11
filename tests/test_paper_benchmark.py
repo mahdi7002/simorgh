@@ -75,6 +75,9 @@ def test_classification_requires_exact_label_not_substring(tmp_path):
         server.server_close()
 
     assert result["by_type"] == {"classify": "0/1"}
+    assert result["outcomes_by_type"] == {
+        "classify": {"correct": 0, "abstained": 0, "wrong": 1}
+    }
 
 
 def test_retrieval_condition_passes_local_context_to_model(tmp_path, monkeypatch):
@@ -136,4 +139,7 @@ def test_retrieval_condition_passes_local_context_to_model(tmp_path, monkeypatch
 
     assert "شاهد محلی: سعدی" in received[0]
     assert result["by_type"] == {"poetry_attribution": "1/1"}
+    assert result["outcomes_by_type"] == {
+        "poetry_attribution": {"correct": 1, "abstained": 0, "wrong": 0}
+    }
     assert result["retrieval_summary"]["items_with_context"] == 1
