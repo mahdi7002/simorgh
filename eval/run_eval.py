@@ -496,7 +496,9 @@ def section_llm(url: str, questions_path: Path, timeout: int, use_retrieval: boo
 def to_markdown(report: dict) -> str:
     e, s = report["env"], report["sections"]
     lines = [f"# SIMORGH evaluation — {report['timestamp']}", "",
-             f"Environment: {e['cpu']} · {e['cores']} threads · {e['ram_gb']} GB RAM · Python {e['python']} · commit `{e['commit']}`", "",
+             f"Environment: {e['cpu']} · {e['cores']} threads · {e['ram_gb']} GB RAM · Python {e['python']} · commit `{e['commit']}`",
+             f"Model file: {report.get('model_file', 'NOT_PROVIDED')} · SHA-256: {report.get('model_sha256', 'NOT_MEASURED')}",
+             f"Server PID: {report.get('server_pid', 'NOT_PROVIDED')} · sampled peak RSS (MB): {report.get('server_peak_rss_mb', 'NOT_MEASURED')}", "",
              "| Section | Setting | Result |", "|---|---|---|"]
     a = s["smalltalk_guard"]
     lines.append(f"| A. Smalltalk guard | {a['setting']} | greetings blocked {a['greetings_blocked']}; topics kept {a['topics_not_blocked']}; no sources on greeting: {a['no_sources_on_greeting']} |")
