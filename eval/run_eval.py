@@ -16,6 +16,7 @@ Every number is tagged with its setting; nothing is estimated.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 import platform
@@ -25,6 +26,7 @@ import sqlite3
 import statistics
 import subprocess
 import sys
+import threading
 import time
 from contextlib import closing
 from datetime import datetime
@@ -261,10 +263,17 @@ def section_attribution(n: int, seed: int, lookup_file: str | None) -> dict:
                 for name, (a, c, ab, ic, d) in scored.items() if name != "prefix6"}}
 
 
-def llm_chat(url: str, prompt: str, timeout: int, max_tokens: int = 120) -> dict:
+def llm_chat(url: str, prompt: str, timeout: int, max_tokens: int = 120, context: str = "") -> dict:
     import requests
+    user_content = prompt
+    if context:
+        user_content += (
+            "\n\nشواهد بازیابی‌شده از پایگاه‌های محلی سیمرغ (ممکن است ناقص یا نامرتبط باشند):\n"
+            + context
+            + "\n\nاگر شواهد برای پاسخ کافی نیستند، صریح بگو «نمی‌دانم» و چیزی را از خودت به منبع نسبت نده."
+        )
     body = {"messages": [{"role": "system", "content": "فقط فارسی و کوتاه پاسخ بده. اگر نمی‌دانی صریح بگو «نمی‌دانم»."},
-                         {"role": "user", "content": prompt}], "max_tokens": max_tokens, "temperature": 0}
+                         {"role": "user", "content": user_content}], "max_tokens": max_tokens, "temperature": 0}
     t0 = time.time()
     r = requests.post(url, json=body, timeout=timeout)
     dt = time.time() - t0
@@ -272,7 +281,11 @@ def llm_chat(url: str, prompt: str, timeout: int, max_tokens: int = 120) -> dict
     data = r.json()
     text = data["choices"][0]["message"]["content"]
     toks = (data.get("usage") or {}).get("completion_tokens")
-    return {"text": text, "seconds": dt, "tokens": toks, "model": data.get("model"), "tps": (data.get("timings") or {}).get("predicted_per_second")}
+    server_tps = (data.get("timings") or {}).get("predicted_per_second")
+    # Fall back to a reproducible end-to-end rate if llama.cpp timings are absent.
+    measured_tps = server_tps if server_tps else ((toks / dt) if toks is not None and dt > 0 else None)
+    return {"text": text, "seconds": dt, "tokens": toks, "model": data.get("model"),
+            "tps": measured_tps, "tps_source": "server_timings" if server_tps else "completion_tokens/request_seconds" if measured_tps else "NOT_MEASURED"}
 
 
 def _norm_name(text: str) -> str:
@@ -333,7 +346,94 @@ def section_llm_baseline(n: int, seed: int, url: str, lookup_file: str | None, t
             "llm_wrong_examples": examples}
 
 
-def section_llm(url: str, questions_path: Path, timeout: int) -> dict:
+def local_retrieval_context(question: str) -> dict:
+    """Build context with the same local retrieval hint policy as core.chat; never accesses a network."""
+    from core.chat import _retrieval_plan
+    from core import poetry_search
+    from core import quran_search
+    from core import book_search
+
+    plan = _retrieval_plan(question)
+    parts = []
+    counts = {"quran": 0, "poetry": 0, "books": 0}
+    errors = []
+    if plan["quran"]:
+        try:
+            rows = quran_search.get_quran_wisdom(question, limit=1)
+            counts["quran"] = len(rows)
+            if rows:
+                parts.append(quran_search.format_for_prompt(rows))
+        except Exception as exc:
+            errors.append(f"quran:{type(exc).__name__}")
+    if plan["poetry"]:
+        try:
+            rows = poetry_search.get_poetic_wisdom(question)
+            counts["poetry"] = len(rows)
+            if rows:
+                parts.append(poetry_search.format_for_prompt(rows))
+        except Exception as exc:
+            errors.append(f"poetry:{type(exc).__name__}")
+    if plan["books"]:
+        try:
+            rows = book_search.get_book_wisdom(question, limit=2)
+            counts["books"] = len(rows)
+            if rows:
+                parts.append(book_search.format_for_prompt(rows))
+        except Exception as exc:
+            errors.append(f"books:{type(exc).__name__}")
+    return {"context": "\n\n".join(p for p in parts if p), "counts": counts, "errors": errors}
+
+
+def sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as fh:
+        for chunk in iter(lambda: fh.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+class PeakRSSSampler:
+    """Sample a local model-server process RSS during evaluation when --server-pid is supplied."""
+    def __init__(self, pid: int | None):
+        self.pid = pid
+        self.peak_bytes = None
+        self.error = None
+        self._stop = threading.Event()
+        self._thread = None
+        self._process = None
+
+    def _sample(self):
+        try:
+            value = self._process.memory_info().rss
+            self.peak_bytes = value if self.peak_bytes is None else max(self.peak_bytes, value)
+        except Exception as exc:
+            self.error = type(exc).__name__
+
+    def _run(self):
+        while not self._stop.wait(0.1):
+            self._sample()
+
+    def __enter__(self):
+        if self.pid is not None:
+            try:
+                import psutil
+                self._process = psutil.Process(self.pid)
+                self._sample()
+                self._thread = threading.Thread(target=self._run, daemon=True)
+                self._thread.start()
+            except Exception as exc:
+                self.error = type(exc).__name__
+        return self
+
+    def __exit__(self, exc_type, exc, tb):
+        self._stop.set()
+        if self._thread:
+            self._thread.join(timeout=2)
+        if self._process:
+            self._sample()
+
+
+def section_llm(url: str, questions_path: Path, timeout: int, use_retrieval: bool = False) -> dict:
     import requests
     try:
         requests.get(url.rsplit("/v1/", 1)[0] + "/health", timeout=5).raise_for_status()
@@ -342,19 +442,38 @@ def section_llm(url: str, questions_path: Path, timeout: int) -> dict:
     items = json.loads(questions_path.read_text(encoding="utf-8"))["items"]
     per, lat, tps = [], [], []
     model = None
+    retrieval_counts = {"items_with_context": 0, "items_without_context": 0, "source_rows": {"quran": 0, "poetry": 0, "books": 0}, "errors": []}
     for it in items:
+        retrieved = {"context": "", "counts": {"quran": 0, "poetry": 0, "books": 0}, "errors": []}
+        if use_retrieval:
+            retrieved = local_retrieval_context(it["prompt"])
+            retrieval_counts["source_rows"] = {
+                k: retrieval_counts["source_rows"][k] + retrieved["counts"][k]
+                for k in retrieval_counts["source_rows"]
+            }
+            retrieval_counts["errors"].extend({"id": it["id"], "error": e} for e in retrieved["errors"])
+            if retrieved["context"]:
+                retrieval_counts["items_with_context"] += 1
+            else:
+                retrieval_counts["items_without_context"] += 1
         try:
-            out = llm_chat(url, it["prompt"], timeout)
+            out = llm_chat(url, it["prompt"], timeout, context=retrieved["context"])
         except Exception as exc:
-            per.append({"id": it["id"], "type": it["type"], "pass": False, "error": type(exc).__name__})
+            per.append({"id": it["id"], "type": it["type"], "pass": False, "error": type(exc).__name__,
+                        "retrieval_context_chars": len(retrieved["context"])})
             continue
         model = model or out["model"]
         ans = out["text"].replace("\u200c", " ")
         needles = [x.replace("\u200c", " ") for x in it["expected_any"]]
-        ok = any(x in ans for x in needles)
+        if it["type"] == "classify":
+            # Classification must be exactly one allowed label, not merely mention it in a sentence.
+            ok = _norm_name(ans) in {_norm_name(x) for x in needles}
+        else:
+            ok = any(x in ans for x in needles)
         outcome = "correct" if ok else ("abstained" if any(a.replace("\u200c", " ") in ans for a in ABSTAIN_PHRASES) else "wrong")
         per.append({"id": it["id"], "type": it["type"], "pass": ok, "outcome": outcome,
-                    "answer": out["text"][:160], "seconds": round(out["seconds"], 1)})
+                    "answer": out["text"][:160], "seconds": round(out["seconds"], 1),
+                    "retrieval_context_chars": len(retrieved["context"]), "retrieval_counts": retrieved["counts"]})
         lat.append(out["seconds"])
         if out.get("tps"):
             tps.append(out["tps"])
@@ -365,10 +484,13 @@ def section_llm(url: str, questions_path: Path, timeout: int) -> dict:
         a[1] += 1
     qa = [x for x in per if x["type"] == "qa" and "outcome" in x]
     breakdown = {k: sum(x["outcome"] == k for x in qa) for k in ("correct", "abstained", "wrong")}
-    return {"setting": f"questions file: {questions_path.name}, temperature 0, max_tokens 120", "model": model,
-            "by_type": {k: f"{v[0]}/{v[1]}" for k, v in by_type.items()}, "qa_breakdown": breakdown,
+    return {"setting": f"questions file: {questions_path.name}, temperature 0, max_tokens 120, retrieval={'on' if use_retrieval else 'off'}",
+            "retrieval_enabled": use_retrieval, "retrieval_summary": retrieval_counts if use_retrieval else "NOT_APPLICABLE",
+            "model": model, "by_type": {k: f"{v[0]}/{v[1]}" for k, v in by_type.items()}, "qa_breakdown": breakdown,
             "latency_s_median": round(statistics.median(lat), 1) if lat else None,
-            "tokens_per_s_median": round(statistics.median(tps), 1) if tps else None, "items": per}
+            "tokens_per_s_median": round(statistics.median(tps), 1) if tps else None,
+            "tps_measurement": "server timings when supplied by llama.cpp; otherwise completion_tokens/request_seconds",
+            "items": per}
 
 
 def to_markdown(report: dict) -> str:
@@ -424,17 +546,38 @@ def main() -> int:
     ap.add_argument("--baseline-n", type=int, default=100, help="LLM-alone vs lookup on the same verses (0 = skip)")
     ap.add_argument("--lookup-file", default=None, help="evaluate an alternative poetry_lookup.py instead of the repo module")
     ap.add_argument("--timeout", type=int, default=180)
+    ap.add_argument("--retrieval", action="store_true", help="inject context from SIMORGH's local retrieval functions")
+    ap.add_argument("--model-file", type=Path, help="exact local model file to hash with SHA-256")
+    ap.add_argument("--server-pid", type=int, help="PID of the llama-server process whose peak RSS should be sampled")
     args = ap.parse_args()
 
-    report = {"timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"), "env": env_info(), "sections": {}}
+    report = {"timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"), "env": env_info(), "sections": {},
+              "model_file": str(args.model_file) if args.model_file else "NOT_PROVIDED",
+              "model_sha256": "NOT_MEASURED", "server_pid": args.server_pid,
+              "server_peak_rss_mb": "NOT_MEASURED"}
+    if args.model_file:
+        if args.model_file.is_file():
+            report["model_sha256"] = sha256_file(args.model_file)
+        else:
+            report["model_sha256"] = "NOT_MEASURED: model file path missing"
+    if args.server_pid is not None:
+        with PeakRSSSampler(args.server_pid) as rss_probe:
+            report["_rss_probe"] = rss_probe
     report["sections"]["smalltalk_guard"] = section_smalltalk()
     report["sections"]["quran_retrieval"] = section_quran(args.quran_n, args.seed)
     report["sections"]["poetry"] = section_poetry()
     report["sections"]["verse_attribution"] = section_attribution(args.attr_n, args.seed, args.lookup_file)
     report["sections"]["llm_baseline"] = ({"status": "SKIPPED", "reason": "--no-llm or --baseline-n 0"} if (args.no_llm or args.baseline_n <= 0)
                                          else section_llm_baseline(args.baseline_n, args.seed, args.url, args.lookup_file, args.timeout))
-    report["sections"]["llm_qa"] = ({"status": "SKIPPED", "reason": "--no-llm"} if args.no_llm
-                                    else section_llm(args.url, args.questions, args.timeout))
+    if args.no_llm:
+        report["sections"]["llm_qa"] = {"status": "SKIPPED", "reason": "--no-llm"}
+    else:
+        with PeakRSSSampler(args.server_pid) as rss_probe:
+            report["sections"]["llm_qa"] = section_llm(args.url, args.questions, args.timeout, args.retrieval)
+        if rss_probe.peak_bytes is not None:
+            report["server_peak_rss_mb"] = round(rss_probe.peak_bytes / (1024 * 1024), 1)
+        elif args.server_pid is not None:
+            report["server_peak_rss_mb"] = f"NOT_MEASURED: {rss_probe.error or 'sampling unavailable'}"
 
     out_dir = ROOT / "eval" / "results"
     out_dir.mkdir(parents=True, exist_ok=True)
