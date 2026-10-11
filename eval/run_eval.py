@@ -560,9 +560,6 @@ def main() -> int:
             report["model_sha256"] = sha256_file(args.model_file)
         else:
             report["model_sha256"] = "NOT_MEASURED: model file path missing"
-    if args.server_pid is not None:
-        with PeakRSSSampler(args.server_pid) as rss_probe:
-            report["_rss_probe"] = rss_probe
     report["sections"]["smalltalk_guard"] = section_smalltalk()
     report["sections"]["quran_retrieval"] = section_quran(args.quran_n, args.seed)
     report["sections"]["poetry"] = section_poetry()
