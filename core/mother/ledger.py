@@ -17,6 +17,29 @@ def utc_now() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
+MAX_REPORT_BYTES = 4_000_000
+
+
+def compact_report_payload(value: Any, str_max: int = 2000, list_max: int = 100, _depth: int = 0) -> Any:
+    """Bound the stored size of a report. Reports are views; complete events stay in the events table."""
+    if _depth > 20:
+        return "[COMPACTED_DEEP]"
+    if isinstance(value, str):
+        if len(value) > str_max:
+            return value[:str_max] + f"...[COMPACTED_STR original_len={len(value)}]"
+        return value
+    if isinstance(value, dict):
+        out: dict[Any, Any] = {}
+        for k, v in value.items():
+            out[k] = compact_report_payload(v, str_max, list_max, _depth + 1)
+            if isinstance(v, (list, tuple)) and len(v) > list_max:
+                out[f"{k}__compacted_omitted"] = len(v) - list_max
+        return out
+    if isinstance(value, (list, tuple)):
+        return [compact_report_payload(v, str_max, list_max, _depth + 1) for v in list(value)[:list_max]]
+    return value
+
+
 class MotherLedger:
     """Append-oriented local ledger for boot, events, snapshots, reports and quarantine."""
 
@@ -336,9 +359,37 @@ class MotherLedger:
         return result
 
     def save_report(self, report_type: str, period_start: str, period_end: str, payload: dict[str, Any]) -> int:
+        payload = compact_report_payload(payload)
         raw = json.dumps(payload, ensure_ascii=False, sort_keys=True, default=str)
+        if len(raw) > MAX_REPORT_BYTES:
+            payload = compact_report_payload(payload, str_max=400, list_max=20)
+            raw = json.dumps(payload, ensure_ascii=False, sort_keys=True, default=str)
         digest = hashlib.sha256(raw.encode("utf-8")).hexdigest()
         with self.connect() as conn:
+            # DAILY/WEEKLY are refreshed views of a period, not append-only events.
+            # Reuse the newest row for the same period to avoid storing a full growing
+            # activity list every 15 minutes. POST_BOOT remains append-only: each boot
+            # has its own history record. Existing duplicate rows are not deleted.
+            if report_type in {"DAILY", "WEEKLY"}:
+                if report_type == "WEEKLY":
+                    # WEEKLY period_start slides with "now"; key it by the UTC day of period_end instead.
+                    existing = conn.execute(
+                        "SELECT id FROM reports WHERE report_type=? AND substr(period_end,1,10)=substr(?,1,10) ORDER BY id DESC LIMIT 1",
+                        (report_type, period_end),
+                    ).fetchone()
+                else:
+                    existing = conn.execute(
+                        "SELECT id FROM reports WHERE report_type=? AND period_start=? ORDER BY id DESC LIMIT 1",
+                        (report_type, period_start),
+                    ).fetchone()
+                if existing is not None:
+                    report_id = int(existing[0])
+                    conn.execute(
+                        "UPDATE reports SET period_end=?,sha256=?,payload_json=? WHERE id=?",
+                        (period_end, digest, raw, report_id),
+                    )
+                    return report_id
+
             cur = conn.execute(
                 "INSERT INTO reports(report_type,period_start,period_end,created_at,sha256,payload_json)"
                 " VALUES(?,?,?,?,?,?)",
