@@ -15,7 +15,7 @@ Topics to cover (add sources): Persian poetry corpora and attribution; retrieval
 ## 3 System
 - Offline stack: llama.cpp server (Gemma-3-4B QAT Q4_0), FastAPI service, SQLite FTS5 databases. Hardware: Core i5-4460, 7.7 GB RAM, no GPU, ≈10 tokens/s generation.
 - Provenance boundary: the specific verse-attribution route in `app/knowledge/poetry_lookup.py` can return a database-backed answer without the LLM and marks that response `ai_generated=false`. Ordinary Quran/poetry/book retrieval generally contributes context to the model prompt, so final answers are not universally model-independent. The existing greeting guard blocks retrieval for small talk.
-- Data: `persian_poetry.db` (1,406,919 verses with poet ids; FTS5 index), distributed as a hash-checked Git LFS object.
+- Data: historical evidence reports a local poetry corpus with 1,406,919 verse records and poet IDs. The default `data/poetry/persian_poetry.db` path used by the attribution module was not present in the current public tree reviewed for this draft. Clean-clone availability, exact file/hash/source provenance and redistribution rights are NOT VERIFIED; do not describe the dataset as publicly reproducible until these gates are resolved.
 
 ## 4 Method: verse attribution
 1. Normalise (ي→ی, ك→ک, strip diacritics); tokenise into words.
