@@ -14,7 +14,7 @@ Topics to cover (add sources): Persian poetry corpora and attribution; retrieval
 
 ## 3 System
 - Offline stack: llama.cpp server (Gemma-3-4B QAT Q4_0), FastAPI service, SQLite FTS5 databases. Hardware: Core i5-4460, 7.7 GB RAM, no GPU, ≈10 tokens/s generation.
-- Provenance: answers from the database are returned without the LLM and flagged `ai_generated=false`; greetings never trigger retrieval.
+- Provenance boundary: the specific verse-attribution route in `app/knowledge/poetry_lookup.py` can return a database-backed answer without the LLM and marks that response `ai_generated=false`. Ordinary Quran/poetry/book retrieval generally contributes context to the model prompt, so final answers are not universally model-independent. The existing greeting guard blocks retrieval for small talk.
 - Data: `persian_poetry.db` (1,406,919 verses with poet ids; FTS5 index), distributed as a hash-checked Git LFS object.
 
 ## 4 Method: verse attribution
