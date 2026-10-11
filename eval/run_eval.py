@@ -478,15 +478,22 @@ def section_llm(url: str, questions_path: Path, timeout: int, use_retrieval: boo
         if out.get("tps"):
             tps.append(out["tps"])
     by_type = {}
+    outcomes_by_type = {}
     for p in per:
         a = by_type.setdefault(p["type"], [0, 0])
-        a[0] += p["pass"]
+        a[0] += bool(p["pass"])
         a[1] += 1
+        if "outcome" in p:
+            outcome_counts = outcomes_by_type.setdefault(
+                p["type"], {"correct": 0, "abstained": 0, "wrong": 0}
+            )
+            outcome_counts[p["outcome"]] += 1
     qa = [x for x in per if x["type"] == "qa" and "outcome" in x]
     breakdown = {k: sum(x["outcome"] == k for x in qa) for k in ("correct", "abstained", "wrong")}
     return {"setting": f"questions file: {questions_path.name}, temperature 0, max_tokens 120, retrieval={'on' if use_retrieval else 'off'}",
             "retrieval_enabled": use_retrieval, "retrieval_summary": retrieval_counts if use_retrieval else "NOT_APPLICABLE",
-            "model": model, "by_type": {k: f"{v[0]}/{v[1]}" for k, v in by_type.items()}, "qa_breakdown": breakdown,
+            "model": model, "by_type": {k: f"{v[0]}/{v[1]}" for k, v in by_type.items()},
+            "outcomes_by_type": outcomes_by_type, "qa_breakdown": breakdown,
             "latency_s_median": round(statistics.median(lat), 1) if lat else None,
             "tokens_per_s_median": round(statistics.median(tps), 1) if tps else None,
             "tps_measurement": "server timings when supplied by llama.cpp; otherwise completion_tokens/request_seconds",
@@ -529,8 +536,10 @@ def to_markdown(report: dict) -> str:
     else:
         res = ", ".join(f"{k} {v}" for k, v in l["by_type"].items())
         bd = l.get("qa_breakdown")
-        if bd:
+        if bd and sum(bd.values()):
             res += f" (qa: {bd['correct']} correct / {bd['abstained']} abstained / {bd['wrong']} WRONG)"
+        for kind, outcomes in l.get("outcomes_by_type", {}).items():
+            res += f"; {kind}: {outcomes['correct']} correct / {outcomes['abstained']} abstained / {outcomes['wrong']} wrong"
         lines.append(f"| D. LLM QA | model {l['model']}; {l['setting']} | {res}; median {l['latency_s_median']} s, {l['tokens_per_s_median']} tok/s |")
     lines += ["", "Notes: B is an easy setting (self-retrieval) and measures regression, not real-world accuracy. "
               "C measures availability only. D uses a small starter question set; report its size alongside any claim.", ""]
