@@ -1,6 +1,6 @@
 # Provenance-first retrieval for Persian poetry attribution on commodity hardware  (DRAFT, anonymised for double-blind review)
 
-> Target: AbjadNLP 2027 (deadline 15 Dec 2026). Verify page limit/format on the workshop page. Replace the repository link with an anonymised mirror before submission. **No citations are filled in**: every `[CITE]` must be added by the author after reading the sources; do not cite from memory.
+> Optional target: SilkRoadNLP 2027, direct paper deadline 15 Dec 2026, with a strong thematic fit to Iranian-language NLP and technological sovereignty. This draft is a separate technical framing, not approved for submission: first confirm the national conference's overlapping-submission rules and complete the benchmark/data-rights gates. AbjadNLP is an alternative, not a second simultaneous submission. Double-blind formatting and an anonymised source mirror must be checked before any submission.
 
 ## Abstract
 See `docs/paper/ABSTRACT.md` (English version), updated with the held-out numbers below.
@@ -10,10 +10,17 @@ See `docs/paper/ABSTRACT.md` (English version), updated with the held-out number
 - Contribution (keep to what is evidenced): (1) a deterministic, provenance-first lookup for verse attribution over ~1.4M verses; (2) an abstention rule that avoids certifying a poet when a phrase is too common; (3) a reproducible evaluation protocol with dev/held-out samples, perturbations, chimeras and error analysis; (4) a comparison with the same LLM used alone.
 
 ## 2 Related work
-Topics to cover (add sources): Persian poetry corpora and attribution; retrieval-augmented generation; selective prediction / abstention; evaluation of small quantised LLMs. [CITE ×N]
+
+Persian LLM evaluation has begun to include wider task and culture coverage. Abaskohi et al. (2024) benchmarked several LLMs on classic, reasoning and knowledge-based Persian tasks and contributed new reasoning datasets; Hosseinbeigi et al. (2025) introduced PeKA and PK-BETS for Persian knowledge, literature and culture. The proposed 40-item set here is much smaller and deliberately task-specific: it is intended to test a local pipeline and abstention on a frozen set, not to replace or compete with broad Persian benchmarks. Its measured results are still pending.
+
+Raji et al. (2024) describe a machine-readable Persian literary corpus annotated for time period and style, while Shahnazari et al. (2025, preprint) study Persian poetry authorship recognition with a supervised model over a curated corpus. Those tasks are not directly comparable to SIMORGH's phrase-matching attribution path: the latter asks whether a known phrase can be matched to a stored record and declines to certify common or ambiguous phrases, rather than classifying arbitrary verses across poets.
+
+Lewis et al. (2020) describe retrieval-augmented generation as a way to condition model outputs on explicit non-parametric memory. SIMORGH also retrieves local text, but the current implementation has two distinct behaviors: a deterministic route for certain verse-attribution requests, and ordinary retrieval that supplies context to the language model. This paper therefore reports the deterministic attribution task separately from the LLM-only versus LLM-with-context ablation.
+
+The coverage/abstention trade-off is related to selective classification (Geifman and El-Yaniv, 2017). The current lookup reports empirical coverage, answered accuracy and candidate inclusion; it is not a calibrated risk-controlling selective classifier and offers no formal error guarantee.
 
 ## 3 System
-- Offline stack: llama.cpp server (Gemma-3-4B QAT Q4_0), FastAPI service, SQLite FTS5 databases. Hardware: Core i5-4460, 7.7 GB RAM, no GPU, ≈10 tokens/s generation.
+- Historical test stack: local llama.cpp server (Gemma-3-4B QAT Q4_0), FastAPI and SQLite/FTS. Recorded test machine: Core i5-4460, about 7.7 GB RAM, no GPU. A single current throughput figure is omitted because historical run contexts differ; throughput in the new four-condition benchmark is NOT_MEASURED.
 - Provenance boundary: the specific verse-attribution route in `app/knowledge/poetry_lookup.py` can return a database-backed answer without the LLM and marks that response `ai_generated=false`. Ordinary Quran/poetry/book retrieval generally contributes context to the model prompt, so final answers are not universally model-independent. The existing greeting guard blocks retrieval for small talk.
 - Data: historical evidence reports a local poetry corpus with 1,406,919 verse records and poet IDs. The default `data/poetry/persian_poetry.db` path used by the attribution module was not present in the current public tree reviewed for this draft. Clean-clone availability, exact file/hash/source provenance and redistribution rights are NOT VERIFIED; do not describe the dataset as publicly reproducible until these gates are resolved.
 
