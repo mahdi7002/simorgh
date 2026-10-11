@@ -40,6 +40,32 @@ def compact_report_payload(value: Any, str_max: int = 2000, list_max: int = 100,
     return value
 
 
+REPORT_KEEP_DAYS = 7
+REPORT_MAX_TOTAL_BYTES = 1_000_000_000
+REPORT_PRUNE_MAX_DB_BYTES = 5_000_000_000
+REPORT_DIGEST_SQL = (
+    "CREATE TABLE IF NOT EXISTS report_digests ("
+    "report_id INTEGER PRIMARY KEY, report_type TEXT NOT NULL, period_start TEXT, period_end TEXT, "
+    "created_at TEXT, sha256 TEXT, payload_bytes INTEGER, pruned_at TEXT NOT NULL)"
+)
+
+
+def select_reports_to_prune(rows, cutoff_iso, max_total_bytes):
+    """rows: (id, report_type, created_at, nbytes). The newest row of each type is always kept.
+    Rows newer than cutoff_iso are kept unless their total exceeds max_total_bytes (then only the newest per type stays)."""
+    rows = list(rows)
+    newest: dict[Any, int] = {}
+    for rid, rtype, _created, _nbytes in rows:
+        if rtype not in newest or rid > newest[rtype]:
+            newest[rtype] = rid
+    protected = set(newest.values())
+    keep = {rid for rid, _t, created, _b in rows if created >= cutoff_iso} | protected
+    total = sum((nbytes or 0) for rid, _t, _c, nbytes in rows if rid in keep)
+    if total > max_total_bytes:
+        keep = set(protected)
+    return sorted(rid for rid, _t, _c, _b in rows if rid not in keep)
+
+
 class MotherLedger:
     """Append-oriented local ledger for boot, events, snapshots, reports and quarantine."""
 
@@ -358,7 +384,7 @@ class MotherLedger:
             result.append(item)
         return result
 
-    def save_report(self, report_type: str, period_start: str, period_end: str, payload: dict[str, Any]) -> int:
+    def _save_report_core(self, report_type: str, period_start: str, period_end: str, payload: dict[str, Any]) -> int:
         payload = compact_report_payload(payload)
         raw = json.dumps(payload, ensure_ascii=False, sort_keys=True, default=str)
         if len(raw) > MAX_REPORT_BYTES:
@@ -396,6 +422,59 @@ class MotherLedger:
                 (report_type, period_start, period_end, utc_now(), digest, raw),
             )
             return int(cur.lastrowid)
+
+    _last_prune_at: float | None = None
+
+    def save_report(self, report_type: str, period_start: str, period_end: str, payload: dict[str, Any]) -> int:
+        report_id = self._save_report_core(report_type, period_start, period_end, payload)
+        try:
+            self.prune_reports_if_due()
+        except Exception as exc:  # retention must never break reporting
+            import logging as _logging
+            _logging.getLogger(__name__).warning("report prune skipped: %s: %s", type(exc).__name__, exc)
+        return report_id
+
+    def prune_reports_if_due(self, force: bool = False) -> dict[str, Any] | None:
+        """Deterministic retention (no LLM): keep newest report per type + last REPORT_KEEP_DAYS days,
+        keep a metadata digest of every deleted report. Raw facts stay in events/snapshots."""
+        import logging as _logging
+        import time as _time
+        from datetime import datetime as _dt, timedelta as _td, timezone as _tz
+        now_m = _time.monotonic()
+        if not force and MotherLedger._last_prune_at is not None and now_m - MotherLedger._last_prune_at < 3600:
+            return None
+        MotherLedger._last_prune_at = now_m
+        log = _logging.getLogger(__name__)
+        with self.connect() as conn:
+            size = int(conn.execute("PRAGMA page_count").fetchone()[0]) * int(conn.execute("PRAGMA page_size").fetchone()[0])
+            if size > REPORT_PRUNE_MAX_DB_BYTES:
+                log.warning("report prune skipped: db is %.1f GB; run the offline rebuild", size / 1e9)
+                return {"skipped": "db_too_large", "db_bytes": size}
+            conn.execute(REPORT_DIGEST_SQL)
+            rows = conn.execute(
+                "SELECT id, report_type, period_start, period_end, created_at, sha256, length(CAST(payload_json AS BLOB)) FROM reports"
+            ).fetchall()
+            cutoff = (_dt.now(_tz.utc) - _td(days=REPORT_KEEP_DAYS)).isoformat()
+            doomed = select_reports_to_prune(((r[0], r[1], r[4], r[6]) for r in rows), cutoff, REPORT_MAX_TOTAL_BYTES)
+            if not doomed:
+                return {"deleted": 0}
+            by_id = {r[0]: r for r in rows}
+            pruned_at = _dt.now(_tz.utc).isoformat()
+            freed = 0
+            for rid in doomed:
+                r = by_id[rid]
+                conn.execute(
+                    "INSERT OR IGNORE INTO report_digests(report_id,report_type,period_start,period_end,created_at,sha256,payload_bytes,pruned_at)"
+                    " VALUES(?,?,?,?,?,?,?,?)",
+                    (r[0], r[1], r[2], r[3], r[4], r[5], r[6], pruned_at),
+                )
+                conn.execute("DELETE FROM reports WHERE id=?", (rid,))
+                freed += int(r[6] or 0)
+            conn.commit()
+            if int(conn.execute("PRAGMA auto_vacuum").fetchone()[0]) == 2:
+                conn.execute("PRAGMA incremental_vacuum(50000)").fetchall()
+        log.warning("reports pruned: deleted=%d freed_bytes=%d", len(doomed), freed)
+        return {"deleted": len(doomed), "freed_bytes": freed}
 
     def latest_report(self, report_type: str) -> dict[str, Any]:
         with self.connect() as conn:
