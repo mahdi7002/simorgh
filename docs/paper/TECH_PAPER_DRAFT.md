@@ -1,6 +1,6 @@
 # Provenance-first retrieval for Persian poetry attribution on commodity hardware  (DRAFT, anonymised for double-blind review)
 
-> Target: AbjadNLP 2027 (deadline 15 Dec 2026). Verify page limit/format on the workshop page. Replace the repository link with an anonymised mirror before submission. **No citations are filled in**: every `[CITE]` must be added by the author after reading the sources; do not cite from memory.
+> Optional target: SilkRoadNLP 2027, direct paper deadline 15 Dec 2026, with a strong thematic fit to Iranian-language NLP and technological sovereignty. This draft is a separate technical framing, not approved for submission: first confirm the national conference's overlapping-submission rules and complete the benchmark/data-rights gates. AbjadNLP is an alternative, not a second simultaneous submission. Double-blind formatting and an anonymised source mirror must be checked before any submission.
 
 ## Abstract
 See `docs/paper/ABSTRACT.md` (English version), updated with the held-out numbers below.
@@ -10,12 +10,19 @@ See `docs/paper/ABSTRACT.md` (English version), updated with the held-out number
 - Contribution (keep to what is evidenced): (1) a deterministic, provenance-first lookup for verse attribution over ~1.4M verses; (2) an abstention rule that avoids certifying a poet when a phrase is too common; (3) a reproducible evaluation protocol with dev/held-out samples, perturbations, chimeras and error analysis; (4) a comparison with the same LLM used alone.
 
 ## 2 Related work
-Topics to cover (add sources): Persian poetry corpora and attribution; retrieval-augmented generation; selective prediction / abstention; evaluation of small quantised LLMs. [CITE ×N]
+
+Persian LLM evaluation has begun to include wider task and culture coverage. Abaskohi et al. (2024) benchmarked several LLMs on classic, reasoning and knowledge-based Persian tasks and contributed new reasoning datasets; Hosseinbeigi et al. (2025) introduced PeKA and PK-BETS for Persian knowledge, literature and culture. The proposed 40-item set here is much smaller and deliberately task-specific: it is intended to test a local pipeline and abstention on a frozen set, not to replace or compete with broad Persian benchmarks. Its measured results are still pending.
+
+Raji et al. (2024) describe a machine-readable Persian literary corpus annotated for time period and style, while Shahnazari et al. (2025, preprint) study Persian poetry authorship recognition with a supervised model over a curated corpus. Those tasks are not directly comparable to SIMORGH's phrase-matching attribution path: the latter asks whether a known phrase can be matched to a stored record and declines to certify common or ambiguous phrases, rather than classifying arbitrary verses across poets.
+
+Lewis et al. (2020) describe retrieval-augmented generation as a way to condition model outputs on explicit non-parametric memory. SIMORGH also retrieves local text, but the current implementation has two distinct behaviors: a deterministic route for certain verse-attribution requests, and ordinary retrieval that supplies context to the language model. This paper therefore reports the deterministic attribution task separately from the LLM-only versus LLM-with-context ablation.
+
+The coverage/abstention trade-off is related to selective classification (Geifman and El-Yaniv, 2017). The current lookup reports empirical coverage, answered accuracy and candidate inclusion; it is not a calibrated risk-controlling selective classifier and offers no formal error guarantee.
 
 ## 3 System
-- Offline stack: llama.cpp server (Gemma-3-4B QAT Q4_0), FastAPI service, SQLite FTS5 databases. Hardware: Core i5-4460, 7.7 GB RAM, no GPU, ≈10 tokens/s generation.
-- Provenance: answers from the database are returned without the LLM and flagged `ai_generated=false`; greetings never trigger retrieval.
-- Data: `persian_poetry.db` (1,406,919 verses with poet ids; FTS5 index), distributed as a hash-checked Git LFS object.
+- Historical test stack: local llama.cpp server (Gemma-3-4B QAT Q4_0), FastAPI and SQLite/FTS. Recorded test machine: Core i5-4460, about 7.7 GB RAM, no GPU. A single current throughput figure is omitted because historical run contexts differ; throughput in the new four-condition benchmark is NOT_MEASURED.
+- Provenance boundary: the specific verse-attribution route in `app/knowledge/poetry_lookup.py` can return a database-backed answer without the LLM and marks that response `ai_generated=false`. Ordinary Quran/poetry/book retrieval generally contributes context to the model prompt, so final answers are not universally model-independent. The existing greeting guard blocks retrieval for small talk.
+- Data: historical evidence reports a local poetry corpus with 1,406,919 verse records and poet IDs. The default `data/poetry/persian_poetry.db` path used by the attribution module was not present in the current public tree reviewed for this draft. Clean-clone availability, exact file/hash/source provenance and redistribution rights are NOT VERIFIED; do not describe the dataset as publicly reproducible until these gates are resolved.
 
 ## 4 Method: verse attribution
 1. Normalise (ي→ی, ك→ک, strip diacritics); tokenise into words.
@@ -58,7 +65,25 @@ Per seed the LLM got 7, 8 and 14 of 100 right; on the dev seed 7 it got 14. It n
 Single machine; queries derived from the database; correctness bounded by the database's attributions; ≈ 1/3 coverage under one-letter corruption (abstains rather than guesses); no human evaluation; no user study; LLM QA pilot (n = 10) is too small for claims.
 
 ## 8 Reproducibility
-`git lfs pull && python eval/run_eval.py && python eval/finalize_evidence.py` regenerates every number in §6.
+
+The held-out poetry results in §6 refer to the previously recorded reports in `docs/evidence/ATTRIBUTION_HELDOUT.md` and `docs/evidence/EVAL_2026-10-05.md`. The exact poetry database path used by `app/knowledge/poetry_lookup.py` is absent from the public tree inspected for this draft, so a clean-clone reproduction has **not** been demonstrated. The command below is only applicable after the exact data asset has been obtained through a documented and permitted route; success from a fresh checkout is currently NOT VERIFIED.
+
+```bash
+python eval/run_eval.py --no-llm --attr-n 300 --seed 11
+python eval/finalize_evidence.py
+```
+
+The newer 40-item benchmark in `eval/questions_paper_v1.json` remains PREPARED_NOT_RUN. It must first pass the Quran and poetry gold-reference audit; four timestamped model/retrieval condition JSON files, model/data SHA-256 values, latency, tokens/s, RSS and per-item outputs are required before reporting new numbers.
 
 ## Ethics
-Poetry corpus provenance and licensing must be stated before submission (see `docs/ASSET_PROVENANCE.md`).
+
+The poetry corpus and Quran translation have unresolved redistribution/provenance questions recorded in `docs/paper/B2_DATA_PROVENANCE_GATE.md`. Do not redistribute the source databases or claim a public, clean-clone reproduction until these rights and path checks are resolved. No human participants or actual municipal records were part of the historical poetry benchmark.
+
+## References (located; full-text reading and venue formatting still required before submission)
+
+- Abaskohi, A., Baruni, S., Masoudi, M., Abbasi, N., Babalou, M. H., Edalat, A., Kamahi, S., Mahdizadeh Sani, S., Naghavian, N., Namazifard, D., Sadeghi, P., and Yaghoobzadeh, Y. (2024). “Benchmarking Large Language Models for Persian: A Preliminary Study Focusing on ChatGPT.” *LREC-COLING 2024*, 2189–2203. https://aclanthology.org/2024.lrec-main.197/
+- Geifman, Y., and El-Yaniv, R. (2017). “Selective Classification for Deep Neural Networks.” *NeurIPS 2017*, 4878–4887. https://papers.nips.cc/paper_files/paper/2017/hash/4a8423d5e91fda00bb7e46540e2b0cf1-Abstract.html
+- Hosseinbeigi, S. B., Rohani, B., Masoudi, M., Shamsfard, M., Saaberi, Z., Karimi Manesh, M., and Abbasi, M. A. (2025). “Advancing Persian LLM Evaluation.” *Findings of NAACL 2025*, 2711–2727. https://doi.org/10.18653/v1/2025.findings-naacl.147
+- Lewis, P., Perez, E., Piktus, A., Petroni, F., Karpukhin, V., Goyal, N., Küttler, H., Lewis, M., Yih, W.-t., Rocktäschel, T., Riedel, S., and Kiela, D. (2020). “Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks.” *NeurIPS 2020*. https://proceedings.neurips.cc/paper/2020/hash/6b493230205f780e1bc26945df7481e5-Abstract.html
+- Raji, S., Alikhani, M., de Melo, G., and Stone, M. (2024). “A corpus of Persian literary text.” *Language Resources and Evaluation*, 58, 409–425. https://doi.org/10.1007/s10579-023-09689-6
+- Shahnazari, K., Keshtparvar, M., and Ayyoubzadeh, S. M. (2025). “PARSI: Persian Authorship Recognition via Stylometric Integration.” arXiv:2506.21840 (preprint). https://arxiv.org/abs/2506.21840
