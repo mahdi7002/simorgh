@@ -13,7 +13,7 @@ from collections import Counter
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-QUESTIONS = ROOT / "eval" / "questions_paper_v1.json"
+QUESTIONS = ROOT / "eval" / "questions_paper_v2.json"
 
 
 def sha256_file(path: Path) -> str:
