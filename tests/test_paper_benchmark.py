@@ -169,3 +169,23 @@ def test_file_fingerprint_records_hash_and_never_hashes_lfs_pointer(tmp_path):
     pointer_record = run_eval.file_fingerprint(pointer)
     assert pointer_record["status"] == "GIT_LFS_POINTER_NOT_DATA"
     assert pointer_record["sha256"] == "NOT_MEASURED"
+
+
+def test_normalization_fixture_is_locked_and_balanced_before_execution():
+    path = ROOT / "eval" / "normalization_pairs_v1.json"
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    pairs = payload["pairs"]
+    counts = Counter(pair["category"] for pair in pairs)
+
+    assert payload["_status"] == "LOCKED_BEFORE_EXECUTION_NOT_RUN"
+    assert len(pairs) == 30
+    assert counts == {
+        "arabic_yeh": 6,
+        "arabic_kaf": 6,
+        "zwnj_vs_space": 6,
+        "digit_forms": 6,
+        "diacritics": 6,
+    }
+    assert len({pair["id"] for pair in pairs}) == 30
+    assert all(pair["left"] != pair["right"] for pair in pairs)
+    assert all(pair["expected_invariant"] is True for pair in pairs)
