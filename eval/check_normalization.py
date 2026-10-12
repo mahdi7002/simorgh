@@ -12,7 +12,7 @@ from datetime import datetime
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-FIXTURE = ROOT / "eval" / "normalization_pairs_v1.json"
+FIXTURE = ROOT / "eval" / "normalization_pairs_v2.json"
 
 
 def sha256_file(path: Path) -> str:
