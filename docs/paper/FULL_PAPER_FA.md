@@ -95,7 +95,7 @@ flowchart TD
 این فهرست برای ردیابی منابع است. پیش از ارسال، متن کامل هر منبع باید خوانده شود و ارجاعات بر اساس شیوه‌نامهٔ رسمی همایش یکدست شوند.
 
 1. Abaskohi, A. et al. (2024). “Benchmarking Large Language Models for Persian: A Preliminary Study Focusing on ChatGPT.” *LREC-COLING 2024*, 2189–2203. https://aclanthology.org/2024.lrec-main.197/
-2. Geifman, Y. and El-Yaniv, R. (2017). “Selective Classification for Deep Neural Networks.” *NeurIPS 2017*, 4878–4887. https://arxiv.org/abs/1705.08500
+2. Geifman, Y. and El-Yaniv, R. (2017). “Selective Classification for Deep Neural Networks.” *NeurIPS 2017*, 4878–4887. https://papers.nips.cc/paper_files/paper/2017/hash/4a8423d5e91fda00bb7e46540e2b0cf1-Abstract.html
 3. Hosseinbeigi, S. B. et al. (2025). “Advancing Persian LLM Evaluation.” *Findings of NAACL 2025*, 2711–2727. https://doi.org/10.18653/v1/2025.findings-naacl.147
 4. Lewis, P. et al. (2020). “Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks.” *NeurIPS 2020*. https://proceedings.neurips.cc/paper/2020/hash/6b493230205f780e1bc26945df7481e5-Abstract.html
 5. Raji, S., Alikhani, M., de Melo, G., and Stone, M. (2024). “A corpus of Persian literary text.” *Language Resources and Evaluation*, 58, 409–425. https://doi.org/10.1007/s10579-023-09689-6
