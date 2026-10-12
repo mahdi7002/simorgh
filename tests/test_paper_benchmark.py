@@ -148,3 +148,24 @@ def test_retrieval_condition_passes_local_context_to_model(tmp_path, monkeypatch
         "poetry_attribution": {"correct": 1, "abstained": 0, "wrong": 0}
     }
     assert result["retrieval_summary"]["items_with_context"] == 1
+
+
+def test_file_fingerprint_records_hash_and_never_hashes_lfs_pointer(tmp_path):
+    import hashlib
+
+    real_file = tmp_path / "input.db"
+    real_file.write_bytes(b"sqlite-fixture")
+    record = run_eval.file_fingerprint(real_file)
+    assert record["status"] == "HASHED"
+    assert record["sha256"] == hashlib.sha256(b"sqlite-fixture").hexdigest()
+
+    pointer = tmp_path / "data.db"
+    pointer.write_text(
+        "version https://git-lfs.github.com/spec/v1\n"
+        "oid sha256:" + "a" * 64 + "\n"
+        "size 12345\n",
+        encoding="utf-8",
+    )
+    pointer_record = run_eval.file_fingerprint(pointer)
+    assert pointer_record["status"] == "GIT_LFS_POINTER_NOT_DATA"
+    assert pointer_record["sha256"] == "NOT_MEASURED"
