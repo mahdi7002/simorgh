@@ -4,7 +4,7 @@ Status: **prepared, not run** (2026-10-12). This is an experiment plan, not evid
 
 ## Fixed design
 
-Dataset: `eval/questions_paper_v1.json`. It contains 40 items, 10 per category:
+Dataset for scoring: `eval/questions_paper_v2.json` (corrected pre-run version). The earlier `eval/questions_paper_v1.json` is retained as history, but `poetry-01` uses a disputed common wording (`یک پیکرند`) and must not be used for scored runs. Version v2 changes it to `یکدیگرند` before any model output was inspected. The set contains 40 items, 10 per category:
 - `poetry_attribution`: identify the poet;
 - `source_qa`: answer a question tied to a Quran verse reference;
 - `abstain`: questions designed to lack an answer in the available local source set;
@@ -20,7 +20,7 @@ Ordinary QA uses literal expected-substring scoring, not semantic judging. Class
 
 ## Four-condition matrix
 
-Run the same 40 prompts in all four conditions:
+Run the same 40 prompts in `eval/questions_paper_v2.json` in all four conditions:
 1. Gemma 3 4B QAT Q4_0, retrieval off;
 2. Gemma 3 4B QAT Q4_0, retrieval on;
 3. Qwen2.5 1.5B Instruct Q4_K_M, retrieval off;
@@ -53,3 +53,10 @@ The four runs may take time because each evaluates all 40 items. Each command wr
 - Poetry prompts are curated rather than generated from the evaluation database, but their gold labels still need a corpus audit.
 - The study compares two models on one machine, not a broad population of hardware or models.
 - Report the model versions/hashes, source database hashes, software commit, hardware, all four conditions, category-level results, raw errors and the limitations together.
+
+
+## Pre-run correction record (2026-10-12)
+
+A source check against a text of Golestan showed that the commonly quoted first Saadi line is normally rendered "بنی‌آدم اعضای یکدیگرند". As the first draft used the disputed "یک پیکرند" wording while claiming a verse-level source, scoring was blocked and the correction was versioned in `questions_paper_v2.json` before any model outputs were inspected. The v1 file is retained rather than overwritten. The local poetry corpus audit is still required, and model scores must not be reported unless the exact local corpus can substantiate all poetry gold labels.
+
+The 30-pair model-free normalization fixture is `eval/normalization_pairs_v2.json`; its script prints the fixture SHA-256 before making the first lookup. Pair invariance, no-hit rates, and data correctness are distinct metrics.
