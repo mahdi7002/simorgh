@@ -392,6 +392,27 @@ def sha256_file(path: Path) -> str:
     return digest.hexdigest()
 
 
+def file_fingerprint(path: str | Path | None) -> dict:
+    """Record the exact input path and SHA-256; never hash an LFS pointer as if it were data."""
+    if path is None:
+        return {"path": None, "sha256": "NOT_MEASURED", "status": "NOT_PROVIDED"}
+    candidate = Path(path).expanduser()
+    record = {"path": str(candidate), "sha256": "NOT_MEASURED", "status": "NOT_MEASURED"}
+    if not candidate.is_file():
+        record["status"] = "MISSING"
+        return record
+    try:
+        with candidate.open("rb") as fh:
+            if fh.read(40).startswith(b"version https://git-lfs"):
+                record["status"] = "GIT_LFS_POINTER_NOT_DATA"
+                return record
+        record["sha256"] = sha256_file(candidate)
+        record["status"] = "HASHED"
+    except OSError as exc:
+        record["status"] = f"ERROR:{type(exc).__name__}"
+    return record
+
+
 class PeakRSSSampler:
     """Sample a local model-server process RSS during evaluation when --server-pid is supplied."""
     def __init__(self, pid: int | None):
@@ -490,7 +511,7 @@ def section_llm(url: str, questions_path: Path, timeout: int, use_retrieval: boo
             outcome_counts[p["outcome"]] += 1
     qa = [x for x in per if x["type"] == "qa" and "outcome" in x]
     breakdown = {k: sum(x["outcome"] == k for x in qa) for k in ("correct", "abstained", "wrong")}
-    return {"setting": f"questions file: {questions_path.name}, temperature 0, max_tokens 120, retrieval={'on' if use_retrieval else 'off'}",
+    return {"setting": f"questions file: {questions_path.name}, temperature 0, seed={seed}, max_tokens 120, retrieval={'on' if use_retrieval else 'off'}",
             "retrieval_enabled": use_retrieval, "retrieval_summary": retrieval_counts if use_retrieval else "NOT_APPLICABLE",
             "model": model, "by_type": {k: f"{v[0]}/{v[1]}" for k, v in by_type.items()},
             "outcomes_by_type": outcomes_by_type, "qa_breakdown": breakdown,
@@ -562,10 +583,36 @@ def main() -> int:
     ap.add_argument("--server-pid", type=int, help="PID of the llama-server process whose peak RSS should be sampled")
     args = ap.parse_args()
 
-    report = {"timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"), "env": env_info(), "sections": {},
-              "model_file": str(args.model_file) if args.model_file else "NOT_PROVIDED",
-              "model_sha256": "NOT_MEASURED", "server_pid": args.server_pid,
-              "server_peak_rss_mb": "NOT_MEASURED"}
+    poetry_attribution_path = os.environ.get(
+        "SIMORGH_VERSE_DB", str(ROOT / "data" / "poetry" / "persian_poetry.db")
+    )
+    report = {
+        "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "env": env_info(),
+        "sections": {},
+        "model_file": str(args.model_file) if args.model_file else "NOT_PROVIDED",
+        "model_sha256": "NOT_MEASURED",
+        "server_pid": args.server_pid,
+        "server_peak_rss_mb": "NOT_MEASURED",
+        "run_config": {
+            "seed": args.seed,
+            "temperature": 0,
+            "max_tokens": 120,
+            "questions_file": str(args.questions),
+            "retrieval": bool(args.retrieval),
+            "timeout_seconds": args.timeout,
+            "quran_n": args.quran_n,
+            "attr_n": args.attr_n,
+            "baseline_n": args.baseline_n,
+        },
+        "input_files": {
+            "questions": file_fingerprint(args.questions),
+            "model": file_fingerprint(args.model_file),
+            "quran_db": file_fingerprint(quran_search.DB_PATH),
+            "poetry_search_db": file_fingerprint(poetry_search.DB_PATH),
+            "poetry_attribution_db": file_fingerprint(poetry_attribution_path),
+        },
+    }
     if args.model_file:
         if args.model_file.is_file():
             report["model_sha256"] = sha256_file(args.model_file)
