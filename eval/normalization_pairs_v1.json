@@ -1,0 +1,290 @@
+{
+  "_title": "SIMORGH orthographic invariance test v1",
+  "_status": "LOCKED_BEFORE_EXECUTION_NOT_RUN",
+  "_created_date": "2026-10-12",
+  "_criterion": {
+    "pair_count": 30,
+    "groups": {
+      "arabic_yeh": 6,
+      "arabic_kaf": 6,
+      "zwnj_vs_space": 6,
+      "digit_forms": 6,
+      "diacritics": 6
+    },
+    "poetry_lookup": "stable if both sides have the same status and same answer pid, or same sorted candidate IDs for ambiguous/uncertain; identical no-hit is stable but separately counted as no-hit.",
+    "quran_search": "stable if ordered (surah, ayah, exact returned text) results are identical; identical empty results count stable but separately as no-hit.",
+    "scoring": "No LLM is called. The fixture and its SHA-256 must be printed before the first query is executed. Do not edit after seeing outputs."
+  },
+  "pairs": [
+    {
+      "id": "norm-arabic_yeh-01",
+      "category": "arabic_yeh",
+      "engine": "poetry_lookup",
+      "source_question_id": "poetry-01",
+      "left": "بیت «بنی‌آدم اعضای یک پیکرند / که در آفرینش ز یک گوهرند» از کدام شاعر است؟ فقط نام شاعر را بنویس.",
+      "right": "بیت «بني‌آدم اعضاي يک پيکرند / که در آفرينش ز يک گوهرند» از کدام شاعر است؟ فقط نام شاعر را بنویس.",
+      "expected_invariant": true
+    },
+    {
+      "id": "norm-arabic_yeh-02",
+      "category": "arabic_yeh",
+      "engine": "poetry_lookup",
+      "source_question_id": "poetry-02",
+      "left": "سرایندهٔ «الا یا ایها الساقی ادر کاسا و ناولها» کیست؟ فقط نام شاعر را بنویس.",
+      "right": "سرایندهٔ «الا يا ايها الساقي ادر کاسا و ناولها» کیست؟ فقط نام شاعر را بنویس.",
+      "expected_invariant": true
+    },
+    {
+      "id": "norm-arabic_yeh-03",
+      "category": "arabic_yeh",
+      "engine": "poetry_lookup",
+      "source_question_id": "poetry-03",
+      "left": "بیت «بشنو از نی چون حکایت می‌کند / از جدایی‌ها شکایت می‌کند» از کیست؟ فقط نام شاعر را بنویس.",
+      "right": "بیت «بشنو از ني چون حکايت مي‌کند / از جدايي‌ها شکايت مي‌کند» از کیست؟ فقط نام شاعر را بنویس.",
+      "expected_invariant": true
+    },
+    {
+      "id": "norm-arabic_yeh-04",
+      "category": "arabic_yeh",
+      "engine": "poetry_lookup",
+      "source_question_id": "poetry-04",
+      "left": "سرایندهٔ «توانا بود هر که دانا بود / ز دانش دل پیر برنا بود» کیست؟ فقط نام شاعر را بنویس.",
+      "right": "سرایندهٔ «توانا بود هر که دانا بود / ز دانش دل پير برنا بود» کیست؟ فقط نام شاعر را بنویس.",
+      "expected_invariant": true
+    },
+    {
+      "id": "norm-arabic_yeh-05",
+      "category": "arabic_yeh",
+      "engine": "poetry_lookup",
+      "source_question_id": "poetry-05",
+      "left": "بیت «به نام خداوند جان و خرد / کزین برتر اندیشه برنگذرد» سرودهٔ چه کسی است؟ فقط نام شاعر را بنویس.",
+      "right": "بیت «به نام خداوند جان و خرد / کزين برتر انديشه برنگذرد» سرودهٔ چه کسی است؟ فقط نام شاعر را بنویس.",
+      "expected_invariant": true
+    },
+    {
+      "id": "norm-arabic_yeh-06",
+      "category": "arabic_yeh",
+      "engine": "poetry_lookup",
+      "source_question_id": "poetry-06",
+      "left": "سرایندهٔ «ابر و باد و مه و خورشید و فلک در کارند / تا تو نانی به کف آری و به غفلت نخوری» کیست؟ فقط نام شاعر را بنویس.",
+      "right": "سرایندهٔ «ابر و باد و مه و خورشيد و فلک در کارند / تا تو ناني به کف آري و به غفلت نخوري» کیست؟ فقط نام شاعر را بنویس.",
+      "expected_invariant": true
+    },
+    {
+      "id": "norm-arabic_kaf-01",
+      "category": "arabic_kaf",
+      "engine": "poetry_lookup",
+      "source_question_id": "poetry-01",
+      "left": "بیت «بنی‌آدم اعضای یک پیکرند / که در آفرینش ز یک گوهرند» از کدام شاعر است؟ فقط نام شاعر را بنویس.",
+      "right": "بیت «بنی‌آدم اعضای یك پیكرند / كه در آفرینش ز یك گوهرند» از کدام شاعر است؟ فقط نام شاعر را بنویس.",
+      "expected_invariant": true
+    },
+    {
+      "id": "norm-arabic_kaf-02",
+      "category": "arabic_kaf",
+      "engine": "poetry_lookup",
+      "source_question_id": "poetry-02",
+      "left": "سرایندهٔ «الا یا ایها الساقی ادر کاسا و ناولها» کیست؟ فقط نام شاعر را بنویس.",
+      "right": "سرایندهٔ «الا یا ایها الساقی ادر كاسا و ناولها» کیست؟ فقط نام شاعر را بنویس.",
+      "expected_invariant": true
+    },
+    {
+      "id": "norm-arabic_kaf-03",
+      "category": "arabic_kaf",
+      "engine": "poetry_lookup",
+      "source_question_id": "poetry-03",
+      "left": "بیت «بشنو از نی چون حکایت می‌کند / از جدایی‌ها شکایت می‌کند» از کیست؟ فقط نام شاعر را بنویس.",
+      "right": "بیت «بشنو از نی چون حكایت می‌كند / از جدایی‌ها شكایت می‌كند» از کیست؟ فقط نام شاعر را بنویس.",
+      "expected_invariant": true
+    },
+    {
+      "id": "norm-arabic_kaf-04",
+      "category": "arabic_kaf",
+      "engine": "poetry_lookup",
+      "source_question_id": "poetry-04",
+      "left": "سرایندهٔ «توانا بود هر که دانا بود / ز دانش دل پیر برنا بود» کیست؟ فقط نام شاعر را بنویس.",
+      "right": "سرایندهٔ «توانا بود هر كه دانا بود / ز دانش دل پیر برنا بود» کیست؟ فقط نام شاعر را بنویس.",
+      "expected_invariant": true
+    },
+    {
+      "id": "norm-arabic_kaf-05",
+      "category": "arabic_kaf",
+      "engine": "poetry_lookup",
+      "source_question_id": "poetry-05",
+      "left": "بیت «به نام خداوند جان و خرد / کزین برتر اندیشه برنگذرد» سرودهٔ چه کسی است؟ فقط نام شاعر را بنویس.",
+      "right": "بیت «به نام خداوند جان و خرد / كزین برتر اندیشه برنگذرد» سرودهٔ چه کسی است؟ فقط نام شاعر را بنویس.",
+      "expected_invariant": true
+    },
+    {
+      "id": "norm-arabic_kaf-06",
+      "category": "arabic_kaf",
+      "engine": "poetry_lookup",
+      "source_question_id": "poetry-06",
+      "left": "سرایندهٔ «ابر و باد و مه و خورشید و فلک در کارند / تا تو نانی به کف آری و به غفلت نخوری» کیست؟ فقط نام شاعر را بنویس.",
+      "right": "سرایندهٔ «ابر و باد و مه و خورشید و فلك در كارند / تا تو نانی به كف آری و به غفلت نخوری» کیست؟ فقط نام شاعر را بنویس.",
+      "expected_invariant": true
+    },
+    {
+      "id": "norm-zwnj-01",
+      "category": "zwnj_vs_space",
+      "engine": "poetry_lookup",
+      "source_question_id": "poetry-01",
+      "left": "بیت «بنی‌آدم اعضای یک پیکرند / که در آفرینش ز یک گوهرند» از کدام شاعر است؟ فقط نام شاعر را بنویس.",
+      "right": "بیت «بنی آدم اعضای یک پیکرند / که در آفرینش ز یک گوهرند» از کدام شاعر است؟ فقط نام شاعر را بنویس.",
+      "expected_invariant": true
+    },
+    {
+      "id": "norm-zwnj-02",
+      "category": "zwnj_vs_space",
+      "engine": "poetry_lookup",
+      "source_question_id": "poetry-03",
+      "left": "بیت «بشنو از نی چون حکایت می‌کند / از جدایی‌ها شکایت می‌کند» از کیست؟ فقط نام شاعر را بنویس.",
+      "right": "بیت «بشنو از نی چون حکایت می کند / از جدایی ها شکایت می کند» از کیست؟ فقط نام شاعر را بنویس.",
+      "expected_invariant": true
+    },
+    {
+      "id": "norm-zwnj-03",
+      "category": "zwnj_vs_space",
+      "engine": "poetry_lookup",
+      "source_question_id": "poetry-07",
+      "left": "بیت «درخت دوستی بنشان که کام دل به بار آرد / نهال دشمنی برکن که رنج بی‌شمار آرد» از کدام شاعر است؟ فقط نام شاعر را بنویس.",
+      "right": "بیت «درخت دوستی بنشان که کام دل به بار آرد / نهال دشمنی برکن که رنج بی شمار آرد» از کدام شاعر است؟ فقط نام شاعر را بنویس.",
+      "expected_invariant": true
+    },
+    {
+      "id": "norm-zwnj-04",
+      "category": "zwnj_vs_space",
+      "engine": "poetry_lookup",
+      "source_question_id": "poetry-10",
+      "left": "بیت «سحر با باد می‌گفتم حدیث آرزومندی / خطاب آمد که واثق شو به الطاف خداوندی» از کیست؟ فقط نام شاعر را بنویس.",
+      "right": "بیت «سحر با باد می گفتم حدیث آرزومندی / خطاب آمد که واثق شو به الطاف خداوندی» از کیست؟ فقط نام شاعر را بنویس.",
+      "expected_invariant": true
+    },
+    {
+      "id": "norm-zwnj-05",
+      "category": "zwnj_vs_space",
+      "engine": "quran_search",
+      "source_question_id": "source-01",
+      "left": "در ترجمهٔ فارسی قرآن، عبارت مربوط به «صبر و نماز» انسان را به چه کاری دعوت می‌کند؟ پاسخ کوتاه بده و اگر منبع محلی نتیجه‌ای نداد، این را روشن کن.",
+      "right": "در ترجمهٔ فارسی قرآن، عبارت مربوط به «صبر و نماز» انسان را به چه کاری دعوت می کند؟ پاسخ کوتاه بده و اگر منبع محلی نتیجه ای نداد، این را روشن کن.",
+      "expected_invariant": true
+    },
+    {
+      "id": "norm-zwnj-06",
+      "category": "zwnj_vs_space",
+      "engine": "quran_search",
+      "source_question_id": "source-02",
+      "left": "در ترجمهٔ قرآن، دربارهٔ رابطهٔ سختی و آسانی چه وعده‌ای بیان می‌شود؟ در یک جمله پاسخ بده.",
+      "right": "در ترجمهٔ قرآن، دربارهٔ رابطهٔ سختی و آسانی چه وعده ای بیان می شود؟ در یک جمله پاسخ بده.",
+      "expected_invariant": true
+    },
+    {
+      "id": "norm-digits-01",
+      "category": "digit_forms",
+      "engine": "quran_search",
+      "source_question_id": "source-01",
+      "left": "در ترجمهٔ فارسی قرآن، عبارت مربوط به «صبر و نماز» انسان را به چه کاری دعوت می‌کند؟ پاسخ کوتاه بده و اگر منبع محلی نتیجه‌ای نداد، این را روشن کن. (مرجع: قرآن، بقره 2:153)",
+      "right": "در ترجمهٔ فارسی قرآن، عبارت مربوط به «صبر و نماز» انسان را به چه کاری دعوت می‌کند؟ پاسخ کوتاه بده و اگر منبع محلی نتیجه‌ای نداد، این را روشن کن. (مرجع: قرآن، بقره ۲:۱۵۳)",
+      "expected_invariant": true
+    },
+    {
+      "id": "norm-digits-02",
+      "category": "digit_forms",
+      "engine": "quran_search",
+      "source_question_id": "source-02",
+      "left": "در ترجمهٔ قرآن، دربارهٔ رابطهٔ سختی و آسانی چه وعده‌ای بیان می‌شود؟ در یک جمله پاسخ بده. (مرجع: قرآن، شرح 94:5-6)",
+      "right": "در ترجمهٔ قرآن، دربارهٔ رابطهٔ سختی و آسانی چه وعده‌ای بیان می‌شود؟ در یک جمله پاسخ بده. (مرجع: قرآن، شرح ۹۴:۵-۶)",
+      "expected_invariant": true
+    },
+    {
+      "id": "norm-digits-03",
+      "category": "digit_forms",
+      "engine": "quran_search",
+      "source_question_id": "source-03",
+      "left": "در آیهٔ قرآنی دربارهٔ عدالت، حتی وقتی نسبت به گروهی دشمنی داریم، چه اصلی نباید کنار گذاشته شود؟ (مرجع: قرآن، مائده 5:8)",
+      "right": "در آیهٔ قرآنی دربارهٔ عدالت، حتی وقتی نسبت به گروهی دشمنی داریم، چه اصلی نباید کنار گذاشته شود؟ (مرجع: قرآن، مائده ۵:۸)",
+      "expected_invariant": true
+    },
+    {
+      "id": "norm-digits-04",
+      "category": "digit_forms",
+      "engine": "quran_search",
+      "source_question_id": "source-04",
+      "left": "در ترجمهٔ قرآنی دربارهٔ رفتار با والدین، پس از سفارش به عبادت خدا به چه کسانی سفارش شده است نیکی کنیم؟ (مرجع: قرآن، اسراء 17:23)",
+      "right": "در ترجمهٔ قرآنی دربارهٔ رفتار با والدین، پس از سفارش به عبادت خدا به چه کسانی سفارش شده است نیکی کنیم؟ (مرجع: قرآن، اسراء ۱۷:۲۳)",
+      "expected_invariant": true
+    },
+    {
+      "id": "norm-digits-05",
+      "category": "digit_forms",
+      "engine": "quran_search",
+      "source_question_id": "source-05",
+      "left": "طبق ترجمهٔ آیهٔ مربوط به تکلیف انسان، هیچ‌کس جز به اندازهٔ چه چیزی مکلف نمی‌شود؟ (مرجع: قرآن، بقره 2:286)",
+      "right": "طبق ترجمهٔ آیهٔ مربوط به تکلیف انسان، هیچ‌کس جز به اندازهٔ چه چیزی مکلف نمی‌شود؟ (مرجع: قرآن، بقره ۲:۲۸۶)",
+      "expected_invariant": true
+    },
+    {
+      "id": "norm-digits-06",
+      "category": "digit_forms",
+      "engine": "quran_search",
+      "source_question_id": "source-06",
+      "left": "در آیه‌ای دربارهٔ ملت‌ها و قبیله‌ها، هدف از متفاوت بودن گروه‌های انسانی چیست؟ (مرجع: قرآن، حجرات 49:13)",
+      "right": "در آیه‌ای دربارهٔ ملت‌ها و قبیله‌ها، هدف از متفاوت بودن گروه‌های انسانی چیست؟ (مرجع: قرآن، حجرات ۴۹:۱۳)",
+      "expected_invariant": true
+    },
+    {
+      "id": "norm-diacritics-01",
+      "category": "diacritics",
+      "engine": "poetry_lookup",
+      "source_question_id": "poetry-01",
+      "left": "بیت «بنی‌آدم اعضای یک پیکرند / که در آفرینش ز یک گوهرند» از کدام شاعر است؟ فقط نام شاعر را بنویس.",
+      "right": "بیت «بنیَ‌آدمَ اعضَای یَک پیَکرنَد / کهَ در آَفریَنش زَ یک گَوهرَند» از کدام شاعر است؟ فقط نام شاعر را بنویس.",
+      "expected_invariant": true
+    },
+    {
+      "id": "norm-diacritics-02",
+      "category": "diacritics",
+      "engine": "poetry_lookup",
+      "source_question_id": "poetry-02",
+      "left": "سرایندهٔ «الا یا ایها الساقی ادر کاسا و ناولها» کیست؟ فقط نام شاعر را بنویس.",
+      "right": "سرایندهٔ «الاَ یا اَیهاَ السَاقیَ ادرَ کاسَا و نَاولَها» کیست؟ فقط نام شاعر را بنویس.",
+      "expected_invariant": true
+    },
+    {
+      "id": "norm-diacritics-03",
+      "category": "diacritics",
+      "engine": "poetry_lookup",
+      "source_question_id": "poetry-03",
+      "left": "بیت «بشنو از نی چون حکایت می‌کند / از جدایی‌ها شکایت می‌کند» از کیست؟ فقط نام شاعر را بنویس.",
+      "right": "بیت «بشنَو ازَ نی چَون حَکایَت میَ‌کندَ / از جَدایَی‌هاَ شکاَیت مَی‌کنَد» از کیست؟ فقط نام شاعر را بنویس.",
+      "expected_invariant": true
+    },
+    {
+      "id": "norm-diacritics-04",
+      "category": "diacritics",
+      "engine": "poetry_lookup",
+      "source_question_id": "poetry-04",
+      "left": "سرایندهٔ «توانا بود هر که دانا بود / ز دانش دل پیر برنا بود» کیست؟ فقط نام شاعر را بنویس.",
+      "right": "سرایندهٔ «تواَنا بَود هَر کهَ دانَا بوَد / ز دَانشَ دل پَیر بَرناَ بودَ» کیست؟ فقط نام شاعر را بنویس.",
+      "expected_invariant": true
+    },
+    {
+      "id": "norm-diacritics-05",
+      "category": "diacritics",
+      "engine": "poetry_lookup",
+      "source_question_id": "poetry-05",
+      "left": "بیت «به نام خداوند جان و خرد / کزین برتر اندیشه برنگذرد» سرودهٔ چه کسی است؟ فقط نام شاعر را بنویس.",
+      "right": "بیت «به نَام خَداوَند جَان وَ خردَ / کزیَن برَتر اَندیَشه بَرنگَذردَ» سرودهٔ چه کسی است؟ فقط نام شاعر را بنویس.",
+      "expected_invariant": true
+    },
+    {
+      "id": "norm-diacritics-06",
+      "category": "diacritics",
+      "engine": "poetry_lookup",
+      "source_question_id": "poetry-06",
+      "left": "سرایندهٔ «ابر و باد و مه و خورشید و فلک در کارند / تا تو نانی به کف آری و به غفلت نخوری» کیست؟ فقط نام شاعر را بنویس.",
+      "right": "سرایندهٔ «ابرَ و باَد و مَه و خَورشَید وَ فلکَ در کَارنَد / تاَ تو نَانیَ به کَف آرَی و بَه غفَلت نَخورَی» کیست؟ فقط نام شاعر را بنویس.",
+      "expected_invariant": true
+    }
+  ]
+}
