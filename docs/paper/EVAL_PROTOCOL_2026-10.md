@@ -10,7 +10,7 @@ Dataset: `eval/questions_paper_v1.json`. It contains 40 items, 10 per category:
 - `abstain`: questions designed to lack an answer in the available local source set;
 - `classify`: label citizen reports with exactly one permitted class.
 
-Temperature is zero. Do not edit prompts after seeing model outputs. If the pre-run reference audit finds an incorrect gold answer, document the issue and correct it before the first scored run, with a new dataset version.
+Temperature is zero, and the fixed seed is sent in each chat-completion request (default `--seed 7`; pass the same explicit `--seed 7` in all four runs). The seed also controls the local historical-sampling sections. Do not edit prompts after seeing model outputs. If the pre-run reference audit finds an incorrect gold answer, document the issue and correct it before the first scored run, with a new dataset version.
 
 ## Required pre-run audit
 
