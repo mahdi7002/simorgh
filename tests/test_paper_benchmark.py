@@ -189,3 +189,42 @@ def test_normalization_fixture_is_locked_and_balanced_before_execution():
     assert len({pair["id"] for pair in pairs}) == 30
     assert all(pair["left"] != pair["right"] for pair in pairs)
     assert all(pair["expected_invariant"] is True for pair in pairs)
+
+
+def test_paper_benchmark_v2_corrects_saadi_verse_before_first_scored_run():
+    path = ROOT / "eval" / "questions_paper_v2.json"
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    items = payload["items"]
+    counts = Counter(item["type"] for item in items)
+
+    assert len(items) == 40
+    assert counts == {
+        "poetry_attribution": 10,
+        "source_qa": 10,
+        "abstain": 10,
+        "classify": 10,
+    }
+    item = next(item for item in items if item["id"] == "poetry-01")
+    assert "اعضای یکدیگرند" in item["prompt"]
+    assert "اعضای یک پیکرند" not in item["prompt"]
+    assert payload["_status"] == "PREPARED_NOT_RUN"
+
+
+def test_normalization_fixture_v2_is_locked_and_balanced_before_execution():
+    path = ROOT / "eval" / "normalization_pairs_v2.json"
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    pairs = payload["pairs"]
+    counts = Counter(pair["category"] for pair in pairs)
+
+    assert payload["_status"] == "LOCKED_BEFORE_EXECUTION_NOT_RUN"
+    assert len(pairs) == 30
+    assert counts == {
+        "arabic_yeh": 6,
+        "arabic_kaf": 6,
+        "zwnj_vs_space": 6,
+        "digit_forms": 6,
+        "diacritics": 6,
+    }
+    assert len({pair["id"] for pair in pairs}) == 30
+    assert all(pair["left"] != pair["right"] for pair in pairs)
+    assert all(pair["expected_invariant"] is True for pair in pairs)
