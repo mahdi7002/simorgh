@@ -82,6 +82,7 @@ def test_classification_requires_exact_label_not_substring(tmp_path):
 
 def test_retrieval_condition_passes_local_context_to_model(tmp_path, monkeypatch):
     received = []
+    received_payloads = []
 
     class Handler(BaseHTTPRequestHandler):
         def log_message(self, *args):
@@ -96,6 +97,7 @@ def test_retrieval_condition_passes_local_context_to_model(tmp_path, monkeypatch
             n = int(self.headers["Content-Length"])
             request = json.loads(self.rfile.read(n))
             received.append(request["messages"][-1]["content"])
+            received_payloads.append(request)
             body = json.dumps({
                 "model": "mock",
                 "choices": [{"message": {"content": "سعدی"}}],
@@ -132,12 +134,15 @@ def test_retrieval_condition_passes_local_context_to_model(tmp_path, monkeypatch
             questions,
             timeout=5,
             use_retrieval=True,
+            seed=23,
         )
     finally:
         server.shutdown()
         server.server_close()
 
     assert "شاهد محلی: سعدی" in received[0]
+    assert received_payloads[0]["seed"] == 23
+    assert received_payloads[0]["temperature"] == 0
     assert result["by_type"] == {"poetry_attribution": "1/1"}
     assert result["outcomes_by_type"] == {
         "poetry_attribution": {"correct": 1, "abstained": 0, "wrong": 0}
