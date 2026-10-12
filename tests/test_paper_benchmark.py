@@ -12,7 +12,7 @@ spec.loader.exec_module(run_eval)
 
 
 def test_paper_benchmark_has_40_fixed_balanced_items():
-    path = ROOT / "eval" / "questions_paper_v1.json"
+    path = ROOT / "eval" / "questions_paper_v3.json"
     payload = json.loads(path.read_text(encoding="utf-8"))
     items = payload["items"]
     counts = Counter(item["type"] for item in items)
@@ -228,3 +228,33 @@ def test_normalization_fixture_v2_is_locked_and_balanced_before_execution():
     assert len({pair["id"] for pair in pairs}) == 30
     assert all(pair["left"] != pair["right"] for pair in pairs)
     assert all(pair["expected_invariant"] is True for pair in pairs)
+
+
+
+def test_paper_benchmark_v3_freezes_pre_run_gold_corrections():
+    path = ROOT / "eval" / "questions_paper_v3.json"
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    items = payload["items"]
+    counts = Counter(item["type"] for item in items)
+    by_id = {item["id"]: item for item in items}
+
+    assert payload["_status"] == "PREPARED_NOT_RUN"
+    assert len(items) == 40
+    assert counts == {
+        "poetry_attribution": 10,
+        "source_qa": 10,
+        "abstain": 10,
+        "classify": 10,
+    }
+    assert len(by_id) == 40
+
+    assert "بشنو این نی چون شکایت می‌کند" in by_id["poetry-03"]["prompt"]
+    assert "از جدایی‌ها حکایت می‌کند" in by_id["poetry-03"]["prompt"]
+    assert {"مولانا", "مولوی"} <= set(by_id["poetry-03"]["expected_any"])
+
+    assert by_id["poetry-07"]["expected_any"] == ["حافظ"]
+    assert "کمک بخواهید" in by_id["source-01"]["expected_any"]
+    assert "با دشواری آسانی است" in by_id["source-02"]["expected_any"]
+    assert "اژدها" not in by_id["source-10"]["expected_any"]
+    assert "اسراف" not in by_id["source-09"]["expected_any"]
+    assert "گرفتگی مجرای آب‌رو" in by_id["classify-08"]["prompt"]
