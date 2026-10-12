@@ -3,26 +3,143 @@ from __future__ import annotations
 import signal
 import time
 from datetime import datetime, timezone
-from typing import Any
+from pathlib import Path
+from typing import Any, Iterable
 
 from .ledger import MotherLedger
 from .observer import SystemObserver
 from .reports import ReportEngine
 from .quality import run_daily_quality_check
+from .problem_memory import ProblemMemory
+from .resource_manager import ResourceManager
+from .git_observer import GitObserver
+from .workspace_inspector import WorkspaceInspector
+from .repository_config import resolve_repository_paths
+
+
+def _weekly_report_due(local_now: datetime, latest_weekly: dict[str, Any] | None) -> bool:
+    """Return whether a local Sunday still needs a WEEKLY report for that local date.
+
+    Ledger timestamps are UTC. Compare calendar dates only after conversion to
+    the same timezone as local_now. Fail closed on a malformed existing report
+    so an unreadable timestamp cannot trigger a rapid duplicate-report loop.
+    """
+    if local_now.weekday() != 6:
+        return False
+    if not latest_weekly:
+        return True
+
+    created_at = latest_weekly.get("_ledger", {}).get("created_at", "")
+    if not isinstance(created_at, str) or not created_at:
+        return False
+    try:
+        parsed = datetime.fromisoformat(created_at.replace("Z", "+00:00"))
+    except ValueError:
+        return False
+
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
+
+    local_tz = local_now.tzinfo or datetime.now().astimezone().tzinfo or timezone.utc
+    latest_local_date = parsed.astimezone(local_tz).date()
+    return latest_local_date != local_now.date()
 
 
 class MotherService:
     """Long-lived, non-networked observer. It owns no port and never mutates source code."""
 
-    def __init__(self, interval_seconds: int = 300):
+    def __init__(
+        self,
+        interval_seconds: int = 300,
+        repositories: Iterable[str | Path] | None = None,
+        repositories_config: str | Path | None = None,
+    ):
         self.interval_seconds = max(30, int(interval_seconds))
         self.ledger = MotherLedger()
         self.observer = SystemObserver()
+        self.problem_memory = ProblemMemory.shared()
+        self.resource_manager = ResourceManager.shared(
+            interval_seconds=30,
+            problem_memory=self.problem_memory,
+        )
+
+        self.repository_paths = resolve_repository_paths(
+            repositories=repositories,
+            config_path=repositories_config,
+        )
+
+        self.git_observers = [
+            GitObserver(
+                repo_path=repo_path,
+                fetch_interval_seconds=300,
+            )
+            for repo_path in self.repository_paths
+        ]
+
+        # Backward-compatible alias for existing consumers/tests.
+        self.git_observer = self.git_observers[0]
+        self.workspace_inspector = WorkspaceInspector()
+
         self.reports = ReportEngine(self.ledger)
         self._stop = False
         self._last_observation = None
         self._observer_alive = False
         self._last_observer_error: dict[str, Any] | None = None
+
+    def _observe_git_repositories(self, fetch: bool = True) -> dict[str, Any]:
+        states = [
+            observer.observe(fetch=fetch)
+            for observer in self.git_observers
+        ]
+
+        if not states:
+            return {
+                "status": "NOT_AVAILABLE",
+                "repositories": [],
+                "repository_count": 0,
+            }
+
+        # Keep the historical single-repository top-level shape so existing
+        # consumers remain compatible, while exposing the full workspace.
+        aggregate = dict(states[0])
+        aggregate["repositories"] = states
+        aggregate["repository_count"] = len(states)
+
+        statuses = {state.get("status") for state in states}
+
+        invalid_repository_indexes = []
+        fatal_error_indexes = []
+
+        for index, state in enumerate(states):
+            if state.get("status") != "ERROR":
+                continue
+
+            detail = str(
+                (state.get("error") or {}).get("detail", "")
+            ).lower()
+
+            if (
+                "not a git repository" in detail
+                or "no such file or directory" in detail
+                or "cannot find the path" in detail
+            ):
+                invalid_repository_indexes.append(index)
+            else:
+                fatal_error_indexes.append(index)
+
+        if fatal_error_indexes:
+            aggregate["aggregate_status"] = "ERROR"
+        elif invalid_repository_indexes or any(
+            status not in {None, "OK"} for status in statuses
+        ):
+            aggregate["aggregate_status"] = "DEGRADED"
+        else:
+            aggregate["aggregate_status"] = "OK"
+
+        aggregate["invalid_repository_indexes"] = invalid_repository_indexes
+        aggregate["fatal_error_indexes"] = fatal_error_indexes
+
+        return aggregate
 
     def _handle_signal(self, signum, _frame) -> None:
         if signum in {signal.SIGTERM, signal.SIGINT}:
@@ -121,6 +238,38 @@ class MotherService:
             snapshot.get("repositories", {}),
             source="git_observer",
         )
+        git_state = snapshot.get("git", {})
+        self.ledger.set_self_fact(
+            "mother.git_repositories",
+            git_state.get("repositories", []),
+            source="git_observer",
+        )
+        self.ledger.set_self_fact(
+            "mother.git_branch",
+            git_state.get("branch"),
+            source="git_observer",
+        )
+        self.ledger.set_self_fact(
+            "mother.git_head",
+            git_state.get("head"),
+            source="git_observer",
+        )
+        self.ledger.set_self_fact(
+            "mother.git_sync_state",
+            git_state.get("sync_state"),
+            source="git_observer",
+        )
+        workspace_state = snapshot.get("workspace", {})
+        self.ledger.set_self_fact(
+            "mother.workspace_schema",
+            workspace_state.get("schema_version"),
+            source="workspace_inspector",
+        )
+        self.ledger.set_self_fact(
+            "mother.workspace_repository_count",
+            workspace_state.get("repository_count"),
+            source="workspace_inspector",
+        )
 
     def observe_once(self) -> dict[str, Any]:
         previous = self.ledger.latest_snapshot()
@@ -151,6 +300,11 @@ class MotherService:
                 data=journal,
             )
         snapshot = self.observer.capture()
+        snapshot["git"] = self._observe_git_repositories(fetch=True)
+        snapshot["workspace"] = self.workspace_inspector.inspect(
+            self.repository_paths,
+            git_states=snapshot["git"].get("repositories", []),
+        )
         self.ledger.save_snapshot(snapshot)
         self._update_self_model(snapshot)
         self._write_world_state(snapshot)
@@ -180,6 +334,7 @@ class MotherService:
             verified=True,
             data={"interval_seconds": self.interval_seconds},
         )
+        self.resource_manager.start()
         try:
             self.observe_once()
             self._observer_alive = True
@@ -209,8 +364,7 @@ class MotherService:
                     last_daily_refresh = now
                 local_now = datetime.now().astimezone()
                 latest_weekly = self.ledger.latest_report("WEEKLY")
-                latest_weekly_date = latest_weekly.get("_ledger", {}).get("created_at", "")[:10]
-                if local_now.weekday() == 6 and latest_weekly_date != local_now.date().isoformat():
+                if _weekly_report_due(local_now, latest_weekly):
                     self.reports.weekly(with_ai=False)
                     last_weekly_refresh = now
                 if now - last_quality_check >= 86400:
@@ -220,6 +374,7 @@ class MotherService:
                 self._record_observer_error(exc)
             self._sleep_interruptibly()
 
+        self.resource_manager.stop()
         self.ledger.mark_shutdown(clean=True)
 
     def health_state(self) -> dict[str, Any]:
@@ -238,6 +393,15 @@ class MotherService:
             severity="error",
             verified=False,
             data=self._last_observer_error,
+        )
+        self.problem_memory.record_incident(
+            component="mother-observer",
+            failure_type="observer_error",
+            severity="ERROR",
+            detected_by="mother_service",
+            symptom=self._last_observer_error.get("detail"),
+            signature={"error_type": self._last_observer_error.get("type")},
+            evidence=self._last_observer_error,
         )
 
     def _sleep_interruptibly(self) -> None:
