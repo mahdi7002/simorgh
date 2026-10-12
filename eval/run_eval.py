@@ -263,7 +263,7 @@ def section_attribution(n: int, seed: int, lookup_file: str | None) -> dict:
                 for name, (a, c, ab, ic, d) in scored.items() if name != "prefix6"}}
 
 
-def llm_chat(url: str, prompt: str, timeout: int, max_tokens: int = 120, context: str = "") -> dict:
+def llm_chat(url: str, prompt: str, timeout: int, max_tokens: int = 120, context: str = "", seed: int = 7) -> dict:
     import requests
     user_content = prompt
     if context:
@@ -273,7 +273,7 @@ def llm_chat(url: str, prompt: str, timeout: int, max_tokens: int = 120, context
             + "\n\nاگر شواهد برای پاسخ کافی نیستند، صریح بگو «نمی‌دانم» و چیزی را از خودت به منبع نسبت نده."
         )
     body = {"messages": [{"role": "system", "content": "فقط فارسی و کوتاه پاسخ بده. اگر نمی‌دانی صریح بگو «نمی‌دانم»."},
-                         {"role": "user", "content": user_content}], "max_tokens": max_tokens, "temperature": 0}
+                         {"role": "user", "content": user_content}], "max_tokens": max_tokens, "temperature": 0, "seed": int(seed)}
     t0 = time.time()
     r = requests.post(url, json=body, timeout=timeout)
     dt = time.time() - t0
@@ -433,7 +433,7 @@ class PeakRSSSampler:
             self._sample()
 
 
-def section_llm(url: str, questions_path: Path, timeout: int, use_retrieval: bool = False) -> dict:
+def section_llm(url: str, questions_path: Path, timeout: int, use_retrieval: bool = False, seed: int = 7) -> dict:
     import requests
     try:
         requests.get(url.rsplit("/v1/", 1)[0] + "/health", timeout=5).raise_for_status()
@@ -457,7 +457,7 @@ def section_llm(url: str, questions_path: Path, timeout: int, use_retrieval: boo
             else:
                 retrieval_counts["items_without_context"] += 1
         try:
-            out = llm_chat(url, it["prompt"], timeout, context=retrieved["context"])
+            out = llm_chat(url, it["prompt"], timeout, context=retrieved["context"], seed=seed)
         except Exception as exc:
             per.append({"id": it["id"], "type": it["type"], "pass": False, "error": type(exc).__name__,
                         "retrieval_context_chars": len(retrieved["context"])})
@@ -581,7 +581,7 @@ def main() -> int:
         report["sections"]["llm_qa"] = {"status": "SKIPPED", "reason": "--no-llm"}
     else:
         with PeakRSSSampler(args.server_pid) as rss_probe:
-            report["sections"]["llm_qa"] = section_llm(args.url, args.questions, args.timeout, args.retrieval)
+            report["sections"]["llm_qa"] = section_llm(args.url, args.questions, args.timeout, args.retrieval, args.seed)
         if rss_probe.peak_bytes is not None:
             report["server_peak_rss_mb"] = round(rss_probe.peak_bytes / (1024 * 1024), 1)
         elif args.server_pid is not None:
