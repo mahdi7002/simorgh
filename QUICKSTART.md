@@ -112,3 +112,19 @@ python persona_chat.py --test
 5. نتیجهٔ `python -m pytest -q`
 
 Issue کوچک و قابل‌بازآزمایی، از گزارش کلی مثل «کار نمی‌کند» بسیار مفیدتر است.
+
+
+## اگر دانلود بسته‌ها از files.pythonhosted.org ممکن نیست
+
+بعضی شبکه‌ها فقط این میزبان را مسدود می‌کنند. در این صورت از یک آینهٔ PyPI استفاده کنید:
+
+```bash
+python -m pip install -i https://pypi.tuna.tsinghua.edu.cn/simple -r requirements.txt
+```
+
+## اجرای تست‌ها
+
+```bash
+python -m pip install -r requirements-dev.txt
+python -m pytest -q
+```

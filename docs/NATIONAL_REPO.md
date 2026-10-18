@@ -475,7 +475,7 @@ END_OF_READ_ONLY_PAGE_INSPECTION
 - National catalog entry: jiwer-4.0.0 was found; direct installation
   from the national portal has not yet been verified.
 - Installation: NOT PERFORMED
-- Artifact directory: /home/mahdi/simorgh/data/package_cache/jiwer-4.0.0
-- Manifest: /home/mahdi/simorgh/data/package_cache/jiwer-4.0.0/MANIFEST.json
+- Artifact directory: ./data/package_cache/jiwer-4.0.0
+- Manifest: ./data/package_cache/jiwer-4.0.0/MANIFEST.json
 - Status: PYPI_HASHES_MATCHED
 - Only wheel files were downloaded; no source distributions requested.
