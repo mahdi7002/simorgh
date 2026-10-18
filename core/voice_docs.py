@@ -3,7 +3,7 @@ import shutil
 import tempfile
 from fastapi import APIRouter, UploadFile, File, HTTPException
 from fastapi.responses import FileResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from core.paths import IMPORTS_DIR
 from core.tts import synthesize
 from core.stt import transcribe
@@ -14,10 +14,11 @@ router = APIRouter()
 
 class SpeakRequest(BaseModel):
     text: str
+    length_scale: float = Field(default=1.0, ge=0.8, le=1.4)
 
 @router.post("/speak")
 def speak(req: SpeakRequest):
-    return FileResponse(synthesize(req.text), media_type="audio/wav")
+    return FileResponse(synthesize(req.text, req.length_scale), media_type="audio/wav")
 
 @router.post("/listen")
 async def listen(file: UploadFile = File(...)):
