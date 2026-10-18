@@ -206,6 +206,24 @@ def _git_actor_marker(repo: str, ref: str, actor: str) -> bool:
     return marker in result.stdout
 
 
+
+def _project_python(repo: str) -> tuple[str, str]:
+    """Prefer the target project's local Python environment."""
+    root = Path(repo).expanduser().resolve()
+    candidates = (
+        (".venv/bin/python", "project_venv"),
+        ("venv/bin/python", "project_venv"),
+        ("env/bin/python", "project_venv"),
+    )
+
+    for relative, source in candidates:
+        candidate = root / relative
+        if candidate.is_file() and os.access(candidate, os.X_OK):
+            return str(candidate), source
+
+    return sys.executable, "mother_python_fallback"
+
+
 def verify_with_pytest(
     log_id: int,
     *,
@@ -275,7 +293,8 @@ def verify_with_pytest(
             "reason": "missing_AI_Actor_commit_marker",
         }
 
-    command = [sys.executable, "-m", "pytest", "-q"]
+    executable, runtime_source = _project_python(repo)
+    command = [executable, "-m", "pytest", "-q"]
     if test_paths:
         command.extend(test_paths)
 

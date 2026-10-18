@@ -15,7 +15,7 @@ from core.mother.bilingual_activity import ensure_storage
 from core.mother.service import MotherService
 from core.mother.ai_work_log_contract_api import router as ai_work_log_contract_router
 
-PORT = int(os.environ.get("SIMORGH_MOTHER_PORT", "8010"))
+PORT = int(os.environ.get("SIMORGH_MOTHER_PORT", "8011"))
 HOST = os.environ.get("SIMORGH_MOTHER_HOST", "127.0.0.1")
 SERVICE = MotherService(int(os.environ.get("SIMORGH_MOTHER_INTERVAL_SECONDS", "300")))
 
