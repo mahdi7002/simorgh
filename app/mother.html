@@ -1,126 +1,330 @@
 <!doctype html>
 <html lang="fa" dir="rtl">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>SIMORGH Mother | مادر سیمرغ</title>
-<style>
-:root{--bg:#07100f;--panel:#0d1816;--line:#1b302b;--text:#edf5f0;--muted:#91aaa2;--accent:#d6b65a;--good:#48c78e;--danger:#e27d62;--blue:#79a7ff}
-*{box-sizing:border-box}body{margin:0;background:linear-gradient(160deg,#07100f,#0a1412 55%,#081110);color:var(--text);font:15px/1.8 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
-main{max-width:1250px;margin:auto;padding:24px 16px 60px}header{display:flex;justify-content:space-between;gap:20px;align-items:end;margin-bottom:16px}
-h1{margin:0;font-size:34px}h1 small{display:block;font-size:14px;color:var(--accent)}h2{margin:0 0 10px;font-size:18px}
-.card{background:rgba(13,24,22,.94);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:12px}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px}.muted{color:var(--muted)}
-.kv{display:flex;justify-content:space-between;gap:10px;padding:4px 0;border-bottom:1px solid rgba(27,48,43,.55)}.kv:last-child{border:0}
-button{border:0;border-radius:9px;padding:9px 12px;background:var(--accent);color:#162019;font-weight:800;cursor:pointer}button.secondary{background:#18302a;color:var(--text)}button.danger{background:#5a2a21;color:#fff}button:disabled{opacity:.45;cursor:not-allowed}
-textarea,input{width:100%;background:#091310;color:var(--text);border:1px solid var(--line);border-radius:9px;padding:9px;font:inherit}textarea{min-height:110px}
-.row{display:flex;gap:8px;flex-wrap:wrap}.row>*{flex:1;min-width:180px}.scroll{max-height:360px;overflow:auto}.item{padding:9px 0;border-bottom:1px solid var(--line)}.badge{display:inline-block;padding:2px 8px;border-radius:999px;background:#18342b;color:var(--good);font-size:12px}.warn{color:var(--danger)}pre{white-space:pre-wrap;background:#06100e;padding:10px;border-radius:9px;overflow:auto}
-.tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}.tab.active{background:var(--accent);color:#162019}.panel{display:none}.panel.active{display:block}
-a{color:var(--blue);word-break:break-all}
-</style>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>SIMORGH Mother Control Plane</title>
+  <style>
+    :root{font-family:system-ui,-apple-system,"Segoe UI",Tahoma,sans-serif;color:#f2f5f7;background:#0b1115}
+    *{box-sizing:border-box}
+    body{margin:0;background:linear-gradient(180deg,#0b1115,#101820 55%,#0b1115);min-height:100vh}
+    header{position:sticky;top:0;z-index:10;padding:18px 20px;border-bottom:1px solid #24323b;background:rgba(11,17,21,.94);backdrop-filter:blur(10px)}
+    .head{max-width:1320px;margin:auto;display:flex;gap:14px;align-items:center;justify-content:space-between}
+    h1{margin:0;font-size:22px}.sub{color:#94a8b5;font-size:13px;margin-top:4px}
+    .wrap{max-width:1320px;margin:20px auto;padding:0 16px}
+    .tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
+    button,.tab,.link{border:1px solid #2a3a44;background:#142029;color:#eaf1f5;border-radius:10px;padding:9px 12px;cursor:pointer;text-decoration:none}
+    button:hover,.tab:hover,.link:hover{background:#1a2a35}
+    .tab.active{border-color:#51c6b4;background:#153b3a}
+    .primary{border-color:#51c6b4}
+    .danger{border-color:#b85c63}
+    .warn{border-color:#b7964a}
+    .grid{display:grid;grid-template-columns:repeat(12,1fr);gap:14px}
+    .card{background:#101a21;border:1px solid #263640;border-radius:14px;padding:16px;box-shadow:0 8px 28px rgba(0,0,0,.16)}
+    .span-12{grid-column:span 12}.span-8{grid-column:span 8}.span-6{grid-column:span 6}.span-4{grid-column:span 4}.span-3{grid-column:span 3}
+    @media(max-width:900px){.span-8,.span-6,.span-4,.span-3{grid-column:span 12}}
+    h2{font-size:16px;margin:0 0 12px}h3{font-size:14px;margin:16px 0 8px}
+    .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+    @media(max-width:700px){.kpis{grid-template-columns:repeat(2,1fr)}}
+    .kpi{background:#0c151b;border:1px solid #23323b;border-radius:10px;padding:12px}.kpi b{display:block;font-size:20px;margin-top:5px}
+    .muted{color:#91a5b1}.ok{color:#65d1a7}.bad{color:#ef7b82}.warntext{color:#e7c36d}
+    pre{white-space:pre-wrap;word-break:break-word;background:#081015;border:1px solid #1f2d35;border-radius:10px;padding:12px;max-height:420px;overflow:auto;font:12px/1.6 ui-monospace,SFMono-Regular,Menlo,monospace}
+    table{width:100%;border-collapse:collapse}th,td{padding:8px;border-bottom:1px solid #20303a;text-align:right;vertical-align:top;font-size:13px}th{color:#9eb2bd}
+    input,textarea,select{width:100%;background:#0a1318;color:#edf4f7;border:1px solid #29404b;border-radius:9px;padding:9px;margin:4px 0 10px}
+    textarea{min-height:90px;resize:vertical}.row{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}.row3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+    @media(max-width:700px){.row,.row3{grid-template-columns:1fr}}
+    .actions{display:flex;gap:8px;flex-wrap:wrap}.pill{display:inline-block;padding:3px 8px;border-radius:999px;border:1px solid #334750;font-size:12px}
+    .notice{padding:12px;border-radius:10px;background:#172127;border:1px solid #30414b;margin-bottom:12px}.notice.bad{border-color:#69383e;color:#f2b5b9}
+    .hidden{display:none}.tiny{font-size:12px}.right{text-align:right}.value{font-family:ui-monospace,monospace}
+  </style>
 </head>
 <body>
-<main>
 <header>
-<div><h1>مادر سیمرغ <small>SIMORGH MOTHER • مشاهده، حافظه، بازتاب، قرنطینه</small></h1><div class="muted">هیچ ورودی وب یا اصلاح کد مستقیماً وارد هسته نمی‌شود.</div></div>
-<button class="secondary" id="refresh">بازخوانی</button>
+  <div class="head">
+    <div>
+      <h1>Mother · SIMORGH Control Plane</h1>
+      <div class="sub">Observer + Ledger + Reports + Research Quarantine + Human-Gated Coding</div>
+    </div>
+    <div class="actions">
+      <a class="link" href="http://127.0.0.1:8000" target="_blank" rel="noreferrer">SIMORGH :8000</a>
+      <a class="link" href="http://127.0.0.1:8011/docs" target="_blank" rel="noreferrer">API Docs</a>
+      <a class="link" href="http://127.0.0.1:8010" target="_blank" rel="noreferrer">Legacy/8010</a>
+    </div>
+  </div>
 </header>
 
-<div class="tabs">
-<button class="tab active" data-tab="state">وضعیت</button>
-<button class="tab" data-tab="reports">گزارش‌ها</button>
-<button class="tab" data-tab="research">درگاه تحقیق</button>
-<button class="tab" data-tab="coding">آزمایش کد</button>
-</div>
+<main class="wrap">
+  <div id="banner" class="notice">در حال اتصال به Mother…</div>
 
-<section class="panel active" id="state">
-<div class="grid">
-<div class="card"><h2>بوت فعلی</h2><div id="boot" class="muted">...</div></div>
-<div class="card"><h2>سیستم و دسترسی</h2><div id="system" class="muted">...</div></div>
-<div class="card"><h2>اهداف</h2><div id="goals" class="muted">...</div></div>
-<div class="card"><h2>ماتریس قابلیت</h2><div id="capabilities" class="muted">...</div></div>
-</div>
-<div class="card"><h2>فعالیت‌های اخیر</h2><div id="events" class="scroll muted">...</div></div>
-<div class="card"><h2>خودشناسی</h2><div id="self" class="scroll muted">...</div></div>
-</section>
+  <nav class="tabs">
+    <button class="tab active" data-tab="overview">نمای کلی</button>
+    <button class="tab" data-tab="reports">گزارش‌ها</button>
+    <button class="tab" data-tab="goals">هدف‌ها</button>
+    <button class="tab" data-tab="research">تحقیق / قرنطینه</button>
+    <button class="tab" data-tab="coding">تعمیر کد</button>
+    <button class="tab" data-tab="ledger">ردپای AI</button>
+  </nav>
 
-<section class="panel" id="reports">
-<div class="grid">
-<div class="card"><h2>گزارش بوت</h2><pre id="postboot">...</pre></div>
-<div class="card"><h2>گزارش روزانه</h2><pre id="daily">...</pre></div>
-<div class="card"><h2>گزارش هفتگی</h2><pre id="weekly">...</pre></div>
-</div>
-</section>
+  <section id="overview" class="tabpage">
+    <div class="grid">
+      <div class="card span-12">
+        <h2>سلامت و وضعیت زنده</h2>
+        <div class="kpis">
+          <div class="kpi"><span class="muted">Mother</span><b id="health">…</b></div>
+          <div class="kpi"><span class="muted">Observer</span><b id="observer">…</b></div>
+          <div class="kpi"><span class="muted">Git</span><b id="git">…</b></div>
+          <div class="kpi"><span class="muted">Disk free</span><b id="disk">…</b></div>
+        </div>
+        <div class="actions" style="margin-top:12px">
+          <button class="primary" onclick="refreshAll()">بازخوانی همه</button>
+          <button onclick="openFirefoxHint()">تست با Firefox</button>
+          <a class="link" href="http://127.0.0.1:8080" target="_blank" rel="noreferrer">LLM :8080</a>
+        </div>
+      </div>
 
-<section class="panel" id="research">
-<div class="card">
-<h2>درگاه تحقیق اینترنتی</h2>
-<p class="muted">جست‌وجو در مرورگر انجام می‌شود. هیچ نتیجه‌ای بدون عبور از قرنطینه وارد حافظهٔ سیمرغ نمی‌شود.</p>
-<div class="row"><input id="searchQ" placeholder="موضوع مورد نیاز..."><button id="searchBtn">جست‌وجو</button></div>
-<div id="searchLinks" class="item"></div>
-</div>
-<div class="card">
-<h2>ورود URL به قرنطینه</h2>
-<div class="row"><input id="url" placeholder="https://example.org/article"><button id="quarantineBtn">دریافت و قرنطینه</button></div>
-<div id="quarantineList" class="scroll"></div>
-</div>
-</section>
+      <div class="card span-8">
+        <h2>Snapshot</h2>
+        <pre id="snapshot">…</pre>
+      </div>
+      <div class="card span-4">
+        <h2>خطای آخر Observer</h2>
+        <pre id="lastError">…</pre>
+        <h3>نکته</h3>
+        <div class="tiny muted">اگر اینجا world_state.tmp یا هر FileNotFoundError دیده شود، مشکل از Observer است، نه از Firefox/Chrome.</div>
+      </div>
 
-<section class="panel" id="coding">
-<div class="card">
-<h2>دستیار کدنویسی محلی</h2>
-<p class="muted">مدل محلی فقط پیشنهاد می‌دهد. patch در محیط موقت آزمون می‌شود. اعمال روی مخزن نیازمند تأیید انسانی است.</p>
-<div class="row"><textarea id="codeTask" placeholder="مثلاً: علت شکست تست X را بررسی و کم‌خطرترین اصلاح را پیشنهاد کن."></textarea></div>
-<div class="row"><input id="codePaths" placeholder="فایل‌ها با فاصله، مثلاً core/local_backend.py tests/..."><button id="codePropose">پیشنهاد patch</button></div>
-<div id="codeResult" class="scroll"></div>
-</div>
-<div class="card"><h2>اصلاحیه‌های ثبت‌شده</h2><div id="repairs" class="scroll"></div></div>
-</section>
+      <div class="card span-12">
+        <h2>توپولوژی سرویس‌ها</h2>
+        <table>
+          <thead><tr><th>لایه</th><th>آدرس</th><th>نقش</th><th>باز کردن</th></tr></thead>
+          <tbody>
+            <tr><td>SIMORGH Core</td><td class="value">127.0.0.1:8000</td><td>گفتگو، دانش، پرسونا</td><td><a class="link" href="http://127.0.0.1:8000" target="_blank" rel="noreferrer">Open</a></td></tr>
+            <tr><td>Mother UI/API</td><td class="value">127.0.0.1:8011</td><td>ناظر، دفترکل، گزارش و کنترل انسانی</td><td><a class="link" href="http://127.0.0.1:8011" target="_blank" rel="noreferrer">Open</a></td></tr>
+            <tr><td>Legacy/duplicate candidate</td><td class="value">127.0.0.1:8010</td><td>طبق آخرین خروجی شما یک پردازهٔ دوم</td><td><a class="link" href="http://127.0.0.1:8010" target="_blank" rel="noreferrer">Inspect</a></td></tr>
+            <tr><td>Local LLM</td><td class="value">127.0.0.1:8080</td><td>موتور مدل محلی</td><td><a class="link" href="http://127.0.0.1:8080" target="_blank" rel="noreferrer">Open</a></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <section id="reports" class="tabpage hidden">
+    <div class="grid">
+      <div class="card span-4">
+        <h2>ساخت گزارش</h2>
+        <div class="actions">
+          <button class="primary" onclick="makeReport('daily')">گزارش روزانه</button>
+          <button onclick="makeReport('weekly')">گزارش هفتگی</button>
+          <button onclick="askReport()">روایت فارسی با مدل محلی</button>
+        </div>
+        <pre id="reportResult">…</pre>
+      </div>
+      <div class="card span-8">
+        <h2>فهرست گزارش‌ها</h2>
+        <div class="actions"><button onclick="loadReports()">بازخوانی</button></div>
+        <pre id="reports">…</pre>
+      </div>
+    </div>
+  </section>
+
+  <section id="goals" class="tabpage hidden">
+    <div class="grid">
+      <div class="card span-4">
+        <h2>هدف انسانی</h2>
+        <label>عنوان<input id="goalTitle" placeholder="مثلاً پایدار کردن سرویس Mother"></label>
+        <label>تاریخ هدف<input id="goalDate" type="date"></label>
+        <button class="primary" onclick="addGoal()">افزودن هدف</button>
+      </div>
+      <div class="card span-8">
+        <h2>فهرست هدف‌ها</h2>
+        <div class="actions"><button onclick="loadState()">بازخوانی</button></div>
+        <pre id="goals">…</pre>
+        <div class="row">
+          <input id="goalId" type="number" placeholder="شناسه هدف">
+          <select id="goalStatus"><option>OPEN</option><option>DONE</option><option>BLOCKED</option><option>PAUSED</option></select>
+        </div>
+        <button onclick="setGoalStatus()">تغییر وضعیت</button>
+      </div>
+    </div>
+  </section>
+
+  <section id="research" class="tabpage hidden">
+    <div class="grid">
+      <div class="card span-4">
+        <h2>جستجو</h2>
+        <input id="researchQ" placeholder="سیمرغ هوش مصنوعی">
+        <button class="primary" onclick="researchSearch()">جستجو</button>
+        <pre id="searchResult">…</pre>
+      </div>
+      <div class="card span-8">
+        <h2>قرنطینه</h2>
+        <input id="researchUrl" placeholder="https://example.com/article">
+        <button onclick="quarantine()">آوردن URL به قرنطینه</button>
+        <div class="actions" style="margin-top:10px"><button onclick="loadQuarantine()">بازخوانی قرنطینه</button></div>
+        <pre id="quarantineList">…</pre>
+        <div class="row">
+          <input id="quarantineId" type="number" placeholder="شناسه">
+          <input id="quarantineNote" placeholder="یادداشت بررسی انسانی">
+        </div>
+        <div class="actions">
+          <button class="primary" onclick="reviewQuarantine('approve')">تأیید و ورود به حافظه</button>
+          <button class="danger" onclick="reviewQuarantine('reject')">رد</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="coding" class="tabpage hidden">
+    <div class="grid">
+      <div class="card span-5">
+        <h2>پیشنهاد تعمیر</h2>
+        <label>Task<textarea id="codingTask" placeholder="مثلاً پیش‌فرض پورت Mother را 8011 کن"></textarea></label>
+        <label>Paths<input id="codingPaths" placeholder="core/mother/server.py"></label>
+        <button class="primary" onclick="proposeRepair()">ایجاد پیشنهاد</button>
+        <div class="notice" style="margin-top:12px">Human Gate: اعمال کد فقط پس از VERIFY و تأیید صریح انجام می‌شود.</div>
+      </div>
+      <div class="card span-7">
+        <h2>پیشنهادها</h2>
+        <button onclick="loadCoding()">بازخوانی</button>
+        <pre id="codingList">…</pre>
+        <div class="row3" style="margin-top:8px">
+          <input id="repairId" type="number" placeholder="Repair ID">
+          <button onclick="verifyRepair()">VERIFY</button>
+          <button class="danger" onclick="applyRepair()">APPLY با تأیید</button>
+        </div>
+        <input id="applyNote" placeholder="یادداشت تأیید دستی">
+      </div>
+    </div>
+  </section>
+
+  <section id="ledger" class="tabpage hidden">
+    <div class="grid">
+      <div class="card span-5">
+        <h2>ثبت کار AI / انسان</h2>
+        <input id="logActor" value="human" placeholder="actor">
+        <input id="logAction" value="review" placeholder="action">
+        <textarea id="logSummary" placeholder="خلاصه کار"></textarea>
+        <textarea id="logEvidence" placeholder="شاهد قابل بررسی"></textarea>
+        <button class="primary" onclick="writeLog()">ثبت در ledger</button>
+      </div>
+      <div class="card span-7">
+        <h2>گزارش ردپای AI</h2>
+        <button onclick="loadLogReport()">بازخوانی</button>
+        <pre id="logReport">…</pre>
+      </div>
+    </div>
+  </section>
+</main>
 
 <script>
-let state=null;
-const esc=s=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
-function kv(a,b){return '<div class="kv"><span class="muted">'+esc(a)+'</span><span>'+esc(b)+'</span></div>'}
-function json(v){return JSON.stringify(v||{},null,2)}
-async function api(url,opt){const r=await fetch(url,opt);const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.detail||JSON.stringify(d));return d}
-async function refresh(){
- try{state=await api('/api/mother/state');render();}catch(e){document.getElementById('system').innerHTML='<span class="warn">'+esc(e.message)+'</span>'}
+const API = "";
+const $ = id => document.getElementById(id);
+async function api(path, opts={}) {
+  const r = await fetch(API + path, {headers: {"Content-Type":"application/json", ...(opts.headers||{})}, ...opts});
+  const t = await r.text();
+  let data; try { data = JSON.parse(t); } catch { data = t; }
+  if (!r.ok) throw new Error(typeof data === "string" ? data : JSON.stringify(data));
+  return data;
 }
-function render(){
- const b=state.boot||{}, s=state.snapshot||{}, m=s.memory||{}, d=s.disk||{}, cpu=s.cpu||{};
- document.getElementById('boot').innerHTML=[kv('boot_id',b.boot_id),kv('شروع',b.started_at||''),kv('بوت قبلی',b.previous_boot_id||'ندارد'),kv('خاموشی قبلی',b.previous_clean_shutdown===true?'تمیز':b.previous_clean_shutdown===false?'نامشخص/غیرتمیز':'ثبت نشده')].join('');
- const access=s.access||{};
- document.getElementById('system').innerHTML=[kv('CPU',cpu.percent+'%'),kv('RAM',m.percent+'%'),kv('فضای دیسک',d.percent+'%'),kv('Python',s.os?.python||''),kv('Host',s.host||''),kv('کاربر',access.user||''),kv('Journal',access.journal_readable?'قابل‌خواندن':'محدود')].join('');
- const cm=state.weekly?.capability_matrix||{};
- document.getElementById('capabilities').innerHTML=[kv('اندازه‌گیری',cm.status||'NOT_AVAILABLE'),kv('قابلیت‌های موجود',String(cm.implemented_count??'')+'/'+String(cm.total_count??'')),kv('شکاف‌ها',(cm.missing||[]).join(', ')||'گزارش نشده')].join('');
- const goals=state.goals||[]; document.getElementById('goals').innerHTML=(goals.length?goals:[]).map(g=>'<div class="item">'+esc(g.title)+' <span class="badge">'+esc(g.status)+'</span></div>').join('')||'<span class="muted">هدف ثبت نشده.</span>';
- const events=(state.daily?.activity||[]).slice(-80).reverse();
- document.getElementById('events').innerHTML=events.map(e=>'<div class="item"><strong>'+esc(e.event_type)+'</strong> · '+esc(e.component)+' · '+esc(e.timestamp)+'<div class="muted">'+esc(JSON.stringify(e.data))+'</div></div>').join('')||'رویدادی ثبت نشده.';
- const selfFacts=state.self_model||[];
- document.getElementById('self').innerHTML=[kv('رویدادها',state.daily?.events_total||0),kv('snapshotها',state.daily?.snapshots_count||0),kv('پیشنهادهای هفته',((state.weekly||{}).next_candidate_objectives||[]).length),kv('مدل محلی در بازتاب',state.daily?.self_reflection?.status||'NOT_AVAILABLE'),kv('مرز خاموشی',state.post_boot?.offline_boundary||'')].join('')+selfFacts.map(x=>'<div class="item"><strong>'+esc(x.key)+'</strong> · <span class="badge">'+esc(x.status)+'</span><div class="muted">'+esc(JSON.stringify(x.value))+'</div></div>').join('');
- document.getElementById('postboot').textContent=json(state.post_boot);
- document.getElementById('daily').textContent=json(state.daily);
- document.getElementById('weekly').textContent=json(state.weekly);
- renderQuarantine(state.quarantine||[]);
- renderRepairs(state.code_repairs||[]);
+function pretty(v){ return typeof v==="string" ? v : JSON.stringify(v,null,2); }
+function set(id,v){ $(id).textContent=pretty(v); }
+function msg(text, cls=""){ $("banner").className="notice "+cls; $("banner").textContent=text; }
+function tab(name){
+  document.querySelectorAll(".tab").forEach(b=>b.classList.toggle("active",b.dataset.tab===name));
+  document.querySelectorAll(".tabpage").forEach(s=>s.classList.toggle("hidden",s.id!==name));
 }
-function renderQuarantine(items){
- document.getElementById('quarantineList').innerHTML=(items||[]).map(i=>'<div class="item"><strong>#'+i.id+'</strong> <span class="badge">'+esc(i.status)+'</span><br><a href="'+esc(i.source_url)+'" target="_blank" rel="noreferrer">'+esc(i.source_url)+'</a><br>'+esc(i.title||'بدون عنوان')+'<br>'+ (i.status==='QUARANTINED'?'<div class="row" style="margin-top:6px"><button data-qai="'+i.id+'" class="secondary">بازبینی مدل محلی</button><button data-qok="'+i.id+'">تأیید و ورود</button><button data-qno="'+i.id+'" class="danger">رد</button></div>':'')+'</div>').join('')||'<span class="muted">قرنطینه خالی است.</span>';
- document.querySelectorAll('[data-qai]').forEach(b=>b.onclick=async()=>{b.disabled=true;try{alert(json(await api('/api/mother/research/quarantine/'+b.dataset.qai+'/ai-review',{method:'POST'})))}catch(e){alert(e.message)}});
- document.querySelectorAll('[data-qok]').forEach(b=>b.onclick=async()=>{const note=prompt('یادداشت صحت‌سنجی انسانی را وارد کن:')||'';try{await api('/api/mother/research/quarantine/'+b.dataset.qok+'/approve',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({note})});await refresh()}catch(e){alert(e.message)}});
- document.querySelectorAll('[data-qno]').forEach(b=>b.onclick=async()=>{const note=prompt('دلیل رد:')||'';try{await api('/api/mother/research/quarantine/'+b.dataset.qno+'/reject',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({note})});await refresh()}catch(e){alert(e.message)}});
+document.querySelectorAll(".tab").forEach(b=>b.onclick=()=>tab(b.dataset.tab));
+
+async function loadState(){
+  try{
+    const h = await api("/health");
+    $("health").textContent = h.status || "UNKNOWN";
+    $("observer").textContent = h.observer || "UNKNOWN";
+    if(h.last_error){ set("lastError",h.last_error); } else set("lastError","none");
+    const s = await api("/api/mother/state");
+    const snap=s.snapshot||{};
+    $("git").textContent = (snap.git && snap.git.aggregate_status) || "UNKNOWN";
+    $("disk").textContent = (snap.disk && snap.disk.free_gb!=null) ? snap.disk.free_gb+" GB" : "UNKNOWN";
+    set("snapshot",snap);
+    set("goals",s.goals||[]);
+    msg("Mother متصل است.", "ok");
+  } catch(e){ msg("خطا در ارتباط با Mother: "+e.message,"bad"); set("lastError",e.message); }
 }
-function renderRepairs(items){
- document.getElementById('repairs').innerHTML=(items||[]).map(i=>'<div class="item"><strong>#'+i.id+'</strong> <span class="badge">'+esc(i.status)+'</span><br>'+esc(i.task)+'<br>'+esc(i.verification?.status||'NOT VERIFIED')+'<div class="row" style="margin-top:6px">'+(i.status==='PROPOSED'?'<button data-verify="'+i.id+'">آزمون ایزوله</button>':'')+(i.status==='VERIFIED'?'<button data-apply="'+i.id+'">اعمال اصلاحیه</button>':'')+'</div></div>').join('')||'اصلاحیه‌ای ثبت نشده.';
- document.querySelectorAll('[data-verify]').forEach(b=>b.onclick=async()=>{b.disabled=true;try{alert(json(await api('/api/mother/coding/'+b.dataset.verify+'/verify',{method:'POST'})));await refresh()}catch(e){alert(e.message)}});
- document.querySelectorAll('[data-apply]').forEach(b=>b.onclick=async()=>{if(!confirm('این patch قبلاً آزمون شده است. اعمال روی working tree؟'))return;try{alert(json(await api('/api/mother/coding/'+b.dataset.apply+'/apply',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({approve:true})})));await refresh()}catch(e){alert(e.message)}});
+async function refreshAll(){ await loadState(); await loadReports(); await loadQuarantine(); await loadCoding(); await loadLogReport(); }
+async function loadReports(){try{set("reports",await api("/api/mother/reports"))}catch(e){set("reports",e.message)}}
+async function makeReport(kind){try{set("reportResult",await api("/api/mother/reports/"+kind,{method:"POST",body:"{}"})); await loadReports()}catch(e){set("reportResult",e.message)}}
+async function askReport(){try{set("reportResult",await api("/api/mother/report/ask",{method:"POST",body:"{}"}))}catch(e){set("reportResult",e.message)}}
+async function addGoal(){
+  try{
+    const title=$("goalTitle").value.trim(), target_date=$("goalDate").value||null;
+    if(!title) throw new Error("عنوان هدف خالی است");
+    set("goals",await api("/api/mother/goals",{method:"POST",body:JSON.stringify({title,target_date})}));
+    await loadState();
+  }catch(e){set("goals",e.message)}
 }
-document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>{document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));document.querySelectorAll('.panel').forEach(x=>x.classList.remove('active'));b.classList.add('active');document.getElementById(b.dataset.tab).classList.add('active')});
-document.getElementById('refresh').onclick=refresh;
-document.getElementById('searchBtn').onclick=async()=>{const q=document.getElementById('searchQ').value.trim();if(!q)return;try{const d=await api('/api/mother/research/search?q='+encodeURIComponent(q));const links=d.search_urls;document.getElementById('searchLinks').innerHTML=Object.entries(links).map(([k,v])=>'<div><button class="secondary" data-search="'+esc(v)+'">'+esc(k)+'</button> <a href="'+esc(v)+'" target="_blank" rel="noreferrer">'+esc(v)+'</a></div>').join('');document.querySelectorAll('[data-search]').forEach(b=>b.onclick=()=>window.open(b.dataset.search,'_blank','noopener,noreferrer'))}catch(e){alert(e.message)}};
-document.getElementById('quarantineBtn').onclick=async()=>{const url=document.getElementById('url').value.trim();if(!url)return;try{await api('/api/mother/research/quarantine',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url})});document.getElementById('url').value='';await refresh()}catch(e){alert(e.message)}};
-document.getElementById('codePropose').onclick=async()=>{const task=document.getElementById('codeTask').value.trim();const paths=document.getElementById('codePaths').value.trim().split(/[\s,]+/).filter(Boolean);if(!task)return;try{document.getElementById('codeResult').textContent='در حال درخواست از مدل محلی...';const d=await api('/api/mother/coding/propose',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({task,paths})});document.getElementById('codeResult').innerHTML='<pre>'+esc(json(d))+'</pre>';await refresh()}catch(e){document.getElementById('codeResult').textContent=e.message}};
-refresh();
+async function setGoalStatus(){
+  try{
+    const id=Number($("goalId").value), st=$("goalStatus").value;
+    if(!id) throw new Error("شناسه هدف را وارد کنید");
+    set("goals",await api("/api/mother/goals/"+id+"/status?status="+encodeURIComponent(st),{method:"POST",body:"{}"}));
+    await loadState();
+  }catch(e){set("goals",e.message)}
+}
+async function researchSearch(){try{set("searchResult",await api("/api/mother/research/search?q="+encodeURIComponent($("researchQ").value)))}catch(e){set("searchResult",e.message)}}
+async function quarantine(){
+  try{
+    const url=$("researchUrl").value.trim();
+    if(!url) throw new Error("URL خالی است");
+    set("quarantineList",await api("/api/mother/research/quarantine",{method:"POST",body:JSON.stringify({url})}));
+    await loadQuarantine();
+  }catch(e){set("quarantineList",e.message)}
+}
+async function loadQuarantine(){try{set("quarantineList",await api("/api/mother/research/quarantine"))}catch(e){set("quarantineList",e.message)}}
+async function reviewQuarantine(kind){
+  try{
+    const id=Number($("quarantineId").value), note=$("quarantineNote").value;
+    if(!id) throw new Error("شناسه قرنطینه را وارد کنید");
+    if(kind==="approve" && !confirm("ورود این مورد به حافظه را تأیید می‌کنید؟")) return;
+    set("quarantineList",await api("/api/mother/research/quarantine/"+id+"/"+kind,{method:"POST",body:JSON.stringify({note})}));
+    await loadQuarantine();
+  }catch(e){set("quarantineList",e.message)}
+}
+async function proposeRepair(){
+  try{
+    const task=$("codingTask").value.trim();
+    const paths=$("codingPaths").value.split(",").map(x=>x.trim()).filter(Boolean);
+    if(!task) throw new Error("Task خالی است");
+    set("codingList",await api("/api/mother/coding/propose",{method:"POST",body:JSON.stringify({task,paths})}));
+    await loadCoding();
+  }catch(e){set("codingList",e.message)}
+}
+async function loadCoding(){try{set("codingList",await api("/api/mother/coding"))}catch(e){set("codingList",e.message)}}
+async function verifyRepair(){
+  try{
+    const id=Number($("repairId").value); if(!id) throw new Error("Repair ID را وارد کنید");
+    set("codingList",await api("/api/mother/coding/"+id+"/verify",{method:"POST",body:"{}"})); await loadCoding();
+  }catch(e){set("codingList",e.message)}
+}
+async function applyRepair(){
+  try{
+    const id=Number($("repairId").value); if(!id) throw new Error("Repair ID را وارد کنید");
+    const note=$("applyNote").value.trim();
+    if(!confirm("این پچ VERIFIED است و می‌خواهید با تأیید انسانی اعمال شود؟")) return;
+    set("codingList",await api("/api/mother/coding/"+id+"/apply",{method:"POST",body:JSON.stringify({approve:true,note})})); await loadCoding();
+  }catch(e){set("codingList",e.message)}
+}
+async function writeLog(){
+  try{
+    const payload={actor:$("logActor").value,action:$("logAction").value,summary:$("logSummary").value,evidence:$("logEvidence").value};
+    set("logReport",await api("/api/mother/ai-work-log",{method:"POST",body:JSON.stringify(payload)})); await loadLogReport();
+  }catch(e){set("logReport",e.message)}
+}
+async function loadLogReport(){try{set("logReport",await api("/api/mother/ai-work-log/report"))}catch(e){set("logReport",e.message)}}
+function openFirefoxHint(){
+  alert("برای تست تمیز رابط Mother با Firefox، این دستور را در ترمینال اجرا کنید:\\n\\nfirefox http://127.0.0.1:8011/");
+}
+refreshAll();
+setInterval(loadState,15000);
 </script>
-</main>
 </body>
 </html>

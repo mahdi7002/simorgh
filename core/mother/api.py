@@ -6,7 +6,7 @@ import os
 from datetime import datetime, timezone
 from typing import Any
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Body, HTTPException
 from pydantic import BaseModel, Field
 
 from .coding import apply_verified_patch, propose_patch, verify_patch
@@ -24,8 +24,127 @@ from .research import (
 from .reports import ReportEngine
 from .observer import SystemObserver
 from .report_context import build_report_evidence, build_verification, review_report_with_gemma
+from .problem_memory import ProblemMemory
+from .resource_manager import ResourceManager
 
 router = APIRouter(prefix="/api/mother", tags=["mother"])
+
+
+@router.get("/resources")
+def resources():
+    return ResourceManager.shared(interval_seconds=30).snapshot_dict()
+
+
+@router.get("/problems")
+def problem_list(status: str | None = None, limit: int = 30):
+    return {"incidents": ProblemMemory.shared().list_incidents(status=status, limit=limit)}
+
+
+@router.get("/problems/{incident_id}")
+def problem_detail(incident_id: str):
+    item = ProblemMemory.shared().get_incident(incident_id)
+    if item is None:
+        raise HTTPException(404, "problem incident not found")
+    return item
+
+
+@router.get("/problem-suggestions")
+def problem_suggestions(component: str, failure_type: str, signature: str | None = None, limit: int = 3):
+    import json
+    parsed = None
+    if signature:
+        try:
+            parsed = json.loads(signature)
+        except json.JSONDecodeError:
+            parsed = {"raw": signature}
+    return {"suggestions": ProblemMemory.shared().suggestions(component=component, failure_type=failure_type, signature=parsed, limit=limit)}
+
+
+@router.get("/lessons")
+def problem_lessons(component: str | None = None, failure_type: str | None = None, limit: int = 20):
+    return {"lessons": ProblemMemory.shared().lessons(component=component, failure_type=failure_type, limit=limit)}
+
+
+@router.post("/problems/{incident_id}/diagnosis")
+def problem_diagnosis(incident_id: str, payload: dict = Body(default={} )):
+    payload = payload or {}
+    ok = ProblemMemory.shared().set_diagnosis(
+        incident_id,
+        cause=payload.get("cause"),
+        basis=payload.get("basis") or {},
+        diagnosed_by=str(payload.get("diagnosed_by", "human")),
+    )
+    if not ok:
+        raise HTTPException(404, "problem incident not found")
+    return {"incident_id": incident_id, "recorded": True}
+
+
+@router.post("/problems/{incident_id}/attempt")
+def problem_attempt(incident_id: str, payload: dict = Body(default={} )):
+    payload = payload or {}
+    try:
+        return ProblemMemory.shared().record_attempt(
+            incident_id,
+            actor_type=str(payload.get("actor_type", "human")),
+            method=str(payload.get("method", "unknown")),
+            action=payload.get("action"),
+            command=payload.get("command"),
+            result=payload.get("result"),
+            success=payload.get("success"),
+            verified=bool(payload.get("verified", False)),
+            evidence=payload.get("evidence") or {},
+            error=payload.get("error"),
+            duration_ms=payload.get("duration_ms"),
+        )
+    except KeyError as exc:
+        raise HTTPException(404, str(exc)) from exc
+
+
+@router.post("/problems/{incident_id}/resolve")
+def problem_resolve(incident_id: str, payload: dict = Body(default={} )):
+    payload = payload or {}
+    try:
+        return ProblemMemory.shared().record_attempt(
+            incident_id,
+            actor_type=str(payload.get("actor_type", "human")),
+            method=str(payload.get("method", "unknown")),
+            action=payload.get("action"),
+            command=payload.get("command"),
+            result=payload.get("result", "resolved"),
+            success=bool(payload.get("success", True)),
+            verified=False,
+            evidence=payload.get("evidence") or {},
+            error=payload.get("error"),
+            duration_ms=payload.get("duration_ms"),
+            kind="resolution",
+        )
+    except KeyError as exc:
+        raise HTTPException(404, str(exc)) from exc
+
+
+@router.post("/problems/{incident_id}/verify")
+def problem_verify(incident_id: str, payload: dict = Body(default={} )):
+    payload = payload or {}
+    try:
+        return ProblemMemory.shared().verify_resolution(
+            incident_id,
+            verifier_type=str(payload.get("verifier_type", "human")),
+            verified=bool(payload.get("verified", False)),
+            useful=bool(payload.get("useful", False)),
+            evidence=payload.get("evidence") or {},
+            notes=payload.get("notes"),
+        )
+    except KeyError as exc:
+        raise HTTPException(404, str(exc)) from exc
+
+
+@router.post("/lessons/{lesson_id}/use")
+def lesson_use(lesson_id: int):
+    ok = ProblemMemory.shared().record_lesson_use(lesson_id)
+    if not ok:
+        raise HTTPException(404, "lesson not found")
+    return {"lesson_id": lesson_id, "recorded": True}
+
 
 ledger = MotherLedger()
 reports = ReportEngine(ledger)
@@ -145,6 +264,8 @@ def report_ask():
         goals=ledger.list_goals(),
         self_model=ledger.list_self_model(),
     )
+    problem_memory_context = ProblemMemory.shared().context(limit=3)
+    evidence["problem_memory"] = problem_memory_context
     evidence["observation"] = observation
 
     prompt = (
@@ -216,6 +337,7 @@ def report_ask():
         "verification": verification,
         "model_review": model_review,
         "brain": discover_local_brain(),
+        "problem_memory": evidence.get("problem_memory"),
         "observation": observation,
     }
 
