@@ -198,6 +198,23 @@ BEHAVIORAL_CONTRACT = (
 )
 
 
+import re as _re
+
+_ATTR_PHRASE = _re.compile(
+    r"(از\s+کیست|مال\s+کیست|مال\s+کیه|شاعرش\s+کیست|سراینده|گوینده|کی\s+سروده|چه\s+کسی\s+(?:سروده|گفته)|از\s+کدام\s+شاعر)"
+)
+_VERSE_WORD = _re.compile(r"(بیت|شعر|مصرع|غزل|رباعی|مثنوی)")
+
+POETRY_DB_UNAVAILABLE_MESSAGE = (
+    "پایگاه شعر در این نصب در دسترس نیست، پس نمی‌توانم گوینده‌ی این بیت را تأیید کنم "
+    "و حدس هم نمی‌زنم. برای فعال‌کردن آن: git lfs install && git lfs pull"
+)
+
+
+def _looks_like_verse_attribution(question: str) -> bool:
+    return bool(_ATTR_PHRASE.search(question) and _VERSE_WORD.search(question))
+
+
 def suggest_handoff(question: str, current_agent: str) -> str | None:
     persona = PERSONAS.get(current_agent, {})
     for keyword, target in persona.get("handoff_if", {}).items():
@@ -223,6 +240,10 @@ def ask(
     except Exception as exc:  # missing/LFS-pointer DB must not break chat
         logging.getLogger(__name__).warning("poetry attribution unavailable: %s", exc)
         verse_answer = None
+        if _looks_like_verse_attribution(question):
+            # Attribution needs a verified source. Without the verse DB a small model
+            # invents poets and books, so answer deterministically instead.
+            return (POETRY_DB_UNAVAILABLE_MESSAGE, False) if return_metadata else POETRY_DB_UNAVAILABLE_MESSAGE
     if verse_answer:
         return (verse_answer, False) if return_metadata else verse_answer
 

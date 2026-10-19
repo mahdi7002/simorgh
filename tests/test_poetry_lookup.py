@@ -91,7 +91,10 @@ def test_chat_survives_missing_verse_db(tmp_path, monkeypatch):
     pl.close()
     monkeypatch.setattr(pl, "DB", str(tmp_path / "nope.db"))
     monkeypatch.setattr(chat, "generate", lambda *a, **k: "پاسخ مدل")
-    assert chat.ask("این بیت از کیست؟", return_metadata=True) == ("پاسخ مدل", True)
+    # Verse attribution needs a verified source: without the DB the chat refuses instead of letting the model guess.
+    assert chat.ask("این بیت از کیست؟", return_metadata=True) == (chat.POETRY_DB_UNAVAILABLE_MESSAGE, False)
+    # Everything else still reaches the model, so the chat survives a missing DB.
+    assert chat.ask("سلام", return_metadata=True) == ("پاسخ مدل", True)
 
 
 def test_common_phrase_with_many_hits_is_not_certified_to_one_poet(verse_db):
