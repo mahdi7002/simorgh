@@ -1,5 +1,5 @@
 # Test dependencies. Install after requirements.txt: pip install -r requirements-dev.txt
 -r requirements.txt
 pytest==9.1.1
-httpx2==2.12.0
+httpx2==2.13.1
 pip-audit==2.10.1
