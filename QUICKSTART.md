@@ -20,7 +20,7 @@ python -m pip install -U pip
 python -m pip install -r requirements.txt
 ```
 
-> پایگاه شعر (`data/simorgh_full.db`، ~۳۹۲MB) با Git LFS نگهداری می‌شود. پس از clone اجرا کنید: `git lfs install && git lfs pull` و سپس `python scripts/check_poetry_db.py`. بدون آن، بازیابی شعر غیرفعال است.
+> پایگاه شعر (`data/simorgh_full.db`، حدود ۳۹۲MB) جدا از کد منتشر می‌شود. پس از نصب اجرا کنید: `bash scripts/fetch_data.sh` (آخرین نسخه را با بررسی SHA-256 می‌گیرد). جایگزین: `git lfs install && git lfs pull` (نسخه‌ی ثابت‌شده‌ی قدیمی‌تر). جزئیات: `docs/DATA.md`.
 
 ## 2. اولین بررسی، بدون مدل محلی
 
