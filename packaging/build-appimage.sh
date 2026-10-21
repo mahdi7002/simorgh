@@ -26,7 +26,7 @@ fi
 
 # Bundle only what the end user needs at runtime. Mutable state never lives here.
 cp "$ROOT/main.py" "$ROOT/requirements.txt" "$ROOT/LICENSE" "$APPDIR/usr/share/simorgh/"
-for directory in core agents app dashboard models; do
+for directory in core agents app dashboard models locales; do
     if [ -d "$ROOT/$directory" ]; then
         cp -a "$ROOT/$directory" "$APPDIR/usr/share/simorgh/"
     fi
