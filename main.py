@@ -178,12 +178,43 @@ agent_manager = AgentManager()
 orchestrator = Orchestrator()
 
 
+def _chat_history(request, limit: int = 4):
+    """Last few turns of this session, newest last. SIMORGH_CHAT_MEMORY=off disables it."""
+    import os as _os
+    if _os.environ.get("SIMORGH_CHAT_MEMORY", "on").strip().lower() in ("off", "0", "false", "no"):
+        return None
+    try:
+        rows = memory.get_conversation_history(_session_id(request), limit=limit)
+    except Exception:
+        return None
+    return [(r["user"], r["system"]) for r in reversed(rows)] or None
+
+
 @app.get("/")
 async def root_app():
     app_html = Path(__file__).resolve().parent / "app" / "index.html"
     if not app_html.is_file():
         raise HTTPException(404, "SIMORGH web app not found")
     return FileResponse(app_html)
+
+
+@app.get("/learn")
+async def learn_page():
+    page = Path(__file__).resolve().parent / "app" / "learn.html"
+    if not page.is_file():
+        raise HTTPException(404, "SIMORGH learning page not found")
+    return FileResponse(page)
+
+
+@app.get("/locales/{lang}.json")
+async def locale_file(lang: str):
+    import re as _re_loc
+    if not _re_loc.fullmatch(r"[a-z]{2,3}(-[A-Za-z0-9]{2,8})?", lang):
+        raise HTTPException(404, "unsupported language")
+    path = Path(__file__).resolve().parent / "locales" / f"{lang}.json"
+    if not path.is_file():
+        raise HTTPException(404, "locale file not found")
+    return FileResponse(path, media_type="application/json")
 
 
 @app.post("/ask")
@@ -236,7 +267,8 @@ async def ask(request: Request, query: str = Form(...)):
 @app.post("/chat")
 async def chat(request: Request, query: str = Form(...), agent: str = Form("hakim")):
     try:
-        response, ai_generated = chat_ask(query, agent=agent, return_metadata=True)
+        history = _chat_history(request)
+        response, ai_generated = chat_ask(query, agent=agent, return_metadata=True, **({"history": history} if history else {}))
         memory.store_conversation(_session_id(request), query, response, {"agent": agent, "ai_generated": ai_generated})
         payload = {
             "response": response,

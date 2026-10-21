@@ -215,6 +215,47 @@ def _looks_like_verse_attribution(question: str) -> bool:
     return bool(_ATTR_PHRASE.search(question) and _VERSE_WORD.search(question))
 
 
+import re as _re
+
+_WORK_TITLE = _re.compile(r'(?:کتاب|دیوان|کلیات|رمان|اثر)\s*[«"“]([^»"”]{2,40})[»"”]')
+
+UNVERIFIED_WORK_NOTE = (
+    "\n\n⚠️ نتوانستم {titles} را در پایگاه دانش این دستگاه تأیید کنم؛ "
+    "آنچه بالا آمد از دانش عمومی مدل است و ممکن است نادرست یا ساختگی باشد."
+)
+
+
+def _title_in_catalog(title: str) -> bool:
+    from app.knowledge import poetry_lookup as _pl
+    ws = _pl.words(title)
+    if not ws:
+        return False
+    like = "%" + "%".join(ws) + "%"
+    row = _pl.get_db().execute("SELECT 1 FROM books WHERE title LIKE ? LIMIT 1", (like,)).fetchone()
+    return row is not None
+
+
+def _unverified_work_titles(question: str) -> list:
+    out = []
+    for raw in _WORK_TITLE.findall(question):
+        t = raw.strip()
+        try:
+            known = _title_in_catalog(t)
+        except Exception:  # catalog missing or unreadable: cannot verify, so label it
+            known = False
+        if not known and t not in out:
+            out.append(t)
+    return out
+
+
+def _format_history(history) -> str:
+    lines = ["گفتگوی پیشین در همین جلسه (فقط برای پیوستگی؛ اگر به پرسش فعلی ربطی ندارد نادیده بگیر):"]
+    for user, system in list(history)[-4:]:
+        lines.append("کاربر: " + str(user)[:280].replace("\n", " "))
+        lines.append("سیمرغ: " + str(system)[:280].replace("\n", " "))
+    return "\n".join(lines)
+
+
 def suggest_handoff(question: str, current_agent: str) -> str | None:
     persona = PERSONAS.get(current_agent, {})
     for keyword, target in persona.get("handoff_if", {}).items():
@@ -230,6 +271,7 @@ def ask(
     tool_context: str = "",
     use_builtin_tools: bool = True,
     return_metadata: bool = False,
+    history: "list[tuple[str, str]] | None" = None,
 ) -> str | tuple[str, bool]:
     if not question or not question.strip():
         return "بله؟ چیزی بپرس."
@@ -286,6 +328,8 @@ def ask(
 
     extra = "\n\n".join(p for p in extra_parts if p)
     message = f"{question}\n\n{extra}" if extra else question
+    if history:
+        message = _format_history(history) + "\n\nپرسش فعلی:\n" + message
 
     needs_quality = (
         bool(quran or poetry)
@@ -299,6 +343,10 @@ def ask(
         if return_metadata:
             return database_response, False
         return database_response
+
+    unverified = _unverified_work_titles(question)
+    if unverified:
+        response += UNVERIFIED_WORK_NOTE.format(titles="، ".join(f"«{t}»" for t in unverified))
 
     handoff = suggest_handoff(question, agent)
     if handoff and handoff in PERSONAS:
