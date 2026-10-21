@@ -19,10 +19,13 @@ def test_locale_values_are_non_empty_strings():
             assert isinstance(value, str) and value.strip(), (lang, key)
 
 
-def test_every_key_used_by_the_page_exists():
-    html = (ROOT / "app" / "learn.html").read_text(encoding="utf-8")
-    used = set(re.findall(r'data-(?:i|q)="([a-z0-9_]+)"', html))
-    assert used and used <= set(_load("fa"))
+def test_every_key_used_by_the_pages_exists():
+    keys = set(_load("fa"))
+    for page in ("learn.html", "index.html"):
+        html = (ROOT / "app" / page).read_text(encoding="utf-8")
+        used = set(re.findall(r'data-(?:i|q|ph)="([a-z0-9_]+)"', html))
+        used |= set(re.findall(r"\bt\('([a-z0-9_]+)'\)", html))
+        assert used and used <= keys, (page, sorted(used - keys))
 
 
 def test_no_local_absolute_paths():
@@ -40,3 +43,17 @@ def test_learn_page_and_locales_are_served():
     assert fa.status_code == 200 and fa.json()["app_name"]
     assert client.get("/locales/xx.json").status_code == 404
     assert client.get("/locales/..%2Fmain.json").status_code in (404, 422)
+
+
+def test_main_page_is_served_and_carries_the_language_switch():
+    from fastapi.testclient import TestClient
+    import main
+
+    html = TestClient(main.app).get("/").text
+    assert 'data-l="fa"' in html and 'data-l="en"' in html
+    assert "/locales/" in html
+
+
+def test_appimage_script_bundles_locales():
+    script = (ROOT / "packaging" / "build-appimage.sh").read_text(encoding="utf-8")
+    assert "dashboard models locales" in script

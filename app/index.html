@@ -6,52 +6,78 @@
 <title>SIMORGH | سیمرغ</title>
 <style>
 :root{--bg:#07100f;--panel:#0d1816;--line:#1b302b;--text:#edf5f0;--muted:#91aaa2;--accent:#d6b65a;--good:#48c78e;--danger:#e27d62}*{box-sizing:border-box}body{margin:0;background:linear-gradient(160deg,#07100f,#0a1412 55%,#081110);color:var(--text);font:15px/1.8 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}main{max-width:1100px;margin:auto;padding:28px 18px 60px}header{display:flex;justify-content:space-between;gap:20px;align-items:end;margin-bottom:22px}h1{margin:0;font-size:38px}h1 small{display:block;font-size:14px;color:var(--accent);font-weight:500}.lead{color:var(--muted);margin:0}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}.card{background:rgba(13,24,22,.92);border:1px solid var(--line);border-radius:14px;padding:18px}.card h2{margin:0 0 10px;font-size:18px}.kv{display:flex;justify-content:space-between;gap:10px;padding:4px 0;border-bottom:1px solid rgba(27,48,43,.55)}.kv:last-child{border-bottom:0}.muted{color:var(--muted)}.ok{color:var(--good)}.warn{color:var(--danger)}button{border:0;border-radius:10px;padding:10px 14px;background:var(--accent);color:#162019;font-weight:800;cursor:pointer}button.secondary{background:#18302a;color:var(--text)}button:disabled{opacity:.45;cursor:not-allowed}.model{border:1px solid var(--line);border-radius:10px;padding:12px;margin:8px 0}.model-top{display:flex;justify-content:space-between;gap:10px}.pill{padding:2px 8px;border-radius:999px;background:#173128;color:var(--good);font-size:12px}.chat{margin-top:14px}.chatlog{min-height:220px;max-height:420px;overflow:auto;background:#06100e;border:1px solid var(--line);border-radius:12px;padding:12px}.msg{margin:9px 0;padding:9px 11px;border-radius:10px;white-space:pre-wrap}.user{background:#132822}.assistant{background:#0d1916}.composer{display:flex;gap:8px;margin-top:10px}.composer textarea{flex:1;min-height:90px;resize:vertical;background:#091310;color:var(--text);border:1px solid var(--line);border-radius:10px;padding:10px;font:inherit}.foot{margin-top:18px;color:var(--muted);font-size:13px}code{direction:ltr;unicode-bidi:plaintext;background:#0b1714;padding:2px 6px;border-radius:5px}
+.tools{display:flex;gap:8px;flex-wrap:wrap;align-items:center}.lang{display:flex;gap:6px}.lang button.on{background:var(--accent);color:#162019}button:focus-visible,textarea:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 </style>
 </head>
 <body>
 <main>
-<header><div><h1>سیمرغ <small>هوش در خدمت انسان، نه انسان در خدمت هوش</small></h1><p class="lead">هستهٔ محلی، پایگاه دانش مستقل و مدل زبانی اختیاری.</p></div><button class="secondary" id="refresh">بازخوانی وضعیت</button></header>
+<header>
+  <div><h1><span data-i="app_name"></span> <small data-i="tagline"></small></h1><p class="lead" data-i="ui_lead"></p></div>
+  <div class="tools">
+    <div class="lang"><button class="secondary" type="button" data-l="fa">فارسی</button><button class="secondary" type="button" data-l="en">English</button></div>
+    <button class="secondary" id="learn" type="button" data-i="ui_learn"></button>
+    <button class="secondary" id="refresh" type="button" data-i="ui_refresh"></button>
+  </div>
+</header>
 <section class="grid">
-<div class="card"><h2>دستگاه</h2><div id="hardware" class="muted">در حال خواندن...</div></div>
-<div class="card"><h2>هسته</h2><div id="runtime" class="muted">در حال خواندن...</div></div>
-<div class="card"><h2>پایگاه دانش</h2><div id="knowledge" class="muted">در حال خواندن...</div></div>
+<div class="card"><h2 data-i="ui_device"></h2><div id="hardware" class="muted"></div></div>
+<div class="card"><h2 data-i="ui_core"></h2><div id="runtime" class="muted"></div></div>
+<div class="card"><h2 data-i="ui_kb"></h2><div id="knowledge" class="muted"></div></div>
 </section>
-<section class="card" style="margin-top:12px"><h2>مدل‌های محلی</h2><p class="muted">هیچ مدلی بدون انتخاب کاربر دانلود نمی‌شود. SHA-256، مجوز و منبع قبل از ثبت بررسی می‌شوند. بعد از تأیید، backend محلی نیز راه‌اندازی می‌شود.</p><div id="models"></div></section>
-<section class="card chat"><h2>گفت‌وگو</h2><div id="chatlog" class="chatlog"><div class="msg assistant">سیمرغ آماده است. حتی بدون مدل هم می‌توانی از پایگاه دانش محلی استفاده کنی.</div></div><div class="composer"><textarea id="query" placeholder="مثلاً: درباره عدالت، حافظ، یا یک موضوع کتابی بپرس..."></textarea><button id="send">ارسال</button></div></section>
-<p class="foot">حریم خصوصی: رابط فقط به سرویس محلی <code>127.0.0.1</code> متصل است. پاسخ‌های مدل زبانی و پاسخ‌های Database-First با منبع تولید، metadata و disclosure متناسب نمایش داده می‌شوند.</p>
+<section class="card" style="margin-top:12px"><h2 data-i="ui_models"></h2><p class="muted" data-i="ui_models_note"></p><div id="models"></div></section>
+<section class="card chat"><h2 data-i="ui_chat"></h2><div id="chatlog" class="chatlog"><div class="msg assistant" data-i="ui_ready"></div></div><div class="composer"><textarea id="query" data-ph="ui_placeholder"></textarea><button id="send" data-i="ui_send"></button></div></section>
+<p class="foot" data-i="ui_privacy"></p>
 </main>
 <script>
-let state=null;
+let state=null,L={},lang='';
+try{lang=localStorage.getItem('simorgh_lang')||''}catch(e){}
+if(!/^[a-z]{2,3}(-[A-Za-z0-9]{2,8})?$/.test(lang))lang=(navigator.language||'fa').toLowerCase().startsWith('en')?'en':'fa';
+const t=k=>L[k]!==undefined?L[k]:k;
 const esc=s=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 function kv(a,b){return `<div class="kv"><span class="muted">${esc(a)}</span><span>${esc(b)}</span></div>`}
+function reading(){for(const id of ['hardware','runtime','knowledge'])document.getElementById(id).textContent=t('ui_reading')}
+async function setLang(l){
+  const r=await fetch('/locales/'+l+'.json'); if(!r.ok)return;
+  L=await r.json(); lang=l;
+  try{localStorage.setItem('simorgh_lang',l)}catch(e){}
+  document.documentElement.lang=l; document.documentElement.dir=(l==='fa'||l==='ar')?'rtl':'ltr';
+  document.querySelectorAll('[data-i]').forEach(el=>{el.textContent=t(el.dataset.i)});
+  document.querySelectorAll('[data-ph]').forEach(el=>{el.placeholder=t(el.dataset.ph)});
+  document.querySelectorAll('.lang button').forEach(b=>b.classList.toggle('on',b.dataset.l===l));
+  if(state)render(); else reading();
+}
 async function refreshAll(){
   try{const r=await fetch('/api/bootstrap'); if(!r.ok)throw new Error(await r.text()); state=await r.json(); render();}
-  catch(e){document.getElementById('hardware').innerHTML='<span class="warn">خطا در خواندن وضعیت: '+esc(e.message)+'</span>';}
+  catch(e){document.getElementById('hardware').innerHTML='<span class="warn">'+esc(t('ui_err_status')+e.message)+'</span>';}
 }
 function render(){
- const h=state.hardware; document.getElementById('hardware').innerHTML=[kv('سیستم',h.os_name),kv('معماری',h.architecture),kv('پردازنده',h.cpu_model),kv('رشته‌ها',h.cpu_threads),kv('RAM',h.ram_gb+' GB'),kv('فضای آزاد',h.disk_free_gb+' GB'),kv('GPU',h.gpu||'ناشناخته'),kv('ردهٔ پیشنهادی',h.tier)].join('');
- const r=state.runtime, b=state.backend; document.getElementById('runtime').innerHTML=[kv('runtime',r.runtime_dir),kv('حافظه',r.memory_dir),kv('مدل‌ها',r.model_dir),kv('پیکربندی',r.configured?'انجام شده':'اولین اجرا'),kv('backend',b.ready?'آماده':'نصب/راه‌اندازی نشده'),kv('مدل فعال',b.managed_model||'ندارد')].join('');
- const k=state.knowledge; document.getElementById('knowledge').innerHTML=[kv('Database-First',k.database_first?'فعال':'غیرفعال'),kv('بدون مدل',k.requires_model?'نیاز دارد':'نیاز ندارد'),kv('Offline',k.offline_capable?'فعال':'غیرفعال')].join('');
+ const h=state.hardware; document.getElementById('hardware').innerHTML=[kv(t('k_system'),h.os_name),kv(t('k_arch'),h.architecture),kv(t('k_cpu'),h.cpu_model),kv(t('k_threads'),h.cpu_threads),kv(t('k_ram'),h.ram_gb+' GB'),kv(t('k_disk'),h.disk_free_gb+' GB'),kv(t('k_gpu'),h.gpu||t('k_unknown')),kv(t('k_tier'),h.tier)].join('');
+ const r=state.runtime, b=state.backend; document.getElementById('runtime').innerHTML=[kv(t('k_runtime'),r.runtime_dir),kv(t('k_memory'),r.memory_dir),kv(t('k_modeldir'),r.model_dir),kv(t('k_config'),r.configured?t('k_done'):t('k_first')),kv(t('k_backend'),b.ready?t('k_ready'):t('k_notready')),kv(t('k_activemodel'),b.managed_model||t('k_none'))].join('');
+ const k=state.knowledge; document.getElementById('knowledge').innerHTML=[kv(t('k_dbfirst'),k.database_first?t('k_on'):t('k_off')),kv(t('k_nomodel'),k.requires_model?t('k_needs'):t('k_notneeded')),kv(t('k_offline'),k.offline_capable?t('k_on'):t('k_off'))].join('');
  const box=document.getElementById('models'); box.innerHTML='';
  for(const m of state.models){
    const installed=(state.installed_models||[]).some(x=>x.model_id===m.id&&x.trusted_provenance);
    const disabled=!m.compatible||installed;
-   box.insertAdjacentHTML('beforeend',`<div class="model"><div class="model-top"><strong>${esc(m.name)}</strong><span class="pill">${installed?'تأییدشده':m.recommended?'پیشنهادی':m.compatible?'سازگار':'ناسازگار'}</span></div><div class="muted">${esc(m.format)} · ${esc(m.backend)} · حداقل RAM ${esc(m.min_ram_gb)} GB · مجوز ${esc(m.license)}</div><div style="margin-top:8px"><button ${disabled?'disabled':''} data-model-id="${esc(m.id)}">${installed?'نصب‌شده':m.compatible?'دانلود، بررسی و راه‌اندازی':'نیازمند سخت‌افزار بیشتر'}</button></div></div>`);
+   const pill=installed?t('m_verified'):m.recommended?t('m_recommended'):m.compatible?t('m_compatible'):t('m_incompatible');
+   const btn=installed?t('b_installed'):m.compatible?t('b_install'):t('b_needmore');
+   box.insertAdjacentHTML('beforeend',`<div class="model"><div class="model-top"><strong>${esc(m.name)}</strong><span class="pill">${esc(pill)}</span></div><div class="muted">${esc(m.format)} · ${esc(m.backend)} · ${esc(t('m_minram'))} ${esc(m.min_ram_gb)} GB · ${esc(t('m_license'))} ${esc(m.license)}</div><div style="margin-top:8px"><button ${disabled?'disabled':''} data-model-id="${esc(m.id)}">${esc(btn)}</button></div></div>`);
  }
  box.querySelectorAll('button[data-model-id]').forEach(button=>button.addEventListener('click',()=>installModel(button.dataset.modelId,button)));
 }
 async function installModel(id,btn){
- btn.disabled=true; btn.textContent='در حال دریافت، بررسی و راه‌اندازی...';
- try{const r=await fetch('/api/bootstrap/models/'+encodeURIComponent(id)+'/install',{method:'POST'});const data=await r.json();if(!r.ok)throw new Error(data.detail||JSON.stringify(data)); alert('مدل با SHA-256 تأیید و backend محلی راه‌اندازی شد.'); await refreshAll();}
- catch(e){alert('نصب مدل انجام نشد: '+e.message); btn.disabled=false; btn.textContent='دانلود، بررسی و راه‌اندازی';}
+ btn.disabled=true; btn.textContent=t('b_working');
+ try{const r=await fetch('/api/bootstrap/models/'+encodeURIComponent(id)+'/install',{method:'POST'});const data=await r.json();if(!r.ok)throw new Error(data.detail||JSON.stringify(data)); alert(t('alert_ok')); await refreshAll();}
+ catch(e){alert(t('alert_fail')+e.message); btn.disabled=false; btn.textContent=t('b_install');}
 }
 async function sendChat(){
  const button=document.getElementById('send'), q=document.getElementById('query').value.trim(); if(!q)return; button.disabled=true; document.getElementById('query').value=''; const log=document.getElementById('chatlog'); log.insertAdjacentHTML('beforeend',`<div class="msg user">${esc(q)}</div>`);
- try{const f=new FormData(); f.append('query',q); f.append('agent','hakim'); const r=await fetch('/chat',{method:'POST',body:f}); const data=await r.json(); if(!r.ok)throw new Error(data.detail||'خطا'); const label=data.ai_generated?'AI disclosure':'Knowledge disclosure'; log.insertAdjacentHTML('beforeend',`<div class="msg assistant">${esc(data.response)}\n\n[${label}] ${esc(data.disclosure||'')}</div>`)}catch(e){log.insertAdjacentHTML('beforeend',`<div class="msg assistant warn">${esc(e.message)}</div>`)} finally{button.disabled=false; log.scrollTop=log.scrollHeight;}
+ try{const f=new FormData(); f.append('query',q); f.append('agent','hakim'); const r=await fetch('/chat',{method:'POST',body:f}); const data=await r.json(); if(!r.ok)throw new Error(data.detail||t('chat_err')); const label=data.ai_generated?t('lbl_ai'):t('lbl_kb'); log.insertAdjacentHTML('beforeend',`<div class="msg assistant">${esc(data.response)}\n\n[${esc(label)}] ${esc(data.disclosure||'')}</div>`)}catch(e){log.insertAdjacentHTML('beforeend',`<div class="msg assistant warn">${esc(e.message)}</div>`)} finally{button.disabled=false; log.scrollTop=log.scrollHeight;}
 }
+document.querySelectorAll('.lang button').forEach(b=>b.addEventListener('click',()=>setLang(b.dataset.l)));
+document.getElementById('learn').addEventListener('click',()=>{location.href='/learn'});
 document.getElementById('refresh').addEventListener('click',refreshAll);
 document.getElementById('send').addEventListener('click',sendChat);
 document.getElementById('query').addEventListener('keydown',e=>{if(e.key==='Enter'&&(e.ctrlKey||e.metaKey)){e.preventDefault();sendChat();}});
-refreshAll();
+setLang(lang).then(refreshAll);
 </script>
 </body></html>
