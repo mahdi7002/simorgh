@@ -22,7 +22,7 @@ def test_history_reaches_the_model_when_given(monkeypatch):
 def test_no_history_block_without_history(monkeypatch):
     seen = _capture(monkeypatch)
     chat.ask("نام من چیست؟")
-    assert "گفتگوی پیشین" not in seen["message"]
+    assert "پیام‌های پیشین کاربر" not in seen["message"]
 
 
 def test_only_the_last_four_turns_are_sent(monkeypatch):
@@ -65,3 +65,10 @@ def test_label_needs_a_work_word_before_the_quoted_title(monkeypatch):
     monkeypatch.setattr(chat, "_title_in_catalog", lambda t: False)
     text, _ = chat.ask("درباره «گلستان» چه می‌دانی؟", return_metadata=True)
     assert "⚠️" not in text
+
+
+def test_assistant_replies_are_not_fed_back(monkeypatch):
+    seen = _capture(monkeypatch)
+    chat.ask("ادامه بده", history=[("پیام کاربر", "پاسخ قبلی سیمرغ که نباید تکرار شود")])
+    assert "پیام کاربر" in seen["message"]
+    assert "نباید تکرار شود" not in seen["message"]

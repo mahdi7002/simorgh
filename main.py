@@ -208,11 +208,10 @@ async def learn_page():
 
 @app.get("/locales/{lang}.json")
 async def locale_file(lang: str):
-    import re as _re_loc
-    if not _re_loc.fullmatch(r"[a-z]{2,3}(-[A-Za-z0-9]{2,8})?", lang):
-        raise HTTPException(404, "unsupported language")
-    path = Path(__file__).resolve().parent / "locales" / f"{lang}.json"
-    if not path.is_file():
+    # The served path comes from a directory listing, never from the request itself.
+    available = {p.stem: p for p in (Path(__file__).resolve().parent / "locales").glob("*.json")}
+    path = available.get(lang)
+    if path is None:
         raise HTTPException(404, "locale file not found")
     return FileResponse(path, media_type="application/json")
 

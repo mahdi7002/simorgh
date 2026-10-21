@@ -249,10 +249,10 @@ def _unverified_work_titles(question: str) -> list:
 
 
 def _format_history(history) -> str:
-    lines = ["گفتگوی پیشین در همین جلسه (فقط برای پیوستگی؛ اگر به پرسش فعلی ربطی ندارد نادیده بگیر):"]
-    for user, system in list(history)[-4:]:
+    # Only what the user said is passed on: replies of a small model fed back to itself get parroted.
+    lines = ["پیام‌های پیشین کاربر در همین جلسه (فقط برای دانستن آنچه خودش گفته است؛ هیچ ویژگی یا اطلاعاتی را که کاربر صراحتاً نگفته به او نسبت نده؛ اگر پرسش مستقیم است، مستقیم و کوتاه جواب بده):"]
+    for user, _system in list(history)[-4:]:
         lines.append("کاربر: " + str(user)[:280].replace("\n", " "))
-        lines.append("سیمرغ: " + str(system)[:280].replace("\n", " "))
     return "\n".join(lines)
 
 
