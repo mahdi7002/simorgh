@@ -282,10 +282,25 @@ def _quote_in_poetry_db(quote: str) -> bool:
     return row is not None
 
 
+_POET_CUES = (
+    "مولانا", "مولوی", "رومی", "حافظ", "سعدی", "خیام", "فردوسی", "عطار", "نظامی", "سنایی", "جامی",
+    "بیدل", "صائب", "شهریار", "پروین", "سهراب", "نیما", "فروغ", "شاملو", "اخوان", "رودکی",
+    "باباطاهر", "ناصرخسرو", "خاقانی", "انوری", "وحشی", "عراقی", "ابوسعید", "کسایی", "منوچهری",
+)
+_ANY_QUOTE = _re.compile(r'[«"“]([^»"”]{12,220})[»"”]')
+
+
 def _unverified_quotes(response: str) -> list:
+    """Quotations the answer attributes to a poet (by phrase or by a poet's name just before the quotation)
+    that cannot be found in the verse database. Quotations next to no poet name, such as Quran verses, are left alone."""
+    text = response or ""
+    candidates = [q.strip() for _poet, q in _QUOTE_ATTR.findall(text)]
+    for m in _ANY_QUOTE.finditer(text):
+        window = text[max(0, m.start() - 90):m.start()]
+        if any(p in window for p in _POET_CUES):
+            candidates.append(m.group(1).strip())
     out = []
-    for _poet, quote in _QUOTE_ATTR.findall(response or ""):
-        q = quote.strip()
+    for q in candidates:
         try:
             found = _quote_in_poetry_db(q)
         except Exception:  # database missing or unreadable: cannot verify, so label it
@@ -393,7 +408,7 @@ def ask(
     unverified = _unverified_work_titles(question)
     if unverified:
         response += "\n\n" + _tr("note_unverified_work", lang, titles="، ".join(f"«{x}»" for x in unverified))
-    bad_quotes = _unverified_quotes(response)
+    bad_quotes = [q for q in _unverified_quotes(response) if q not in question]
     if bad_quotes:
         response += "\n\n" + _tr("note_quote_unverified", lang, quotes="، ".join("«%s»" % q[:70] for q in bad_quotes))
 
