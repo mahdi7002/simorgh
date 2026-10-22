@@ -169,6 +169,7 @@ from core.memory import MemoryEngine
 from core.why_engine import WhyEngine
 from agents.agent_manager import AgentManager
 from core.chat import ask as chat_ask
+from core.i18n import detect_lang as _detect_lang, t as _t
 from core.orchestration import Orchestrator
 
 understanding = UnderstandingEngine()
@@ -266,6 +267,7 @@ async def ask(request: Request, query: str = Form(...)):
 @app.post("/chat")
 async def chat(request: Request, query: str = Form(...), agent: str = Form("hakim")):
     try:
+        lang_q = _detect_lang(query)
         history = _chat_history(request)
         response, ai_generated = chat_ask(query, agent=agent, return_metadata=True, **({"history": history} if history else {}))
         memory.store_conversation(_session_id(request), query, response, {"agent": agent, "ai_generated": ai_generated})
@@ -273,9 +275,9 @@ async def chat(request: Request, query: str = Form(...), agent: str = Form("haki
             "response": response,
             "agent": agent,
             "ai_generated": ai_generated,
-            "disclosure": AI_DISCLOSURE if ai_generated else KNOWLEDGE_DISCLOSURE,
-            "ai_disclosure": AI_DISCLOSURE if ai_generated else None,
-            "knowledge_disclosure": KNOWLEDGE_DISCLOSURE if not ai_generated else None,
+            "disclosure": _t("disc_ai", lang_q) if ai_generated else _t("disc_kb", lang_q),
+            "ai_disclosure": _t("disc_ai", lang_q) if ai_generated else None,
+            "knowledge_disclosure": _t("disc_kb", lang_q) if not ai_generated else None,
         }
         return JSONResponse(
             content=payload,
