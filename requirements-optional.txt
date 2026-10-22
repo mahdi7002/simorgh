@@ -2,7 +2,7 @@
 pdfplumber>=0.11.0
 pytesseract>=0.3.10
 pdf2image>=1.17.0
-faster-whisper>=1.0.0
+faster-whisper>=1.2.1
 # Pin to the first release containing the July 2026 security fixes found by
 # OSV/PyPA advisories used by the repository's Scorecard scan.
 Pillow==12.3.0
