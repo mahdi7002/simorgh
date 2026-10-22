@@ -18,6 +18,7 @@ from core.poetry_search import get_poetic_wisdom, format_for_prompt as format_po
 from core.quran_search import get_quran_wisdom, format_for_prompt as format_quran
 from core.book_search import get_book_wisdom, format_for_prompt as format_books
 from core.yazd_lore import format_for_prompt as format_yazd
+from core.i18n import detect_lang, t as _tr
 from core.database_answer import build_database_answer
 
 PERSONAS = {
@@ -256,6 +257,44 @@ def _format_history(history) -> str:
     return "\n".join(lines)
 
 
+ENGLISH_RULE = (
+    "\n\nLanguage rule: the user wrote in English, so reply in English (the persona and its values stay the same). "
+    "Never translate or invent quotations from Persian or Arabic texts; quote only text that is given to you above."
+)
+
+UNVERIFIED_PROMPT_NOTE = (
+    "توجه (از سیستم): عنوان {titles} در پایگاه دانش این دستگاه یافت نشد. "
+    "اگر آن را با اطمینان نمی‌شناسی، صریح بگو «نمی‌شناسم» و دربارهٔ محتوایش چیزی نساز."
+)
+
+_QUOTE_ATTR = _re.compile(
+    r'(?:به\s+قول|به\s+گفته[ٔ‌]?|به\s+تعبیر|چنان\s*که)\s+([^\s«"“]+(?:\s+[^\s«"“]+){0,2})\s*[:،,]?\s*[«"“]([^»"”]{8,220})[»"”]'
+)
+
+
+def _quote_in_poetry_db(quote: str) -> bool:
+    from app.knowledge import poetry_lookup as _pl
+    ws = _pl.words(quote)
+    if len(ws) < 3:
+        return True  # too short to judge
+    phrase = '"' + " ".join(ws[:6]) + '"'
+    row = _pl.get_db().execute("SELECT 1 FROM verses_fts WHERE verses_fts MATCH ? LIMIT 1", (phrase,)).fetchone()
+    return row is not None
+
+
+def _unverified_quotes(response: str) -> list:
+    out = []
+    for _poet, quote in _QUOTE_ATTR.findall(response or ""):
+        q = quote.strip()
+        try:
+            found = _quote_in_poetry_db(q)
+        except Exception:  # database missing or unreadable: cannot verify, so label it
+            found = False
+        if not found and q not in out:
+            out.append(q)
+    return out[:2]
+
+
 def suggest_handoff(question: str, current_agent: str) -> str | None:
     persona = PERSONAS.get(current_agent, {})
     for keyword, target in persona.get("handoff_if", {}).items():
@@ -272,9 +311,11 @@ def ask(
     use_builtin_tools: bool = True,
     return_metadata: bool = False,
     history: "list[tuple[str, str]] | None" = None,
+    lang: "str | None" = None,
 ) -> str | tuple[str, bool]:
     if not question or not question.strip():
         return "بله؟ چیزی بپرس."
+    lang = lang or detect_lang(question)
 
     try:
         from app.knowledge.poetry_lookup import attribution
@@ -299,6 +340,8 @@ def ask(
         SIMORGH_IDENTITY + persona_note + BEHAVIORAL_CONTRACT
         + FIDELITY_RULE + STORYTELLING_RULE
     )
+    if lang == "en":
+        system_prompt = system_prompt.replace("همیشه فارسی، صادق", "صادق") + ENGLISH_RULE
 
     extra_parts = []
     quran: list = []
@@ -330,6 +373,9 @@ def ask(
     message = f"{question}\n\n{extra}" if extra else question
     if history:
         message = _format_history(history) + "\n\nپرسش فعلی:\n" + message
+    _unv_prompt = _unverified_work_titles(question)
+    if _unv_prompt:
+        message += "\n\n" + UNVERIFIED_PROMPT_NOTE.format(titles="، ".join(f"«{x}»" for x in _unv_prompt))
 
     needs_quality = (
         bool(quran or poetry)
@@ -346,7 +392,10 @@ def ask(
 
     unverified = _unverified_work_titles(question)
     if unverified:
-        response += UNVERIFIED_WORK_NOTE.format(titles="، ".join(f"«{t}»" for t in unverified))
+        response += "\n\n" + _tr("note_unverified_work", lang, titles="، ".join(f"«{x}»" for x in unverified))
+    bad_quotes = _unverified_quotes(response)
+    if bad_quotes:
+        response += "\n\n" + _tr("note_quote_unverified", lang, quotes="، ".join("«%s»" % q[:70] for q in bad_quotes))
 
     handoff = suggest_handoff(question, agent)
     if handoff and handoff in PERSONAS:
