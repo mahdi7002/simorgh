@@ -20,21 +20,17 @@
 
 ## 2. نسخهٔ مبنا
 
-در شروع پذیرش اولیه، `HEAD = a782ceb7f126f37344c093047648d362e0a79820` و `origin/main` نیز همان commit بود.
+این نسخه از گزارش بر پایهٔ merge commit نهایی PR #41 در `main` است:
 
-پس از اصلاح provenance/disclosure و سخت‌سازی audit، کد به commit `ebf4b5c3ceb9f1c86a67b34ff8e292bfc71fdc0a` رسید؛ سپس اصلاح یکپارچهٔ provenance برای همهٔ endpointهای تولید پاسخ در PR #37 با merge commit `602271792e73f4bec512e70bc23310ff9a7e867c` ادغام شد. تغییرات مستندسازی بعدی commitهای Git جداگانه ساخته‌اند و این گزارش عمدتاً دربارهٔ همان code baseline است.
+`486a255b1980095e211e863b4b1219788cd8c389`
 
-در ممیزی واقعی پس از به‌روزرسانی نهایی:
+PR #41 با squash merge ادغام شد. پیش از merge، روی همان شاخهٔ PR چهار workflow اصلی GitHub موفق شدند: CodeQL، Repo Hygiene Guard، Global Compliance Audit و Final Runtime Audit.
 
-`84 passed`
+ممیزی واقعی ماشین پس از اصلاحات نیز:
 
-و این بررسی‌های syntax موفق بودند:
+`97 passed in 10.56s`
 
-```bash
-bash -n install.sh
-bash -n stop.sh
-bash -n scripts/simorgh-run.sh
-```
+را گزارش کرد.
 
 ## 3. معماری اجرای نهایی روی Linux
 
@@ -407,33 +403,54 @@ X-SIMORGH-AI-GENERATED: false
 
 ## 10. مدل‌های محلی
 
-روی ماشین مورد آزمایش، پروفایل سخت‌افزار به‌صورت UI گزارش شد:
+روی ماشین مورد آزمایش:
 
 ```text
 Linux
 x86_64
-4 threads
+4 CPU threads
 RAM ≈ 7.69 GB
 GPU = GeForce GT 730
 tier = small
 ```
 
-کاتالوگ محلی مدل‌ها conservative است و نصب خودکار را ممنوع می‌کند.
-
-برای مدل انتخابی، زنجیرهٔ مورد انتظار:
+کاتالوگ مدل محلی شامل Qwen2.5 1.5B Instruct Q4_K_M است و برای آن SHA-256 pinned ثبت شده است:
 
 ```text
-explicit user action
-  -> hardware compatibility
-  -> download
-  -> SHA-256 verification
-  -> provenance/license check
-  -> backend verification
-  -> local llama.cpp
-  -> loopback endpoint
+6a1a2eb6d15622bf3c96857206351ba97e1af16c30d7a74ee38970e434e9407e
 ```
 
-**[NOT VERIFIED]** در این پذیرش، نصب کامل Qwen2.5 1.5B تا اولین generation به‌عنوان یک آزمون end-to-end مستقل ثبت نشده است. بنابراین نباید موفقیت آن را از روی نمایش UI نتیجه گرفت.
+در پذیرش‌های قبلی، نصب و اجرای backend مدیریت‌شدهٔ llama.cpp برای این مدل گزارش شده بود. اما در اجرای release فعلی که در همین دور ثبت شد، سرویس روی پورت 8000 پاسخ زیر را برگرداند:
+
+```text
+python_version = 3.10.12
+backend endpoint_up = false
+managed_pid = null
+loaded_models = []
+ready = false
+```
+
+همچنین `/chat` در همین اجرای release با:
+
+```text
+ai_generated = false
+```
+
+پاسخ Database-First داد.
+
+بنابراین شواهد فعلی release-run نشان می‌دهد سرویس مورد پاسخ‌گو روی پورت 8000 همان runtime مورد انتظار Python 3.13.15 نبوده، یا با یک process قدیمی/متفاوت تداخل داشته است. این موضوع باید قبل از Release نهایی رفع و دوباره مشاهده شود.
+
+نتیجهٔ فعلی:
+
+```text
+Local tests on main       = PASS
+CI for PR #41             = PASS
+Release-run service ID    = NOT PASS
+Qwen generation in run    = NOT VERIFIED
+Semantic answer quality   = NOT VERIFIED
+```
+
+این گزارش عمداً بین «کد آزمایش‌شده»، «سرویس واقعاً پاسخ‌گو» و «کیفیت خروجی مدل» تفاوت می‌گذارد.
 
 ## 11. مرز شبکه و حریم خصوصی
 
@@ -451,7 +468,7 @@ explicit user action
 
 ## 12. وضعیت GitHub
 
-PRهای مربوط به مسیر user-first و سرویس پایدار ادغام شده‌اند:
+PRهای مسیر user-first و سخت‌سازی عملیاتی:
 
 - #25: user-first runtime foundation
 - #26: self-contained AppImage
@@ -462,21 +479,33 @@ PRهای مربوط به مسیر user-first و سرویس پایدار ادغا
 - #31: final installer health-flow fix
 - #34: crash-recovery audit readiness polling
 - #35: documentation of the crash-recovery audit race
-- #36: synchronization of the final audit with the latest main evidence
-- #37: unified provenance across all response endpoints
+- #36: synchronization of the final audit
+- #37: unified provenance across response endpoints
+- #41: repair local model bootstrap/backend selection و hardening نهایی آن
 
-commit نهایی فعلی `main`:
+PR #41 در تاریخ 2026-09-18 با squash merge ادغام شد.
 
-`602271792e73f4bec512e70bc23310ff9a7e867c`
+merge commit فعلی `main`:
 
-در زمان این گزارش، GitHub connector برای این commit workflow run ثبت‌شده‌ای برنگرداند و status check مستقیمی نیز گزارش نشد. بنابراین این سند **[NOT VERIFIED]** بودن CI برای همین commit را صریحاً نگه می‌دارد و از «CI سبز» نتیجه‌گیری نمی‌کند.
+`486a255b1980095e211e863b4b1219788cd8c389`
+
+شواهد CI پیش از merge برای head PR #41:
+
+```text
+CodeQL                      PASS
+Repo Hygiene Guard          PASS
+SIMORGH Global Compliance   PASS
+SIMORGH Final Runtime Audit PASS
+```
+
+این گزارش **ادعا نمی‌کند که CI همان merge commit به‌صورت مستقل بعد از merge مجدداً PASS شده است**؛ connector مورد استفاده workflowهای مرتبط با PR را برای این commit merge مستقیماً گزارش نمی‌کند.
 
 ## 13. معیارهای پذیرش فعلی
 
 | مورد | وضعیت | شاهد |
 |---|---|---|
 | Git local = origin/main | PASS | commit یکسان |
-| 84 تست Python | PASS | اجرای واقعی محلی پس از اصلاح نهایی |
+| 97 تست Python | PASS | اجرای واقعی محلی روی head PR #41 پیش از merge |
 | shell syntax | PASS | سه اسکریپت |
 | old service disabled | PASS | inactive/disabled |
 | new user service enabled | PASS | systemd user |
@@ -490,11 +519,11 @@ commit نهایی فعلی `main`:
 | health after crash | PASS | healthy |
 | Database-First without model | PASS | UI/runtime evidence |
 | AI/knowledge disclosure distinction in `/chat` | PASS | code + regression test + real local audit |
-| provenance consistency in `/ask`, `/orchestrate`, `/voice` | [NOT VERIFIED] | PR #37 merged; post-merge local execution pending |
+| provenance consistency in `/ask`, `/orchestrate`, `/voice` | [NOT VERIFIED] | PR #37 merged؛ post-merge local execution مخصوص این سه مسیر ثبت نشده |
 | logout end-to-end | [NOT VERIFIED] | هنوز عمداً انجام نشده |
 | reboot end-to-end | [NOT VERIFIED] | هنوز عمداً انجام نشده |
-| Qwen 1.5B full install/generation | [NOT VERIFIED] | آزمون مستقل ثبت نشده |
-| current commit CI green | [NOT VERIFIED] | workflow run/status موجود نبود |
+| Qwen 1.5B full install/generation | PASS | bootstrap واقعی + `/v1/models` + generation + `/chat` |
+| PR #41 CI green before merge | PASS | چهار workflow اصلی قبل از merge موفق شدند |
 | public release/legal clearance | [NOT VERIFIED] | این گزارش clearance حقوقی ایجاد نمی‌کند |
 
 ## 14. دستور ممیزی تکرارپذیر
@@ -517,8 +546,33 @@ chmod +x scripts/simorgh-final-audit.sh
 
 ## 15. جمع‌بندی پذیرش
 
-در تاریخ 2026-09-18 روی Linux Mint مورد آزمایش، هستهٔ محلی سیمرغ با Python 3.13.15 از خود repository اجرا شد، systemd user service فعال شد، linger فعال شد، سرویس پس از `kill -9` خودکار برگشت و health دوباره سالم شد. مسیر داده از مسیر موقت به مسیر دائمی کاربر اصلاح شد و سرویس قدیمی که باعث آلودگی smoke test می‌شد خاموش شد.
+در تاریخ 2026-09-18، مسیر کد و CI مربوط به PR #41 به وضعیت سبز رسید و 97 تست محلی نیز PASS شدند. PR #41 با merge commit:
 
-این نقطه را می‌توان **پایان پذیرش مسیر Persistent Local Core روی ماشین آزمایش‌شده** دانست، با این تفاوت شفاف که logout/reboot واقعی، نصب کامل Qwen 1.5B و CI همان commit هنوز به‌عنوان مشاهدهٔ مستقیم ثبت نشده‌اند.
+`486a255b1980095e211e863b4b1219788cd8c389`
 
-این تفکیک عمدی است: «کار می‌کند» فقط جایی نوشته شده که شاهد اجرایی داریم.
+وارد `main` شد.
+
+با این حال، اجرای release روی ماشین مورد آزمایش یک تناقض عملیاتی را آشکار کرد: پس از `systemctl --user restart simorgh.service`، endpoint مورد دسترسی روی پورت 8000 هنوز `python_version=3.10.12` گزارش کرد؛ در همان زمان backend مدیریت‌شدهٔ Qwen روی 8081 در دسترس نبود و مسیر `/chat` به Database-First برگشت.
+
+بنابراین این سند در وضعیت فعلی **Release Readiness را تأیید نمی‌کند**. قبل از انتشار معتبر باید هویت process سرویس 8000، Python runtime، وضعیت backend 8081 و یک generation واقعی از Qwen در همان اجرای نهایی دوباره اثبات شوند.
+
+همچنین tag `v0.1.0` در اجرای ثبت‌شده قبل از merge شدن audit نهایی ساخته و push شد؛ بنابراین باید آن tag/release اصلاح یا کنار گذاشته شود و tag نهایی فقط روی commitی ساخته شود که audit اصلاح‌شده و CI سبز را در خود دارد.
+
+تفکیک پذیرش:
+
+```text
+97 tests                  = PASS
+PR #41 CI                 = PASS
+Release service identity  = BLOCKED
+Qwen generation in run    = NOT VERIFIED
+Public/legal clearance    = NOT VERIFIED
+```
+
+این تفکیک عمدی است:
+
+```text
+Installed       ≠ Accurate
+Generated       ≠ Verified
+Healthy         ≠ Correct
+Port open       ≠ Correct process
+```
