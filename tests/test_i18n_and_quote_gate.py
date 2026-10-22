@@ -95,3 +95,32 @@ def test_main_chat_works_when_chat_ask_has_no_lang_parameter(monkeypatch):
     r = TestClient(main.app).post("/chat", data={"query": "سلام", "agent": "hakim"})
     assert r.status_code == 200
     assert r.json()["disclosure"] == main.KNOWLEDGE_DISCLOSURE
+
+
+_REPLY_CUE = "مولانا، با نگاهی به عمق وجود انسان، چنین می‌گوید: «آمد شهر صیام سنجق سلطان رسید دست بدار از طعام مایده جان رسید» و همین."
+
+
+def test_quote_after_a_poet_name_is_checked_even_without_by_the_words_of(monkeypatch):
+    _capture(monkeypatch, reply=_REPLY_CUE)
+    monkeypatch.setattr(chat, "_quote_in_poetry_db", lambda q: False)
+    text = chat.ask("یک سخن معروف درباره صبر بگو")
+    assert "⚠️" in text and "آمد شهر صیام" in text
+
+
+def test_quote_with_no_poet_name_is_left_alone(monkeypatch):
+    _capture(monkeypatch, reply="خداوند می‌فرماید: «ان الله مع الصابرین و بشر الصابرین» پس صبر کن.")
+    monkeypatch.setattr(chat, "_quote_in_poetry_db", lambda q: False)
+    assert "⚠️" not in chat.ask("درباره صبر بگو")
+
+
+def test_quote_that_the_user_typed_is_not_flagged(monkeypatch):
+    quote = "هر چه بود از من بگیر هر چه نبود رها کن"
+    _capture(monkeypatch, reply="مولانا می‌گوید: «%s» و این را به او نسبت داده‌اند." % quote)
+    monkeypatch.setattr(chat, "_quote_in_poetry_db", lambda q: False)
+    assert "⚠️" not in chat.ask("آیا «%s» از مولانا است؟" % quote)
+
+
+def test_cued_quote_found_in_the_database_is_not_flagged(monkeypatch):
+    _capture(monkeypatch, reply=_REPLY_CUE)
+    monkeypatch.setattr(chat, "_quote_in_poetry_db", lambda q: True)
+    assert "⚠️" not in chat.ask("یک سخن معروف درباره صبر بگو")
