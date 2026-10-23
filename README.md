@@ -96,6 +96,8 @@ correctness is relative to the databases' own attributions. Defects found by the
 
 ## User-first installation
 
+> Verse attribution ("who wrote this verse?") needs a verse database that you build locally from the public Ganjoor data: `bash scripts/ensure_poetry_db.sh` (see `docs/DATA.md`).
+
 برای کاربر عادی، مسیر اصلی روی Linux این است:
 
 ```bash
