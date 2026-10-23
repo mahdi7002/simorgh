@@ -203,6 +203,17 @@ def extract(poem: dict, poet_nick: str, source_path: Path | None = None):
 def build(source_dir, output, poets=None, log=print) -> dict:
     t0 = time.time()
     source, output = Path(source_dir).resolve(), Path(output)
+    part = output.with_name(output.name + ".part")
+    metadata = output.with_name(output.name + ".build.json")
+    for label, candidate in (
+        ("output", output),
+        ("staging file", part),
+        ("build metadata", metadata),
+    ):
+        if candidate.exists() or candidate.is_symlink():
+            raise FileExistsError(
+                f"refusing to overwrite existing {label}: {candidate}"
+            )
     available, manifest = load_poets(source)
     wanted = None if (not poets or list(poets) == ["all"]) else set(poets)
     chosen = [(s, n) for s, n in available if wanted is None or s in wanted]
@@ -213,9 +224,6 @@ def build(source_dir, output, poets=None, log=print) -> dict:
     if not chosen:
         raise SystemExit("no poets selected")
     output.parent.mkdir(parents=True, exist_ok=True)
-    part = output.with_name(output.name + ".part")
-    if part.exists():
-        part.unlink()
     conn = sqlite3.connect(str(part))
     conn.execute("PRAGMA journal_mode=OFF")
     conn.execute("PRAGMA synchronous=OFF")

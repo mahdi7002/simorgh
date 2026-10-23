@@ -275,3 +275,22 @@ def test_lookup_works_on_a_built_database(source, tmp_path, monkeypatch):
         assert "شاعر آزمون" in attr
     finally:
         pl.close()
+
+def test_builder_refuses_existing_output_and_sidecars(source, tmp_path):
+    mod = _builder()
+    for kind in ("output", "part", "metadata"):
+        out = tmp_path / f"{kind}.db"
+        protected = {
+            "output": out,
+            "part": out.with_name(out.name + ".part"),
+            "metadata": out.with_name(out.name + ".build.json"),
+        }[kind]
+        sentinel = f"preserve-{kind}".encode()
+        protected.write_bytes(sentinel)
+
+        with pytest.raises(FileExistsError, match="refusing to overwrite"):
+            mod.build(source, out, log=lambda *_a: None)
+
+        assert protected.read_bytes() == sentinel
+        if kind != "output":
+            assert not out.exists()
