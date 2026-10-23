@@ -128,3 +128,13 @@ python -m pip install -i https://pypi.tuna.tsinghua.edu.cn/simple -r requirement
 python -m pip install -r requirements-dev.txt
 python -m pytest -q
 ```
+
+## پایگاه بیتی (برای «این بیت از کیست؟»)
+
+پایگاه بیتی را یک بار خودتان از گنجور (https://ganjoor.net؛ داده: https://github.com/ganjoor/ganjoor-data) روی همین رایانه می‌سازید. سیمرغ نسخه‌ای از شعرها منتشر نمی‌کند.
+
+```bash
+bash scripts/ensure_poetry_db.sh
+```
+
+دستور قبل از دانلود می‌پرسد، و اگر پایگاه از قبل هست و سالم است چیزی دانلود نمی‌کند. شرایط استفاده از داده را در منبع بخوانید. بدون این پایگاه سیمرغ کار می‌کند ولی تشخیص گوینده‌ی بیت غیرفعال می‌ماند.

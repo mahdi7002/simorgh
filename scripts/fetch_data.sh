@@ -43,3 +43,4 @@ for e in m["files"]:
     print("installed:", e["dest"], "(%d bytes)" % e["bytes"])
 print("DATA_OK")
 PY
+echo "Optional next step for verse attribution (who wrote this verse?): bash scripts/ensure_poetry_db.sh"

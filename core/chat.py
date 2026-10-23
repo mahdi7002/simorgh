@@ -208,7 +208,7 @@ _VERSE_WORD = _re.compile(r"(بیت|شعر|مصرع|غزل|رباعی|مثنوی
 
 POETRY_DB_UNAVAILABLE_MESSAGE = (
     "پایگاه شعر در این نصب در دسترس نیست، پس نمی‌توانم گوینده‌ی این بیت را تأیید کنم "
-    "و حدس هم نمی‌زنم. برای فعال‌کردن آن: git lfs install && git lfs pull"
+    "و حدس هم نمی‌زنم. برای فعال‌کردن آن: bash scripts/ensure_poetry_db.sh"
 )
 
 
