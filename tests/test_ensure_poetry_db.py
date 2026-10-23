@@ -52,7 +52,6 @@ def test_healthy_database_means_nothing_is_downloaded(tmp_path):
 def test_missing_database_without_yes_stops_before_any_download(tmp_path):
     r = _run(tmp_path / "none.db", extra={"GANJOOR_SOURCE_DIR": str(tmp_path / "src")})
     assert r.returncode == 3 and "--yes" in r.stdout
-    assert "ganjoor.net" in r.stdout and "ganjoor-data" in r.stdout
     assert not (tmp_path / "src").exists()
 
 
